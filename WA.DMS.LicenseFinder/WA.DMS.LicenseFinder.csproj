@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <UserSecretsId>cc1de03e-272a-4682-b391-8585cfb82c81</UserSecretsId>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\WA.DMS.LicenseFinder.Ports\WA.DMS.LicenseFinder.Ports.csproj" />
+      <ProjectReference Include="..\WA.DMS.LicenseFinder.Services\WA.DMS.LicenseFinder.Services.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0-preview.7.25380.108" />
+    </ItemGroup>
+
+</Project>
