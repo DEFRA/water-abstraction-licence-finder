@@ -1,11 +1,11 @@
-# WA DMS License Finder
+# WA DMS Licence Finder
 
-A .NET console application that matches license records between NALD (National Activities Licensing Database) extracts and DMS (Document Management System) extracts using configurable matching rules.
+A .NET console application that matches licence records between NALD (National Activities Licensing Database) extracts and DMS (Document Management System) extracts using configurable matching rules.
 
 ## Overview
 
-The WA DMS License Finder processes license data from multiple sources to:
-- Match NALD license records with corresponding DMS document records
+The WA DMS Licence Finder processes licence data from multiple sources to:
+- Match NALD licence records with corresponding DMS document records
 - Apply multiple matching rules with priority-based execution
 - Generate detailed Excel reports showing match results and statistics
 - Compare results with previous iterations to track changes

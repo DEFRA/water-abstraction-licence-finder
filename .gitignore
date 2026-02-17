@@ -1,17 +1,17 @@
-/WA.DMS.LicenseFinder.Services/Resources/
-WA.DMS.LicenseFinder.sln.DotSettings.user
-/.idea/.idea.WA.DMS.LicenseFinder/.idea
+/WA.DMS.LicenceFinder.Services/Resources/
+WA.DMS.LicenceFinder.sln.DotSettings.user
+/.idea/.idea.WA.DMS.LicenceFinder/.idea
 .DS_Store
 *.cache
 
-/Unit Tests/WA.DMS.LicenseFinder.Services.UnitTests/bin
-/Unit Tests/WA.DMS.LicenseFinder.Services.UnitTests/obj
+/Unit Tests/WA.DMS.LicenceFinder.Services.UnitTests/bin
+/Unit Tests/WA.DMS.LicenceFinder.Services.UnitTests/obj
 
-/WA.DMS.LicenseFinder.Services/bin
-/WA.DMS.LicenseFinder.Services/obj
+/WA.DMS.LicenceFinder.Services/bin
+/WA.DMS.LicenceFinder.Services/obj
 
-/WA.DMS.LicenseFinder/bin
-/WA.DMS.LicenseFinder/obj
+/WA.DMS.LicenceFinder/bin
+/WA.DMS.LicenceFinder/obj
 
-/WA.DMS.LicenseFinder.Core/bin
-/WA.DMS.LicenseFinder.Core/obj
+/WA.DMS.LicenceFinder.Core/bin
+/WA.DMS.LicenceFinder.Core/obj
