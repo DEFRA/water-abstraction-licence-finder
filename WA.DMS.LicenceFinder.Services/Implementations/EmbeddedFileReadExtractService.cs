@@ -45,7 +45,7 @@ public class EmbeddedFileReadExtractService(ILicenceFileProcessor fileProcessor)
     /// Reads all files starting with 'DMS_Extract' from the resources folder
     /// </summary>
     /// <returns>Combined list of DMS extract records from all matching files</returns>
-    public List<DMSExtract> ReadDmsExtractFiles(bool consolidated = false)
+    public List<DMSExtract> ReadDmsExtractFiles(bool consolidated)
     {
         var allDmsRecords = new List<DMSExtract>();
         

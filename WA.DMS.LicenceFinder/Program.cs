@@ -20,7 +20,7 @@ using (var scope = host.Services.CreateScope())
     
     try
     {
-        var dmsRecords = readExtractService.ReadDmsExtractFiles();
+        var dmsRecords = readExtractService.ReadDmsExtractFiles(false);
         
         // FLOW - Licence file finder
         Console.WriteLine("Starting licence file processing...");

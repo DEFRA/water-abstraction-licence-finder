@@ -11,7 +11,7 @@ public interface IReadExtract
     /// Reads all files starting with 'DMS_Extract' from the resources folder
     /// </summary>
     /// <returns>Combined list of DMS extract records from all matching files</returns>
-    List<DMSExtract> ReadDmsExtractFiles(bool consolidated = false);
+    List<DMSExtract> ReadDmsExtractFiles(bool consolidated);
 
     /// <summary>
     /// Reads all files starting with 'NALD_Extract' from the resources folder
