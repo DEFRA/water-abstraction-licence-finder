@@ -248,7 +248,7 @@ public class LicenseFileProcessor : ILicenseFileProcessor
 
             foreach (var assembly in assemblies)
             {
-                var resourceNames = assembly.GetManifestResourceNames();
+                var resourceNames = assembly!.GetManifestResourceNames();
 
                 foreach (var resourceName in resourceNames)
                 {
@@ -290,7 +290,7 @@ public class LicenseFileProcessor : ILicenseFileProcessor
 
         foreach (var assembly in assemblies)
         {
-            var resourceNames = assembly.GetManifestResourceNames();
+            var resourceNames = assembly!.GetManifestResourceNames();
 
             foreach (var resourceName in resourceNames)
             {
@@ -567,10 +567,10 @@ public class LicenseFileProcessor : ILicenseFileProcessor
             var headers = CreateHeaders(properties, headerMapping);
 
             // Add header row
-            AddHeaderRow(sheetData, headers);
+            AddHeaderRow(sheetData!, headers);
 
             // Add data rows
-            AddDataRows(sheetData, items, properties, headerMapping);
+            AddDataRows(sheetData!, items, properties, headerMapping);
 
             // Save the document
             workbookPart.Workbook.Save();
@@ -633,10 +633,10 @@ public class LicenseFileProcessor : ILicenseFileProcessor
                     var headers = CreateHeaders(properties, headerMapping);
 
                     // Add header row
-                    AddHeaderRow(sheetData, headers);
+                    AddHeaderRow(sheetData!, headers);
 
                     // Add data rows
-                    AddDataRows(sheetData, items, properties, headerMapping);
+                    AddDataRows(sheetData!, items, properties, headerMapping);
                 }
             }
 
@@ -875,7 +875,7 @@ public class LicenseFileProcessor : ILicenseFileProcessor
                             var hyperlinkRelationship = worksheetPart.AddHyperlinkRelationship(validUri, true);
 
                             // Get or create hyperlinks element
-                            var hyperlinks = worksheet.Elements<Hyperlinks>().FirstOrDefault();
+                            var hyperlinks = worksheet!.Elements<Hyperlinks>().FirstOrDefault();
                             if (hyperlinks == null)
                             {
                                 hyperlinks = new Hyperlinks();

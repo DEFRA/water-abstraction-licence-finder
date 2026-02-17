@@ -68,7 +68,7 @@ public class LicenseMatchResult
     /// <summary>
     /// The name of the rule used to find the matching previous iteration
     /// </summary>
-    public string PreviousIterationRuleUsed { get; set; } = string.Empty;
+    public string? PreviousIterationRuleUsed { get; set; } = string.Empty;
 
     /// <summary>
     /// Indicates If rule used in current and previous iteration are the same
@@ -78,7 +78,7 @@ public class LicenseMatchResult
     /// <summary>
     /// The URL of the matched file from DMS extract for previous iteration
     /// </summary>
-    public string PreviousIterationFileUrl { get; set; } = string.Empty;
+    public string? PreviousIterationFileUrl { get; set; } = string.Empty;
 
     /// <summary>
     /// Indicates if file url in current and previous iteration are the same

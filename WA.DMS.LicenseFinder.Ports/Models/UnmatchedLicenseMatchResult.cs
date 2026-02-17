@@ -74,7 +74,7 @@ public class UnmatchedLicenseMatchResult
     /// <summary>
     /// Date of issue of evaluated file
     /// </summary>
-    public string DateOfIssueOfEvaluatedFile { get; set; } = string.Empty;
+    public string? DateOfIssueOfEvaluatedFile { get; set; } = string.Empty;
     
     /// <summary>
     /// File Id

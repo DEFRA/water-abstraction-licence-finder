@@ -17,7 +17,7 @@ public class FileIdentificationExtract
 
     public string MatchedTerms { get; set; } = string.Empty;
 
-    public string DateOfIssue { get; set; } = string.Empty;
+    public string? DateOfIssue { get; set; } = string.Empty;
 
     public string FileSize { get; set; } = string.Empty;
 

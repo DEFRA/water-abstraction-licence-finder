@@ -23,12 +23,15 @@ public static class LicenseFileHelpers
     /// Converts date strings in formats like "27Dec2017" or "27 December2017" to "dd/mm/yyyy" format.
     /// If conversion fails, returns the original string unchanged.
     /// </summary>
-    /// <param name="dateString">The date string to convert</param>
+    /// <param name="dateString1">The date string to convert</param>
     /// <returns>Formatted date string in "dd/mm/yyyy" format or original string if conversion fails</returns>
-    public static string ConvertDateToStandardFormat(string dateString1)
+    public static string? ConvertDateToStandardFormat(string? dateString1)
     {
         if (string.IsNullOrWhiteSpace(dateString1))
+        {
             return dateString1;
+        }
+
         var dateString =  DateFormatConsistent(dateString1);
         // Try to parse various date formats
         string[] formats = {
@@ -42,9 +45,9 @@ public static class LicenseFileHelpers
             "dd-MM-yyyy"        // Alternative format
         };
         
-        foreach (string format in formats)
+        foreach (var format in formats)
         {
-            if (DateTime.TryParseExact(dateString.Trim(), format, 
+            if (DateTime.TryParseExact(dateString!.Trim(), format, 
                 System.Globalization.CultureInfo.InvariantCulture, 
                 System.Globalization.DateTimeStyles.None, out DateTime result))
             {
@@ -131,7 +134,7 @@ public static class LicenseFileHelpers
     {
         // The Uri class helps handle URL decoding and standardisation first
         // before using Path methods. This is optional but helpful for complex URLs.
-        if (Uri.TryCreate(url, UriKind.Absolute, out Uri uri))
+        if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
         {
             // Get the local path component (e.g., "/path/to/file.txt")
             string localPath = uri.LocalPath;

@@ -112,7 +112,7 @@ public class LicenseFileProcessorTests
                 FileUrl = "test.pdf",
                 RuleUsed = "TestRule",
                 LicenseNumber = "1/23/45",
-                MatchFound = true,
+                //MatchFound = true, // TODO commented out for build to work 2026-02-17
                 Region = "Test Region"
             }
         };

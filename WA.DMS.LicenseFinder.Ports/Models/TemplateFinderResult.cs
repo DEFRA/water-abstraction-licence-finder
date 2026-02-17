@@ -7,8 +7,8 @@ public class TemplateFinderResult
 {
     public string PermitNumber { get; set; } = string.Empty;
     public string FileUrl { get; set; } = string.Empty;
-    public string NaldIssueNumber { get; set; }
-    public string SignatureDate { get; set; } = string.Empty;
+    public string? NaldIssueNumber { get; set; }
+    public string? SignatureDate { get; set; } = string.Empty;
     public string? DateOfIssue { get; set; } = string.Empty;
     public string? FileName { get; set; } = string.Empty;
     public int? NumberOfPages { get; set; } 

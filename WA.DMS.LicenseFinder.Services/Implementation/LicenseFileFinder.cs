@@ -176,7 +176,8 @@ public class LicenseFileFinder : ILicenseFileFinder
             }
             catch (Exception ex)
             {
-                
+                Console.WriteLine($"ERROR - {ex.Message}");
+                // TODO throw?
             }
         }
 
@@ -202,7 +203,8 @@ public class LicenseFileFinder : ILicenseFileFinder
         }
         catch (Exception ex)
         {
-            
+            Console.WriteLine($"ERROR - {ex.Message}");
+            // TODO throw?
         }
 
         // Handle duplicate destination filenames by appending _1, _2, etc.
@@ -299,7 +301,8 @@ public class LicenseFileFinder : ILicenseFileFinder
             }
             catch (Exception ex)
             {
-                
+                Console.WriteLine($"ERROR - {ex.Message}");
+                // TODO throw?
             }
         }
 
@@ -325,7 +328,8 @@ public class LicenseFileFinder : ILicenseFileFinder
         }
         catch (Exception ex)
         {
-            
+            Console.WriteLine($"ERROR - {ex.Message}");
+            // TODO throw?
         }
 
         // Handle duplicate destination filenames by appending _1, _2, etc.
@@ -481,7 +485,7 @@ public class LicenseFileFinder : ILicenseFileFinder
             // Step 8: Look for Licence files first
             var licenceFiles = matchingIdentificationFiles
                 .Where(f => f.FileType.Equals("Licence", StringComparison.OrdinalIgnoreCase)
-                            && f.DateOfIssue.Equals(record.SignatureDate, StringComparison.OrdinalIgnoreCase))
+                            && f.DateOfIssue?.Equals(record.SignatureDate, StringComparison.OrdinalIgnoreCase) == true)
                 .ToList();
 
             if (licenceFiles.Any())
@@ -525,7 +529,7 @@ public class LicenseFileFinder : ILicenseFileFinder
                 // Step 9: If no Licence files, look for Addendum and find corresponding Licence
                 var addendumFiles = matchingIdentificationFiles
                     .Where(f => f.FileType.Equals("Addendum", StringComparison.OrdinalIgnoreCase)
-                                && f.DateOfIssue.Equals(record.SignatureDate, StringComparison.OrdinalIgnoreCase))
+                                && f.DateOfIssue?.Equals(record.SignatureDate, StringComparison.OrdinalIgnoreCase) == true)
                     .DistinctBy(f => f.FileName)
                     .ToList();
                 foreach (var addendum in addendumFiles)
@@ -563,7 +567,7 @@ public class LicenseFileFinder : ILicenseFileFinder
                                    DateTime.TryParse(f.DateOfIssue, out var fileDate) &&
                                    DateTime.TryParse(record.SignatureDate, out var signatureDate) &&
                                    fileDate <= signatureDate)
-                        .OrderByDescending(f => DateTime.Parse(f.DateOfIssue))
+                        .OrderByDescending(f => DateTime.Parse(f.DateOfIssue!))
                         .FirstOrDefault();
 
                     if (correspondingLicence != null)
@@ -978,8 +982,8 @@ public class LicenseFileFinder : ILicenseFileFinder
                 results.Add(result);
                 var templateResultOverride = templateResults
                     .FirstOrDefault(t => 
-                        t.PermitNumber.Contains(result.PermitNumber, StringComparison.OrdinalIgnoreCase) && 
-                        result.FileUrl?.Contains(t.FileName, StringComparison.OrdinalIgnoreCase) == true);;
+                        t.PermitNumber.Contains(result.PermitNumber, StringComparison.OrdinalIgnoreCase) &&
+                        result.FileUrl.Contains(t.FileName!, StringComparison.OrdinalIgnoreCase) == true);;
                 result.PrimaryTemplate = templateResultOverride?.PrimaryTemplateType;
                 result.SecondaryTemplate = templateResultOverride?.SecondaryTemplateType;
                 result.NumberOfPages = templateResultOverride?.NumberOfPages;
@@ -1048,7 +1052,7 @@ public class LicenseFileFinder : ILicenseFileFinder
             var templateResult = templateResults
                 .FirstOrDefault(t => 
                     t.PermitNumber.Contains(result.PermitNumber, StringComparison.OrdinalIgnoreCase) && 
-                    result.FileUrl?.Contains(t.FileName, StringComparison.OrdinalIgnoreCase) == true);;
+                    result.FileUrl.Contains(t.FileName!, StringComparison.OrdinalIgnoreCase) == true);;
             result.PrimaryTemplate = templateResult?.PrimaryTemplateType;
             result.SecondaryTemplate = templateResult?.SecondaryTemplateType;
             result.NumberOfPages = templateResult?.NumberOfPages;
@@ -1107,7 +1111,7 @@ public class LicenseFileFinder : ILicenseFileFinder
                 .ToList();
 
             if (higherIssueRecords.Any() || 
-                (higherIssueRecords.Count > 0 && !higherIssueRecords.All(h => allFileIdentification.Any(a => a.DateOfIssue.Equals(h.SignatureDate, StringComparison.OrdinalIgnoreCase)))))
+                (higherIssueRecords.Count > 0 && !higherIssueRecords.All(h => allFileIdentification.Any(a => a.DateOfIssue?.Equals(h.SignatureDate, StringComparison.OrdinalIgnoreCase) == true))))
             {
                 return new UnmatchedLicenseMatchResult
                 {
