@@ -1,4 +1,4 @@
-namespace WA.DMS.LicenseFinder.Ports.Models;
+namespace WA.DMS.LicenseFinder.Core.Models;
 
 /// <summary>
 /// Represents DMS (Document Management System) extract data that can be extracted from Excel or CSV files.

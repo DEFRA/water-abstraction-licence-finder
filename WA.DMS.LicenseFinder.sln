@@ -2,7 +2,7 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WA.DMS.LicenseFinder.Services", "WA.DMS.LicenseFinder.Services\WA.DMS.LicenseFinder.Services.csproj", "{5C59CBAA-4530-4E58-A946-00F5FD8DD5EF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WA.DMS.LicenseFinder.Ports", "WA.DMS.LicenseFinder.Ports\WA.DMS.LicenseFinder.Ports.csproj", "{5B64BD40-0290-4638-AC71-48C25B019E43}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WA.DMS.LicenseFinder.Core", "WA.DMS.LicenseFinder.Core\WA.DMS.LicenseFinder.Core.csproj", "{5B64BD40-0290-4638-AC71-48C25B019E43}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WA.DMS.LicenseFinder", "WA.DMS.LicenseFinder\WA.DMS.LicenseFinder.csproj", "{CBF0C536-4F10-43CA-B11F-945AFED92A4B}"
 EndProject

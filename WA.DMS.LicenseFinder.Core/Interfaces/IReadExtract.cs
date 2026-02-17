@@ -1,6 +1,6 @@
-using WA.DMS.LicenseFinder.Ports.Models;
+using WA.DMS.LicenseFinder.Core.Models;
 
-namespace WA.DMS.LicenseFinder.Ports.Interfaces;
+namespace WA.DMS.LicenseFinder.Core.Interfaces;
 
 /// <summary>
 /// Interface for reading and extracting data from various file sources
@@ -23,7 +23,7 @@ public interface IReadExtract
     /// Reads Previous Iteration Matches from the resources folder
     /// </summary>
     /// <returns>Previous iteration match results</returns>
-    List<LicenseMatchResult> ReadLastIterationMatchesFiles(bool current = false);
+    List<LicenceMatchResult> ReadLastIterationMatchesFiles(bool current = false);
 
     /// <summary>
     /// Reads NALD Metadata from the resources folder
@@ -71,7 +71,7 @@ public interface IReadExtract
     /// Reads LicenceVersionResult.xlsx file from the resources folder
     /// </summary>
     /// <returns>List of licence version records</returns>
-    List<UnmatchedLicenseMatchResult> ReadFileVersionResultsFile();
+    List<UnmatchedLicenceMatchResult> ReadFileVersionResultsFile();
 
     /// <summary>
     /// Reads all files starting with 'WaterPdfs_Inventory' from the resources folder

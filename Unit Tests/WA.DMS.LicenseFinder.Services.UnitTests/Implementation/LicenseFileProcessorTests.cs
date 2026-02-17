@@ -1,7 +1,6 @@
 using FluentAssertions;
-using Moq;
-using WA.DMS.LicenseFinder.Ports.Models;
-using WA.DMS.LicenseFinder.Services.Implementation;
+using WA.DMS.LicenseFinder.Core.Models;
+using WA.DMS.LicenseFinder.Services.Implementations;
 using Xunit;
 
 namespace WA.DMS.LicenseFinder.Services.UnitTests.Implementation;
@@ -11,12 +10,7 @@ namespace WA.DMS.LicenseFinder.Services.UnitTests.Implementation;
 /// </summary>
 public class LicenseFileProcessorTests
 {
-    private readonly LicenseFileProcessor _processor;
-
-    public LicenseFileProcessorTests()
-    {
-        _processor = new LicenseFileProcessor();
-    }
+    private readonly LicenseFileProcessor _processor = new();
 
     [Fact]
     public void Constructor_ShouldCreateInstance()
@@ -104,7 +98,7 @@ public class LicenseFileProcessorTests
     public void GenerateExcel_WithValidData_ShouldReturnFilePath()
     {
         // Arrange
-        var results = new List<LicenseMatchResult>
+        var results = new List<LicenceMatchResult>
         {
             new()
             {
@@ -139,7 +133,7 @@ public class LicenseFileProcessorTests
         var headerMapping = new Dictionary<string, string> { { "Test", "Test" } };
 
         // Act & Assert
-        var act = () => _processor.GenerateExcel<LicenseMatchResult>(null!, "test", headerMapping);
+        var act = () => _processor.GenerateExcel<LicenceMatchResult>(null!, "test", headerMapping);
         act.Should().Throw<ArgumentNullException>();
     }
 
@@ -147,7 +141,7 @@ public class LicenseFileProcessorTests
     public void GenerateExcel_WithNullFileName_ShouldThrowArgumentNullException()
     {
         // Arrange
-        var results = new List<LicenseMatchResult>();
+        var results = new List<LicenceMatchResult>();
         var headerMapping = new Dictionary<string, string> { { "Test", "Test" } };
 
         // Act & Assert
@@ -159,7 +153,7 @@ public class LicenseFileProcessorTests
     public void GenerateExcel_WithNullHeaderMapping_ShouldThrowArgumentNullException()
     {
         // Arrange
-        var results = new List<LicenseMatchResult>();
+        var results = new List<LicenceMatchResult>();
 
         // Act & Assert
         var act = () => _processor.GenerateExcel(results, "test", null!);
@@ -170,7 +164,7 @@ public class LicenseFileProcessorTests
     public void GenerateExcel_WithEmptyResults_ShouldReturnFilePath()
     {
         // Arrange
-        var results = new List<LicenseMatchResult>();
+        var results = new List<LicenceMatchResult>();
         var headerMapping = new Dictionary<string, string>
         {
             { "PermitNumber", "Permit Number" }
@@ -190,7 +184,7 @@ public class LicenseFileProcessorTests
     public void GenerateExcel_WithEmptyOrWhitespaceFileName_ShouldThrowArgumentException(string fileName)
     {
         // Arrange
-        var results = new List<LicenseMatchResult>();
+        var results = new List<LicenceMatchResult>();
         var headerMapping = new Dictionary<string, string> { { "Test", "Test" } };
 
         // Act & Assert

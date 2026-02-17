@@ -1,16 +1,16 @@
-using System.Diagnostics.CodeAnalysis;
-using WA.DMS.LicenseFinder.Ports.Interfaces;
-using WA.DMS.LicenseFinder.Ports.Models;
+using WA.DMS.LicenseFinder.Core.Interfaces;
+using WA.DMS.LicenseFinder.Core.Models;
 using WA.DMS.LicenseFinder.Services.Helpers;
 
-namespace WA.DMS.LicenseFinder.Services.Implementation;
+namespace WA.DMS.LicenseFinder.Services.Implementations;
 
 /// <summary>
 /// Service for reading and extracting data from various file sources
 /// </summary>
-public class ReadExtractService : IReadExtract
+public class ReadExtractService(ILicenseFileProcessor fileProcessor) : IReadExtract
 {
-    private readonly ILicenseFileProcessor _fileProcessor;
+    private readonly ILicenseFileProcessor _fileProcessor = fileProcessor
+        ?? throw new ArgumentNullException(nameof(fileProcessor));
 
     /// <summary>
     /// Common header mapping for LicenseMatchResult - maps property names to Excel header names
@@ -41,18 +41,14 @@ public class ReadExtractService : IReadExtract
         { "ChangeAuditAction", "Override Action"}
     };
 
-    public ReadExtractService(ILicenseFileProcessor fileProcessor)
-    {
-        _fileProcessor = fileProcessor ?? throw new ArgumentNullException(nameof(fileProcessor));
-    }
-
     /// <summary>
     /// Reads all files starting with 'DMS_Extract' from the resources folder
     /// </summary>
     /// <returns>Combined list of DMS extract records from all matching files</returns>
     public List<DMSExtract> ReadDMSExtractFiles(bool consolidated = false)
     {
-        var allDMSRecords = new List<DMSExtract>();
+        var allDmsRecords = new List<DMSExtract>();
+        
         var dmsFiles = consolidated ? _fileProcessor.FindFilesByPattern("Consolidated")
             : _fileProcessor.FindFilesByPattern("Site");
 
@@ -60,20 +56,23 @@ public class ReadExtractService : IReadExtract
         {
             try
             {
-                var records = _fileProcessor.ExtractExcel<List<DMSExtract>>(fileName,new Dictionary<string, string>
-                {
-                    {"Permit Number", "PermitNumber"},
-                    {"Document Date", "DocumentDate"},
-                    {"Uploaded Date", "UploadDate"},
-                    {"File URL", "FileUrl"},
-                    {"File Name", "FileName"},
-                    {"File Size", "FileSize"},
-                    {"Disclosure Status", "DisclosureStatus"},
-                    {"Other Reference", "OtherReference"},
-                    {"Modified Date", "ModifiedDate"},
-                    {"File ID", "FileId"}
-                });
-                allDMSRecords.AddRange(records);
+                var records = _fileProcessor.ExtractExcel<List<DMSExtract>>(
+                    fileName,
+                    new Dictionary<string, string>
+                    {
+                        {"Permit Number", "PermitNumber"},
+                        {"Document Date", "DocumentDate"},
+                        {"Uploaded Date", "UploadDate"},
+                        {"File URL", "FileUrl"},
+                        {"File Name", "FileName"},
+                        {"File Size", "FileSize"},
+                        {"Disclosure Status", "DisclosureStatus"},
+                        {"Other Reference", "OtherReference"},
+                        {"Modified Date", "ModifiedDate"},
+                        {"File ID", "FileId"}
+                    });
+                
+                allDmsRecords.AddRange(records);
             }
             catch (Exception ex)
             {
@@ -82,7 +81,7 @@ public class ReadExtractService : IReadExtract
             }
         }
 
-        return allDMSRecords;
+        return allDmsRecords;
     }
 
     /// <summary>
@@ -91,18 +90,20 @@ public class ReadExtractService : IReadExtract
     /// <returns>Combined list of NALD extract records from all matching files</returns>
     public List<NALDExtract> ReadNALDExtractFiles()
     {
-        var allNALDRecords = new List<NALDExtract>();
+        var allNaldRecords = new List<NALDExtract>();
         var naldFiles = _fileProcessor.FindFilesByPattern("NALD_Extract");
 
         foreach (var fileName in naldFiles)
         {
             try
             {
-                var records = _fileProcessor.ExtractExcel<List<NALDExtract>>(fileName, new Dictionary<string, string>
-                {
-                    { "Licence No.", "LicNo" },
-                    { "Region", "Region" }
-                });
+                var records = _fileProcessor.ExtractExcel<List<NALDExtract>>(
+                    fileName,
+                    new Dictionary<string, string>
+                    {
+                        { "Licence No.", "LicNo" },
+                        { "Region", "Region" }
+                    });
 
                 // Enrich records with cleaned permit numbers
                 foreach (var record in records)
@@ -110,36 +111,37 @@ public class ReadExtractService : IReadExtract
                     record.PermitNo = CleanPermitNumber(record.LicNo);
                 }
 
-                allNALDRecords.AddRange(records);
+                allNaldRecords.AddRange(records);
             }
             catch (Exception ex)
             {
                 // Log warning but continue processing other files
-                Console.WriteLine($"Warning: Failed to read NALD file '{fileName}': {ex.Message}");
+                Console.WriteLine($"WARNING - Failed to read NALD file '{fileName}': {ex.Message}");
             }
         }
 
-        return allNALDRecords;
+        return allNaldRecords;
     }
 
     /// <summary>
     /// Reads Previous Iteration Matches from the resources folder
     /// </summary>
     /// <returns>Previous iteration match results</returns>
-    public List<LicenseMatchResult> ReadLastIterationMatchesFiles(bool current = false)
+    public List<LicenceMatchResult> ReadLastIterationMatchesFiles(bool current = false)
     {
-        var allPreviousIterationResults = new List<LicenseMatchResult>();
+        var allPreviousIterationResults = new List<LicenceMatchResult>();
+
         var prevIterationMatch = current ?
             _fileProcessor.FindFilesByPattern("Current_Iteration_Matches").FirstOrDefault() :
             _fileProcessor.FindFilesByPattern("Previous_Iteration_Matches").FirstOrDefault();
 
         if (prevIterationMatch != null)
         {
-            var records = _fileProcessor.ExtractExcel<List<LicenseMatchResult>>(prevIterationMatch, ReverseMapping(LicenseMatchResultHeaderMapping));
+            var records = _fileProcessor.ExtractExcel<List<LicenceMatchResult>>(prevIterationMatch, ReverseMapping(LicenseMatchResultHeaderMapping));
             allPreviousIterationResults.AddRange(records);
         }
 
-        return allPreviousIterationResults; //.Where(r => r.Region == "Anglian Region").ToList();
+        return allPreviousIterationResults;//.Where(r => r.Region == "Anglian Region").ToList();
     }
 
     /// <summary>
@@ -163,6 +165,7 @@ public class ReadExtractService : IReadExtract
                 {"LIC_SIG_DATE", "SignatureDate"}, 
                 {"FGAC_REGION_CODE", "Region"}
             });
+            
             naldMetadataResults.AddRange(records);
         }
 
@@ -174,6 +177,7 @@ public class ReadExtractService : IReadExtract
                 {"LIC_NO", "LicNo"}, 
                 {"FGAC_REGION_CODE", "Region"}
             });
+            
             naldMetadataReferenceResults.AddRange(records);
         }
 
@@ -186,6 +190,7 @@ public class ReadExtractService : IReadExtract
         {
             var licNos = aablIdToLicNoLookup[(metadataRecord.AablId, metadataRecord.Region)];
             var licNo = licNos.FirstOrDefault();
+            
             if (!string.IsNullOrEmpty(licNo))
             {
                 metadataRecord.LicNo = CleanPermitNumber(licNo);
@@ -205,16 +210,15 @@ public class ReadExtractService : IReadExtract
                     .OrderByDescending(r => SafeParseDateTime(r.SignatureDate))
                     .First())
                 .ToList();
+            
             return filteredRecords;
         }
-        else
-        {
-            // Return all records from all groups, ordered by SignatureDate within each group
-            var allRecords = groupedRecords
-                .SelectMany(group => group.OrderByDescending(r => SafeParseDateTime(r.SignatureDate)))
-                .ToList();
-            return allRecords;
-        }
+
+        // Return all records from all groups, ordered by SignatureDate within each group
+        var allRecords = groupedRecords
+            .SelectMany(group => group.OrderByDescending(r => SafeParseDateTime(r.SignatureDate)))
+            .ToList();
+        return allRecords;
     }
 
     /// <summary>
@@ -282,7 +286,6 @@ public class ReadExtractService : IReadExtract
 
         return allOverrides;
     }
-
 
     /// <summary>
     /// Reads File_Reader_Extract.xlsx file from the resources folder
@@ -403,17 +406,19 @@ public class ReadExtractService : IReadExtract
         {
             try
             {
-                var records = _fileProcessor.ExtractExcel<List<TemplateFinderResult>>(fileName, new Dictionary<string, string>
-                {
-                    {"PermitNumber", "PermitNumber"},
-                    {"FileUrl", "FileUrl"},
-                    {"NaldIssueNumber", "NaldIssueNumber"},
-                    {"SignatureDate", "SignatureDate"},
-                    {"DateOfIssue", "DateOfIssue"},
-                    {"NumberOfPages", "NumberOfPages"},
-                    {"TemplateType", "PrimaryTemplateType"},
-                    {"Template", "SecondaryTemplateType"}
-                });
+                var records = _fileProcessor.ExtractExcel<List<TemplateFinderResult>>(
+                    fileName,
+                    new Dictionary<string, string>
+                    {
+                        {"PermitNumber", "PermitNumber"},
+                        {"FileUrl", "FileUrl"},
+                        {"NaldIssueNumber", "NaldIssueNumber"},
+                        {"SignatureDate", "SignatureDate"},
+                        {"DateOfIssue", "DateOfIssue"},
+                        {"NumberOfPages", "NumberOfPages"},
+                        {"TemplateType", "PrimaryTemplateType"},
+                        {"Template", "SecondaryTemplateType"}
+                    });
 
                 // Update DateOfIssue format for all records
                 foreach (var record in records)
@@ -438,16 +443,16 @@ public class ReadExtractService : IReadExtract
     /// Reads LicenceVersionResult.xlsx file from the resources folder
     /// </summary>
     /// <returns>List of licence version records</returns>
-    public List<UnmatchedLicenseMatchResult> ReadFileVersionResultsFile()
+    public List<UnmatchedLicenceMatchResult> ReadFileVersionResultsFile()
     {
-        var allFileversionResults = new List<UnmatchedLicenseMatchResult>();
+        var allFileversionResults = new List<UnmatchedLicenceMatchResult>();
         var fileversionResults = _fileProcessor.FindFilesByPattern("LicenceVersionResults");
 
         foreach (var fileName in fileversionResults)
         {
             try
             {
-                var records = _fileProcessor.ExtractExcel<List<UnmatchedLicenseMatchResult>>(fileName, new Dictionary<string, string>
+                var records = _fileProcessor.ExtractExcel<List<UnmatchedLicenceMatchResult>>(fileName, new Dictionary<string, string>
                 {
                     {"Permit Number", "PermitNumber"},
                     {"File URL", "FileUrl"},
@@ -475,7 +480,6 @@ public class ReadExtractService : IReadExtract
         return allFileversionResults;
     }
     
-
     /// <summary>
     /// Reads all files starting with 'WaterPdfs_Inventory' from the resources folder
     /// </summary>
@@ -528,7 +532,9 @@ public class ReadExtractService : IReadExtract
     private static string CleanPermitNumber(string licNo)
     {
         if (string.IsNullOrWhiteSpace(licNo))
+        {
             return string.Empty;
+        }
 
         // Remove forward slashes and asterisks
         return licNo.Replace("/", "").Replace("*", "");

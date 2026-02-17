@@ -1,4 +1,4 @@
-namespace WA.DMS.LicenseFinder.Ports.Models;
+namespace WA.DMS.LicenseFinder.Core.Models;
 
 /// <summary>
 /// Represents download information for files not present in inventory

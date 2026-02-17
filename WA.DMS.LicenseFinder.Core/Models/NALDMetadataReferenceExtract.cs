@@ -1,4 +1,4 @@
-namespace WA.DMS.LicenseFinder.Ports.Models;
+namespace WA.DMS.LicenseFinder.Core.Models;
 
 /// <summary>
 /// Represents NALD (National Abstraction Licensing Database) metadata reference extract data that can be extracted from CSV files.

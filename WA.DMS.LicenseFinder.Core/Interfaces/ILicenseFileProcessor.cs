@@ -1,4 +1,4 @@
-namespace WA.DMS.LicenseFinder.Ports.Interfaces;
+namespace WA.DMS.LicenseFinder.Core.Interfaces;
 
 /// <summary>
 /// Provides methods for processing license files, including extraction from and generation of Excel and CSV files.

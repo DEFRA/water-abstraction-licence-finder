@@ -1,9 +1,9 @@
-namespace WA.DMS.LicenseFinder.Ports.Models;
+namespace WA.DMS.LicenseFinder.Core.Models;
 
 /// <summary>
 /// Represents the result of license file matching process
 /// </summary>
-public class LicenseMatchResult
+public class LicenceMatchResult
 {
     /// <summary>
     /// The permit number from NALD extract

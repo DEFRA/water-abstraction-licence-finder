@@ -1,9 +1,8 @@
 using FluentAssertions;
-using LicenseFinder.Services;
-using LicenseFinder.Services.Rules;
 using Microsoft.Extensions.DependencyInjection;
-using WA.DMS.LicenseFinder.Ports.Interfaces;
-using WA.DMS.LicenseFinder.Services.Implementation;
+using WA.DMS.LicenseFinder.Core.Interfaces;
+using WA.DMS.LicenseFinder.Services.Implementations;
+using WA.DMS.LicenseFinder.Services.Rules;
 using Xunit;
 
 namespace WA.DMS.LicenseFinder.Services.UnitTests;
@@ -140,7 +139,7 @@ public class ServiceCollectionExtensionsTests
         var serviceProvider = services.BuildServiceProvider();
 
         // Act
-        var matchingRules = serviceProvider.GetServices<ILicenseMatchingRule>();
+        var matchingRules = serviceProvider.GetServices<ILicenseMatchingRule>().ToList();
 
         // Assert
         matchingRules.Should().NotBeNull();

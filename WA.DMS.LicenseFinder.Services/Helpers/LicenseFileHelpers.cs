@@ -13,7 +13,9 @@ public static class LicenseFileHelpers
     public static string CleanPermitNumber(string licNo)
     {
         if (string.IsNullOrWhiteSpace(licNo))
+        {
             return string.Empty;
+        }
 
         // Remove forward slashes and asterisks
         return licNo.Replace("/", "").Replace("*", "");
@@ -33,6 +35,7 @@ public static class LicenseFileHelpers
         }
 
         var dateString =  DateFormatConsistent(dateString1);
+        
         // Try to parse various date formats
         string[] formats = {
             "ddMMMyyyy",        // 27Dec2017
@@ -64,6 +67,7 @@ public static class LicenseFileHelpers
         // If all parsing attempts fail, return the original string
         return string.Empty;
     }
+    
     private static void ReplaceIfContains(string input, string match, string replaceWith, out string output)
     {
         output = input;
@@ -134,22 +138,19 @@ public static class LicenseFileHelpers
     {
         // The Uri class helps handle URL decoding and standardisation first
         // before using Path methods. This is optional but helpful for complex URLs.
-        if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
         {
-            // Get the local path component (e.g., "/path/to/file.txt")
-            string localPath = uri.LocalPath;
-
-            // Use Path.GetFileName to extract the final part
-            string filename = Path.GetFileName(localPath);
-            
-            return filename;
-        }
-        else
-        {
-            // Handle case where input isn't a valid absolute URI
-            // Fall back to just using Path.GetFileName directly on the input string
             return Path.GetFileName(url);
         }
-    }
+        
+        // Get the local path component (e.g., "/path/to/file.txt")
+        var localPath = uri.LocalPath;
 
+        // Use Path.GetFileName to extract the final part
+        var filename = Path.GetFileName(localPath);
+
+        // Handle case where input isn't a valid absolute URI
+        // Fall back to just using Path.GetFileName directly on the input string
+        return filename;        
+    }
 }

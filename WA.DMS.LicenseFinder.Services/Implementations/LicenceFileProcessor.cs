@@ -3,12 +3,12 @@ using System.Reflection;
 using ExcelDataReader;
 using System.Text;
 using System.Data;
-using WA.DMS.LicenseFinder.Ports.Interfaces;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
+using WA.DMS.LicenseFinder.Core.Interfaces;
 
-namespace WA.DMS.LicenseFinder.Services.Implementation;
+namespace WA.DMS.LicenseFinder.Services.Implementations;
 
 /// <inheritdoc/>
 public class LicenseFileProcessor : ILicenseFileProcessor
@@ -16,7 +16,9 @@ public class LicenseFileProcessor : ILicenseFileProcessor
     public T ExtractExcel<T>(string fileName, Dictionary<string, string>? headerMapping = null)
     {
         if (string.IsNullOrWhiteSpace(fileName))
+        {
             throw new ArgumentException("File name cannot be null or empty", nameof(fileName));
+        }
 
         // Register encoding provider for ExcelDataReader
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
@@ -25,9 +27,11 @@ public class LicenseFileProcessor : ILicenseFileProcessor
         var filePath = FindFile(fileName, ".xlsx", ".xls");
 
         Stream stream;
+        
         if (filePath.StartsWith("embedded:"))
         {
-            var embeddedFileName = filePath.Substring("embedded:".Length);
+            var embeddedFileName = filePath["embedded:".Length..];
+            
             stream = GetEmbeddedResourceStream(embeddedFileName) 
                 ?? throw new FileNotFoundException($"Embedded resource '{embeddedFileName}' not found.");
         }
@@ -39,7 +43,6 @@ public class LicenseFileProcessor : ILicenseFileProcessor
         using (stream)
         using (var reader = ExcelReaderFactory.CreateReader(stream))
         {
-
             var dataSet = reader.AsDataSet(new ExcelDataSetConfiguration()
             {
                 ConfigureDataTable = _ => new ExcelDataTableConfiguration()
@@ -49,11 +52,16 @@ public class LicenseFileProcessor : ILicenseFileProcessor
             });
 
             if (dataSet.Tables.Count == 0)
+            {
                 throw new InvalidOperationException("No worksheets found in the Excel file.");
+            }
 
             var dataTable = dataSet.Tables[0];
+            
             if (dataTable.Rows.Count == 0)
+            {
                 throw new InvalidOperationException("Excel file is empty.");
+            }
 
             // Determine target type for mapping
             var isCollection = typeof(T).IsGenericType && typeof(T).GetGenericTypeDefinition() == typeof(List<>);
@@ -65,6 +73,7 @@ public class LicenseFileProcessor : ILicenseFileProcessor
 
             // Map all rows to objects
             var items = new List<object>();
+            
             foreach (DataRow row in dataTable.Rows)
             {
                 var item = MapRowToObject(row, targetType, columnMapping);
@@ -75,26 +84,29 @@ public class LicenseFileProcessor : ILicenseFileProcessor
             if (isCollection)
             {
                 var list = (IList)Activator.CreateInstance(typeof(T))!;
+                
                 foreach (var item in items)
                     list.Add(item);
+                
                 return (T)list;
             }
-            else
-            {
-                return items.Count > 0 ? (T)items[0] : Activator.CreateInstance<T>();
-            }
+
+            return items.Count > 0 ? (T)items[0] : Activator.CreateInstance<T>();
         }
     }
     
     public T ExtractCsv<T>(string fileName, Dictionary<string, string>? headerMapping = null)
     {
         if (string.IsNullOrWhiteSpace(fileName))
+        {
             throw new ArgumentException("File name cannot be null or empty", nameof(fileName));
+        }
 
         // Find file in resources folder or embedded resources
         var filePath = FindFile(fileName, ".csv");
 
         string[] lines;
+
         if (filePath.StartsWith("embedded:"))
         {
             var embeddedFileName = filePath.Substring("embedded:".Length);
@@ -139,10 +151,8 @@ public class LicenseFileProcessor : ILicenseFileProcessor
                 list.Add(item);
             return (T)list;
         }
-        else
-        {
-            return items.Count > 0 ? (T)items[0] : Activator.CreateInstance<T>();
-        }
+
+        return items.Count > 0 ? (T)items[0] : Activator.CreateInstance<T>();
     }
 
     public string GenerateExcel<T>(T data, string fileName, Dictionary<string, string> headerMapping)
@@ -185,17 +195,26 @@ public class LicenseFileProcessor : ILicenseFileProcessor
         return outputPath;
     }
 
-    public string GenerateExcel(IEnumerable<(string SheetName, Dictionary<string, string>? HeaderMapping, object Data)> worksheetData, string fileName)
+    public string GenerateExcel(
+        IEnumerable<(string SheetName, Dictionary<string, string>? HeaderMapping, object Data)> worksheetData,
+        string fileName)
     {
         if (worksheetData == null)
+        {
             throw new ArgumentNullException(nameof(worksheetData));
+        }
 
         var worksheets = worksheetData.ToList();
+        
         if (worksheets.Count == 0)
+        {
             throw new ArgumentException("At least one worksheet must be provided", nameof(worksheetData));
+        }
 
         if (string.IsNullOrWhiteSpace(fileName))
+        {
             throw new ArgumentException("File name cannot be null or empty", nameof(fileName));
+        }
 
         // Ensure the file has .xlsx extension
         if (!fileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
@@ -215,7 +234,9 @@ public class LicenseFileProcessor : ILicenseFileProcessor
     public List<string> FindFilesByPattern(string pattern)
     {
         if (string.IsNullOrWhiteSpace(pattern))
+        {
             throw new ArgumentException("Pattern cannot be null or empty", nameof(pattern));
+        }
 
         var matchingFiles = new List<string>();
         
@@ -244,7 +265,9 @@ public class LicenseFileProcessor : ILicenseFileProcessor
                 Assembly.GetExecutingAssembly(),
                 Assembly.GetCallingAssembly(),
                 Assembly.GetEntryAssembly()
-            }.Where(a => a != null).Distinct();
+            }
+                .Where(a => a != null)
+                .Distinct();
 
             foreach (var assembly in assemblies)
             {
@@ -254,8 +277,11 @@ public class LicenseFileProcessor : ILicenseFileProcessor
                 {
                     // Extract just the filename from the resource name
                     var fileName = Path.GetFileName(resourceName);
+
                     if (string.IsNullOrEmpty(fileName))
+                    {
                         fileName = resourceName.Split('.').LastOrDefault();
+                    }
 
                     if (!string.IsNullOrEmpty(fileName) && 
                         (fileName.Contains(pattern, StringComparison.OrdinalIgnoreCase) ||
@@ -266,8 +292,9 @@ public class LicenseFileProcessor : ILicenseFileProcessor
                 }
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Console.WriteLine("ERROR - " + ex.Message);
             // If embedded resource search fails, return empty list
         }
 
@@ -587,7 +614,9 @@ public class LicenseFileProcessor : ILicenseFileProcessor
     /// <param name="worksheets">Collection of tuples containing (sheetName, headerMapping, data)</param>
     /// <param name="filePath">Full path where the Excel file will be created</param>
     /// <exception cref="InvalidOperationException">Thrown when unable to create the Excel file</exception>
-    private static void CreateExcelFileWithWorksheets(List<(string SheetName, Dictionary<string, string>? HeaderMapping, object Data)> worksheets, string filePath)
+    private static void CreateExcelFileWithWorksheets(
+        List<(string SheetName, Dictionary<string, string>? HeaderMapping, object Data)> worksheets,
+        string filePath)
     {
         try
         {
@@ -602,6 +631,7 @@ public class LicenseFileProcessor : ILicenseFileProcessor
             var sheets = workbookPart.Workbook.AppendChild(new Sheets());
 
             uint sheetId = 1;
+            
             foreach (var (sheetName, headerMapping, data) in worksheets)
             {
                 // Validate sheet name
@@ -612,12 +642,13 @@ public class LicenseFileProcessor : ILicenseFileProcessor
                 worksheetPart.Worksheet = new Worksheet(new SheetData());
 
                 // Add sheet to workbook
-                var sheet = new Sheet()
+                var sheet = new Sheet
                 {
                     Id = workbookPart.GetIdOfPart(worksheetPart),
                     SheetId = sheetId++,
                     Name = validSheetName
                 };
+                
                 sheets.Append(sheet);
 
                 // Process data for this worksheet
@@ -626,18 +657,20 @@ public class LicenseFileProcessor : ILicenseFileProcessor
                 // Determine data type and convert to items list
                 var (items, itemType) = ProcessWorksheetData(data);
 
-                if (items.Count > 0)
+                if (items.Count <= 0)
                 {
-                    // Get properties and create headers
-                    var properties = GetWritableProperties(itemType, headerMapping);
-                    var headers = CreateHeaders(properties, headerMapping);
-
-                    // Add header row
-                    AddHeaderRow(sheetData!, headers);
-
-                    // Add data rows
-                    AddDataRows(sheetData!, items, properties, headerMapping);
+                    continue;
                 }
+                
+                // Get properties and create headers
+                var properties = GetWritableProperties(itemType, headerMapping);
+                var headers = CreateHeaders(properties, headerMapping);
+
+                // Add header row
+                AddHeaderRow(sheetData!, headers);
+
+                // Add data rows
+                AddDataRows(sheetData!, items, properties, headerMapping);
             }
 
             // Save the document

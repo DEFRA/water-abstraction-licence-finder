@@ -1,10 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>LicenseFinder.Services</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\WA.DMS.LicenseFinder.Ports\WA.DMS.LicenseFinder.Ports.csproj" />
+    <ProjectReference Include="..\WA.DMS.LicenseFinder.Core\WA.DMS.LicenseFinder.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

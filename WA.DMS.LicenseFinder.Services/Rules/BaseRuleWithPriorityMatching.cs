@@ -1,7 +1,7 @@
-using WA.DMS.LicenseFinder.Ports.Interfaces;
-using WA.DMS.LicenseFinder.Ports.Models;
+using WA.DMS.LicenseFinder.Core.Interfaces;
+using WA.DMS.LicenseFinder.Core.Models;
 
-namespace LicenseFinder.Services.Rules;
+namespace WA.DMS.LicenseFinder.Services.Rules;
 
 /// <summary>
 /// Abstract base class for license matching rules that use priority-based matching
@@ -36,16 +36,20 @@ public abstract class BaseRuleWithPriorityMatching : ILicenseMatchingRule
 
         // Input validation
         if (string.IsNullOrWhiteSpace(naldRecord.LicNo) || string.IsNullOrWhiteSpace(naldRecord.PermitNo))
+        {
             return null;
+        }
 
         // Get matching records using the specific rule's logic
-        var matchingRecords = GetMatchingRecords(naldRecord, dmsLookups);
+        var matchingRecords = GetMatchingRecords(naldRecord, dmsLookups).ToList();
 
-        if (matchingRecords == null || !matchingRecords.Any())
+        if (!matchingRecords.Any())
+        {
             return null;
+        }
 
         // Apply priority matching logic
-        var priorityResult = RuleHelpers.FindPriorityMatch(matchingRecords.ToList(), GetRuleBaseName());
+        var priorityResult = RuleHelpers.FindPriorityMatch(matchingRecords, GetRuleBaseName());
 
         // Update state based on results
         _dynamicRuleName = priorityResult.ruleName;

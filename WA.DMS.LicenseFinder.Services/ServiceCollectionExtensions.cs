@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
-using WA.DMS.LicenseFinder.Ports.Interfaces;
-using WA.DMS.LicenseFinder.Services.Implementation;
-using LicenseFinder.Services.Rules;
+using WA.DMS.LicenseFinder.Core.Interfaces;
+using WA.DMS.LicenseFinder.Services.Implementations;
+using WA.DMS.LicenseFinder.Services.Rules;
 
 namespace WA.DMS.LicenseFinder.Services;
 

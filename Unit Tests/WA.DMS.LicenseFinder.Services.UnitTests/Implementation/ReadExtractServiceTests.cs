@@ -1,8 +1,8 @@
 using FluentAssertions;
 using Moq;
-using WA.DMS.LicenseFinder.Ports.Interfaces;
-using WA.DMS.LicenseFinder.Ports.Models;
-using WA.DMS.LicenseFinder.Services.Implementation;
+using WA.DMS.LicenseFinder.Core.Interfaces;
+using WA.DMS.LicenseFinder.Core.Models;
+using WA.DMS.LicenseFinder.Services.Implementations;
 using Xunit;
 
 namespace WA.DMS.LicenseFinder.Services.UnitTests.Implementation;

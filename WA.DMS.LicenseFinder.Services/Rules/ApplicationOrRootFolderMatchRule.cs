@@ -1,9 +1,6 @@
-using WA.DMS.LicenseFinder.Ports.Interfaces;
-using WA.DMS.LicenseFinder.Ports.Models;
+using WA.DMS.LicenseFinder.Core.Models;
 
-using WA.DMS.LicenseFinder.Services.Implementation;
-
-namespace LicenseFinder.Services.Rules;
+namespace WA.DMS.LicenseFinder.Services.Rules;
 
 /// <summary>
 /// Rule that matches NALD license numbers with DMS files in Application or Root folders with license-related names.
@@ -20,10 +17,12 @@ public class ApplicationOrRootFolderMatchRule : BaseRuleWithPriorityMatching
     protected override IEnumerable<DMSExtract> GetMatchingRecords(NALDExtract naldRecord, DMSLookupIndexes dmsLookups)
     {
         var permitNo = naldRecord.PermitNo;
+        
         if (dmsLookups.ByPermitNumber.TryGetValue(permitNo, out var matches))
         {
             return matches.Where(dms => RuleHelpers.IsInApplicationAssociatedDocsFolder(dms.FileUrl));
         }
-        return Enumerable.Empty<DMSExtract>();
+        
+        return [];
     }
 }

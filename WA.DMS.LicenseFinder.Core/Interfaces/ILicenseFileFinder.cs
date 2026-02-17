@@ -1,6 +1,4 @@
-using WA.DMS.LicenseFinder.Ports.Models;
-
-namespace WA.DMS.LicenseFinder.Ports.Interfaces;
+namespace WA.DMS.LicenseFinder.Core.Interfaces;
 
 /// <summary>
 /// Interface for finding and matching license files
@@ -11,7 +9,7 @@ public interface ILicenseFileFinder
     /// Finds and matches license files, generating an Excel report with results
     /// </summary>
     /// <returns>The path to the generated Excel results file</returns>
-    string FindLicenseFile();
+    string FindLicenceFile();
     
     /// <summary>
     /// Finds all potential duplicates in DMS extract
@@ -19,7 +17,7 @@ public interface ILicenseFileFinder
     /// <returns>The path to the generated Excel results file</returns>
     string FindDuplicateLicenseFiles();
 
-    string BuildFileTemplateIdentitificationExtract();
+    string BuildFileTemplateIdentificationExtract();
 
     string BuildDownloadInfoExcel(string region = "");
 

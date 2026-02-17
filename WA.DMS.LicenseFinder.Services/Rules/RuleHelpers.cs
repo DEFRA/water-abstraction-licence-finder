@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
-using WA.DMS.LicenseFinder.Ports.Models;
+using WA.DMS.LicenseFinder.Core.Models;
 
-namespace LicenseFinder.Services.Rules;
+namespace WA.DMS.LicenseFinder.Services.Rules;
 
 /// <summary>
 /// Static helper class containing shared methods for license matching rules
@@ -25,7 +25,9 @@ public static class RuleHelpers
         var priorityMatches = matchingRecords.Where(priorityFilter).ToList();
 
         if (!priorityMatches.Any())
+        {
             return null;
+        }
 
         var (document, hasSameDateDuplicates) = SelectLatestDocument(priorityMatches);
 
@@ -42,9 +44,9 @@ public static class RuleHelpers
         // Define priority levels with their filters and labels
         var priorityLevels = new[]
         {
-            (filter: new Func<DMSExtract, bool>(dms => ContainsLicenseVariationPriority1(dms.FileName)), label: "Priority 1"),
-            (filter: new Func<DMSExtract, bool>(dms => ContainsLicenseVariationPriority2(dms.FileName)), label: "Priority 2"),
-            (filter: new Func<DMSExtract, bool>(dms => ContainsLicenseVariationPriority3(dms.FileName)), label: "Priority 3"),
+            (filter: dms => ContainsLicenseVariationPriority1(dms.FileName), label: "Priority 1"),
+            (filter: dms => ContainsLicenseVariationPriority2(dms.FileName), label: "Priority 2"),
+            (filter: dms => ContainsLicenseVariationPriority3(dms.FileName), label: "Priority 3"),
             (filter: new Func<DMSExtract, bool>(dms => ContainsLicenseVariationPriority4(dms.FileName, dms.PermitNumber)), label: "Permit Number Match - Priority 4")
         };
 
@@ -52,6 +54,7 @@ public static class RuleHelpers
         foreach (var (filter, label) in priorityLevels)
         {
             var result = ProcessPriorityLevel(matchingRecords, filter, ruleName, label);
+            
             if (result.HasValue)
             {
                 return result.Value;
@@ -67,10 +70,12 @@ public static class RuleHelpers
     /// </summary>
     /// <param name="fileName">The filename to check</param>
     /// <returns>True if the filename should be excluded, false otherwise</returns>
-    public static bool ShouldExcludeFileName(string fileName)
+    private static bool ShouldExcludeFileName(string fileName)
     {
         if (string.IsNullOrWhiteSpace(fileName))
+        {
             return false;
+        }
 
         var exclusionTerms = new[] { "letter", "schedule", "addendum" };
 
@@ -82,14 +87,18 @@ public static class RuleHelpers
     /// </summary>
     /// <param name="fileName">The filename to check</param>
     /// <returns>True if the filename contains license variations, false otherwise</returns>
-    public static bool ContainsLicenseVariationPriority1(string fileName)
+    private static bool ContainsLicenseVariationPriority1(string fileName)
     {
         if (string.IsNullOrWhiteSpace(fileName))
-            return false;
+        {
+            return false;            
+        }
 
         // Exclude if filename contains exclusion terms
         if (ShouldExcludeFileName(fileName))
+        {
             return false;
+        }
 
         // List of exact terms and their common misspellings to match
         var licenseTerms = new[]
@@ -110,14 +119,18 @@ public static class RuleHelpers
     /// </summary>
     /// <param name="fileName">The filename to check</param>
     /// <returns>True if the filename contains license variations, false otherwise</returns>
-    public static bool ContainsLicenseVariationPriority2(string fileName)
+    private static bool ContainsLicenseVariationPriority2(string fileName)
     {
         if (string.IsNullOrWhiteSpace(fileName))
+        {
             return false;
+        }
 
         // Exclude if filename contains exclusion terms
         if (ShouldExcludeFileName(fileName))
+        {
             return false;
+        }
 
         // List of exact terms to match for Priority 2
         var licenseTerms = new[]
@@ -145,10 +158,12 @@ public static class RuleHelpers
     /// </summary>
     /// <param name="fileName">The filename to check</param>
     /// <returns>True if the filename contains Abstraction Licence variations, false otherwise</returns>
-    public static bool ContainsLicenseVariationPriority3(string fileName)
+    private static bool ContainsLicenseVariationPriority3(string fileName)
     {
         if (string.IsNullOrWhiteSpace(fileName))
+        {
             return false;
+        }
 
         // Exclude if filename contains exclusion terms
         if (ShouldExcludeFileName(fileName))
@@ -165,12 +180,16 @@ public static class RuleHelpers
     /// Checks if a filename contains general license variations priority 4
     /// </summary>
     /// <param name="fileName">The filename to check</param>
+    /// <param name="permitNo"></param>
     /// <returns>True if the filename contains general license variations, false otherwise</returns>
     public static bool ContainsLicenseVariationPriority4(string fileName, string permitNo)
     {
         // Exclude if filename contains exclusion terms
         if (ShouldExcludeFileName(fileName))
+        {
             return false;
+        }
+
         return ContainsPermitNumberPattern(fileName, permitNo);
     }
 
@@ -182,7 +201,9 @@ public static class RuleHelpers
     private static string? GetSecondToLastPathSegment(string fileUrl)
     {
         if (string.IsNullOrWhiteSpace(fileUrl))
+        {
             return null;
+        }
 
         try
         {
@@ -192,7 +213,9 @@ public static class RuleHelpers
 
             // We need at least 2 segments to get the second-to-last one
             if (pathSegments.Length < 2)
+            {
                 return null;
+            }
 
             // Get the second-to-last path segment (exclude the filename which is the last segment)
             return pathSegments[pathSegments.Length - 2];
@@ -203,7 +226,9 @@ public static class RuleHelpers
             var pathSegments = fileUrl.Split('/', StringSplitOptions.RemoveEmptyEntries);
 
             if (pathSegments.Length < 2)
+            {
                 return null;
+            }
 
             return pathSegments[pathSegments.Length - 2];
         }
@@ -219,7 +244,9 @@ public static class RuleHelpers
         var secondToLastFolder = GetSecondToLastPathSegment(fileUrl);
 
         if (string.IsNullOrWhiteSpace(secondToLastFolder))
+        {
             return false;
+        }
 
         // Check if the second-to-last folder contains Permit variations
         return secondToLastFolder.Contains("Permit", StringComparison.OrdinalIgnoreCase) ||
@@ -237,7 +264,9 @@ public static class RuleHelpers
         var secondToLastFolder = GetSecondToLastPathSegment(fileUrl);
 
         if (string.IsNullOrWhiteSpace(secondToLastFolder))
+        {
             return false;
+        }
 
         // Pattern to match "Application & Associated Docs" and variations
         var applicationDocsPattern = @"^application\s*&?\s*associated\s*docs?$";
@@ -245,8 +274,8 @@ public static class RuleHelpers
         // Pattern to match "LIB" followed by numbers and forward slash (e.g., LIB1/, LIB7/, etc.)
         var libPattern = @"^lib\d+/$";
 
-        return Regex.IsMatch(secondToLastFolder, applicationDocsPattern, RegexOptions.IgnoreCase) ||
-               Regex.IsMatch(secondToLastFolder, libPattern, RegexOptions.IgnoreCase);
+        return Regex.IsMatch(secondToLastFolder, applicationDocsPattern, RegexOptions.IgnoreCase)
+            || Regex.IsMatch(secondToLastFolder, libPattern, RegexOptions.IgnoreCase);
     }
 
     /// <summary>
@@ -255,10 +284,12 @@ public static class RuleHelpers
     /// <param name="fileName">The filename to search in</param>
     /// <param name="permitNo">The permit number to search for (e.g., "633303G0038")</param>
     /// <returns>True if the filename contains the permit number in some recognizable form</returns>
-    public static bool ContainsPermitNumberPattern(string fileName, string permitNo)
+    private static bool ContainsPermitNumberPattern(string fileName, string permitNo)
     {
         if (string.IsNullOrWhiteSpace(fileName) || string.IsNullOrWhiteSpace(permitNo))
+        {
             return false;
+        }
 
         // Remove any non-alphanumeric characters from filename for comparison
         var cleanFileName = Regex.Replace(fileName, @"[^a-zA-Z0-9]", "", RegexOptions.IgnoreCase);
@@ -266,19 +297,26 @@ public static class RuleHelpers
         // Strategy 1: Exact match of cleaned permit number at start
         if (cleanFileName.StartsWith(permitNo, StringComparison.OrdinalIgnoreCase))
         {
-            var remainingAfterPermit = cleanFileName.Substring(permitNo.Length);
+            var remainingAfterPermit = cleanFileName[permitNo.Length..];
+
             if (IsValidRemainingContent(remainingAfterPermit))
+            {
                 return true;
+            }
         }
 
         // Strategy 2: Match with common separators (-, _, /, \, space, etc.) at start
         var permitWithSeparators = "^" + string.Join(@"[\-_/\\\s]*", permitNo.ToCharArray());
         var match = Regex.Match(fileName, permitWithSeparators, RegexOptions.IgnoreCase);
+        
         if (match.Success)
         {
             var remainingAfterMatch = fileName.Substring(match.Length);
+
             if (IsValidRemainingContentWithSeparators(remainingAfterMatch))
+            {
                 return true;
+            }
         }
 
         // Strategy 3: Enhanced pattern matching for segmented numbers at start
@@ -287,11 +325,15 @@ public static class RuleHelpers
         if (!string.IsNullOrEmpty(segmentedPattern))
         {
             var segmentedMatch = Regex.Match(fileName, "^" + segmentedPattern, RegexOptions.IgnoreCase);
+            
             if (segmentedMatch.Success)
             {
                 var remainingAfterMatch = fileName.Substring(segmentedMatch.Length);
+                
                 if (IsValidRemainingContentWithSeparators(remainingAfterMatch))
+                {
                     return true;
+                }
             }
         }
 
@@ -300,27 +342,38 @@ public static class RuleHelpers
         {
             // Split permit number into meaningful chunks and check each at start
             var chunks = GetPermitNumberChunks(permitNo);
+            
             foreach (var chunk in chunks)
             {
-                if (chunk.Length >= 4 && cleanFileName.StartsWith(chunk, StringComparison.OrdinalIgnoreCase))
+                if (chunk.Length < 4 || !cleanFileName.StartsWith(chunk, StringComparison.OrdinalIgnoreCase))
                 {
-                    var remainingAfterChunk = cleanFileName.Substring(chunk.Length);
-                    if (IsValidRemainingContent(remainingAfterChunk))
-                        return true;
+                    continue;
+                }
+                
+                var remainingAfterChunk = cleanFileName.Substring(chunk.Length);
+
+                if (IsValidRemainingContent(remainingAfterChunk))
+                {
+                    return true;
                 }
             }
         }
 
         // Strategy 5: Pattern-based matching for common permit number formats at start
         var flexiblePattern = CreateFlexiblePermitPattern(permitNo);
+        
         if (!string.IsNullOrEmpty(flexiblePattern))
         {
             var flexibleMatch = Regex.Match(fileName, "^" + flexiblePattern, RegexOptions.IgnoreCase);
+            
             if (flexibleMatch.Success)
             {
                 var remainingAfterMatch = fileName.Substring(flexibleMatch.Length);
+
                 if (IsValidRemainingContentWithSeparators(remainingAfterMatch))
+                {
                     return true;
+                }
             }
         }
 
@@ -335,7 +388,9 @@ public static class RuleHelpers
     private static bool IsValidRemainingContent(string remaining)
     {
         if (string.IsNullOrEmpty(remaining))
+        {
             return true;
+        }
 
         // Only allow numbers in the remaining content
         return Regex.IsMatch(remaining.Replace(".pdf", string.Empty, StringComparison.OrdinalIgnoreCase), @"^\d*$");
@@ -349,7 +404,9 @@ public static class RuleHelpers
     private static bool IsValidRemainingContentWithSeparators(string remaining)
     {
         if (string.IsNullOrEmpty(remaining))
+        {
             return true;
+        }
 
         // Only allow spaces and numbers in the remaining content
         return Regex.IsMatch(remaining.Replace(".pdf", string.Empty, StringComparison.OrdinalIgnoreCase), @"^[\s\d]*$");
@@ -360,20 +417,20 @@ public static class RuleHelpers
     /// </summary>
     /// <param name="permitNo">The permit number to chunk</param>
     /// <returns>List of chunks that can be used for partial matching</returns>
-    public static List<string> GetPermitNumberChunks(string permitNo)
+    private static List<string> GetPermitNumberChunks(string permitNo)
     {
         var chunks = new List<string>();
 
         // Extract numeric sequences (4+ digits)
         var numericChunks = Regex.Matches(permitNo, @"\d{4,}")
-            .Cast<Match>()
             .Select(m => m.Value);
+        
         chunks.AddRange(numericChunks);
 
         // Extract alphanumeric sequences (4+ characters)
         var alphanumericChunks = Regex.Matches(permitNo, @"[a-zA-Z0-9]{4,}")
-            .Cast<Match>()
             .Select(m => m.Value);
+        
         chunks.AddRange(alphanumericChunks);
 
         // Get the last 6 characters if permit is long enough
@@ -397,10 +454,12 @@ public static class RuleHelpers
     /// </summary>
     /// <param name="permitNo">The permit number to create a pattern for</param>
     /// <returns>A regex pattern that matches segmented variations of the permit number</returns>
-    public static string CreateSegmentedPermitPattern(string permitNo)
+    private static string CreateSegmentedPermitPattern(string permitNo)
     {
         if (string.IsNullOrWhiteSpace(permitNo) || permitNo.Length < 6)
+        {
             return string.Empty;
+        }
 
         var patterns = new List<string>();
 
@@ -412,7 +471,7 @@ public static class RuleHelpers
         if (permitNo.Length >= 8)
         {
             // Try different two-digit combinations
-            for (int firstSegment = 1; firstSegment <= 3 && firstSegment < permitNo.Length; firstSegment++)
+            for (var firstSegment = 1; firstSegment <= 3 && firstSegment < permitNo.Length; firstSegment++)
             {
                 var segments = new List<string>();
                 var remaining = permitNo;
@@ -451,16 +510,18 @@ public static class RuleHelpers
     /// </summary>
     /// <param name="permitNo">The permit number to create a pattern for</param>
     /// <returns>A regex pattern that matches the permit number in various formats</returns>
-    public static string CreateFlexiblePermitPattern(string permitNo)
+    private static string CreateFlexiblePermitPattern(string permitNo)
     {
         if (string.IsNullOrWhiteSpace(permitNo))
+        {
             return string.Empty;
+        }
 
         // Create pattern that allows for separators between groups of characters
         var chars = permitNo.ToCharArray();
         var patternParts = new List<string>();
 
-        for (int i = 0; i < chars.Length; i++)
+        for (var i = 0; i < chars.Length; i++)
         {
             var escapedChar = Regex.Escape(chars[i].ToString());
             patternParts.Add(escapedChar);
@@ -481,7 +542,7 @@ public static class RuleHelpers
     /// </summary>
     /// <param name="dmsRecords">Collection of DMS records to select from</param>
     /// <returns>Tuple containing the latest DMS record (or null) and whether duplicates with same dates exist</returns>
-    public static (DMSExtract? document, bool hasSameDateDuplicates) SelectLatestDocument(IEnumerable<DMSExtract> dmsRecords)
+    private static (DMSExtract? document, bool hasSameDateDuplicates) SelectLatestDocument(IEnumerable<DMSExtract> dmsRecords)
     {
         var recordsList = dmsRecords?.ToList();
 
@@ -503,9 +564,8 @@ public static class RuleHelpers
 
         // Check if there are multiple records with the same latest dates
         var duplicatesWithSameDates = orderedRecords
-            .Where(r => GetSafeDateTime(r.DocumentDate) == latestDocDate && 
-                       GetSafeDateTime(r.UploadDate) == latestUploadDate)
-            .Count() > 1;
+            .Count(r => GetSafeDateTime(r.DocumentDate) == latestDocDate
+                && GetSafeDateTime(r.UploadDate) == latestUploadDate) > 1;
 
         return (latestRecord, duplicatesWithSameDates);
     }
@@ -517,10 +577,12 @@ public static class RuleHelpers
     /// </summary>
     /// <param name="dateString">The string date to convert</param>
     /// <returns>DateTime.MinValue if null/empty/unparseable, otherwise the parsed DateTime value</returns>
-    public static DateTime GetSafeDateTime(string dateString)
+    private static DateTime GetSafeDateTime(string dateString)
     {
         if (string.IsNullOrWhiteSpace(dateString))
+        {
             return DateTime.MinValue;
+        }
 
         // Common date formats to try parsing
         var dateFormats = new[]

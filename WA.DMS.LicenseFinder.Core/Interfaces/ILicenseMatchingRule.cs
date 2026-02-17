@@ -1,6 +1,6 @@
-using WA.DMS.LicenseFinder.Ports.Models;
+using WA.DMS.LicenseFinder.Core.Models;
 
-namespace WA.DMS.LicenseFinder.Ports.Interfaces;
+namespace WA.DMS.LicenseFinder.Core.Interfaces;
 
 /// <summary>
 /// Interface for implementing license matching rules

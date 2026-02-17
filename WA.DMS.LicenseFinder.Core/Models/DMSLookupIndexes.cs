@@ -1,4 +1,4 @@
-namespace WA.DMS.LicenseFinder.Ports.Models;
+namespace WA.DMS.LicenseFinder.Core.Models;
 
 /// <summary>
 /// Container for various lookup dictionaries to optimize DMS record searching
