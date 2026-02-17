@@ -10,22 +10,22 @@ namespace WA.DMS.LicenceFinder.Services.UnitTests.Implementation;
 /// <summary>
 /// Unit tests for ReadExtractService class
 /// </summary>
-public class ReadExtractServiceTests
+public class EmbeddedFileReadExtractServiceTests
 {
     private readonly Mock<ILicenceFileProcessor> _mockFileProcessor;
-    private readonly ReadExtractService _readExtractService;
+    private readonly EmbeddedFileReadExtractService _embeddedFileReadExtractService;
 
-    public ReadExtractServiceTests()
+    public EmbeddedFileReadExtractServiceTests()
     {
         _mockFileProcessor = new Mock<ILicenceFileProcessor>();
-        _readExtractService = new ReadExtractService(_mockFileProcessor.Object);
+        _embeddedFileReadExtractService = new EmbeddedFileReadExtractService(_mockFileProcessor.Object);
     }
 
     [Fact]
     public void Constructor_WithNullFileProcessor_ShouldThrowArgumentNullException()
     {
         // Act & Assert
-        var act = () => new ReadExtractService(null!);
+        var act = () => new EmbeddedFileReadExtractService(null!);
         act.Should().Throw<ArgumentNullException>().WithParameterName("fileProcessor");
     }
 
@@ -44,7 +44,7 @@ public class ReadExtractServiceTests
             .Returns(expectedRecords);
 
         // Act
-        var result = _readExtractService.ReadDMSExtractFiles();
+        var result = _embeddedFileReadExtractService.ReadDmsExtractFiles();
 
         // Assert
         result.Should().BeEquivalentTo(expectedRecords);
@@ -67,7 +67,7 @@ public class ReadExtractServiceTests
             .Returns(rawRecords);
 
         // Act
-        var result = _readExtractService.ReadNALDExtractFiles();
+        var result = _embeddedFileReadExtractService.ReadNaldExtractFiles();
 
         // Assert
         result.Should().HaveCount(1);
@@ -91,7 +91,7 @@ public class ReadExtractServiceTests
             .Returns(expectedRecords);
 
         // Act
-        var result = _readExtractService.ReadChangeAuditFiles();
+        var result = _embeddedFileReadExtractService.ReadChangeAuditFiles();
 
         // Assert
         result.Should().BeEquivalentTo(expectedRecords);
@@ -114,7 +114,7 @@ public class ReadExtractServiceTests
             .Returns(expectedRecords);
 
         // Act
-        var result = _readExtractService.ReadManualFixExtractFiles();
+        var result = _embeddedFileReadExtractService.ReadManualFixExtractFiles();
 
         // Assert
         result.Should().BeEquivalentTo(expectedRecords);
@@ -137,7 +137,7 @@ public class ReadExtractServiceTests
             .Returns(expectedRecords);
 
         // Act
-        var result = _readExtractService.ReadFileReaderExtract();
+        var result = _embeddedFileReadExtractService.ReadFileReaderExtract();
 
         // Assert
         result.Should().BeEquivalentTo(expectedRecords);
@@ -153,7 +153,7 @@ public class ReadExtractServiceTests
             .Returns(new List<string>());
 
         // Act
-        var result = _readExtractService.ReadLastIterationMatchesFiles();
+        var result = _embeddedFileReadExtractService.ReadLastIterationMatchesFiles();
 
         // Assert
         result.Should().BeEmpty();
@@ -170,7 +170,7 @@ public class ReadExtractServiceTests
             .Returns(new List<string>());
 
         // Act
-        var result = _readExtractService.ReadNALDMetadataFile();
+        var result = _embeddedFileReadExtractService.ReadNALDMetadataFile();
 
         // Assert
         result.Should().BeEmpty();
@@ -200,7 +200,7 @@ public class ReadExtractServiceTests
             .Returns(rawRecords);
 
         // Act
-        var result = _readExtractService.ReadNALDExtractFiles();
+        var result = _embeddedFileReadExtractService.ReadNaldExtractFiles();
 
         // Assert
         if (result.Any())
@@ -228,7 +228,7 @@ public class ReadExtractServiceTests
             .Returns(validRecords);
 
         // Act
-        var result = _readExtractService.ReadDMSExtractFiles();
+        var result = _embeddedFileReadExtractService.ReadDmsExtractFiles();
 
         // Assert
         result.Should().BeEquivalentTo(validRecords);

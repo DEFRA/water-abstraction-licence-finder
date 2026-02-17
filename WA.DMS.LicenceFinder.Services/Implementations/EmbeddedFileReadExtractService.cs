@@ -5,9 +5,9 @@ using WA.DMS.LicenceFinder.Services.Helpers;
 namespace WA.DMS.LicenceFinder.Services.Implementations;
 
 /// <summary>
-/// Service for reading and extracting data from various file sources
+/// Service for reading and extracting data from embedded files
 /// </summary>
-public class ReadExtractService(ILicenceFileProcessor fileProcessor) : IReadExtract
+public class EmbeddedFileReadExtractService(ILicenceFileProcessor fileProcessor) : IReadExtract
 {
     private readonly ILicenceFileProcessor _fileProcessor = fileProcessor
         ?? throw new ArgumentNullException(nameof(fileProcessor));
@@ -45,7 +45,7 @@ public class ReadExtractService(ILicenceFileProcessor fileProcessor) : IReadExtr
     /// Reads all files starting with 'DMS_Extract' from the resources folder
     /// </summary>
     /// <returns>Combined list of DMS extract records from all matching files</returns>
-    public List<DMSExtract> ReadDMSExtractFiles(bool consolidated = false)
+    public List<DMSExtract> ReadDmsExtractFiles(bool consolidated = false)
     {
         var allDmsRecords = new List<DMSExtract>();
         
@@ -88,7 +88,7 @@ public class ReadExtractService(ILicenceFileProcessor fileProcessor) : IReadExtr
     /// Reads all files starting with 'NALD_Extract' from the resources folder
     /// </summary>
     /// <returns>Combined list of NALD extract records from all matching files</returns>
-    public List<NALDExtract> ReadNALDExtractFiles()
+    public List<NALDExtract> ReadNaldExtractFiles()
     {
         var allNaldRecords = new List<NALDExtract>();
         var naldFiles = _fileProcessor.FindFilesByPattern("NALD_Extract");
@@ -137,7 +137,10 @@ public class ReadExtractService(ILicenceFileProcessor fileProcessor) : IReadExtr
 
         if (prevIterationMatch != null)
         {
-            var records = _fileProcessor.ExtractExcel<List<LicenceMatchResult>>(prevIterationMatch, ReverseMapping(LicenseMatchResultHeaderMapping));
+            var records = _fileProcessor.ExtractExcel<List<LicenceMatchResult>>(
+                prevIterationMatch,
+                ReverseMapping(LicenseMatchResultHeaderMapping));
+            
             allPreviousIterationResults.AddRange(records);
         }
 

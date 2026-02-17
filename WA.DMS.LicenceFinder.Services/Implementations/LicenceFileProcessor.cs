@@ -249,7 +249,9 @@ public class LicenceFileProcessor : ILicenceFileProcessor
         var embeddedFiles = FindEmbeddedResourcesByPattern(pattern);
         matchingFiles.AddRange(embeddedFiles);
 
-        return matchingFiles.Distinct().ToList();
+        return matchingFiles
+            .Distinct()
+            .ToList();
     }
 
     #region Private Helper Methods
@@ -271,7 +273,7 @@ public class LicenceFileProcessor : ILicenceFileProcessor
                 Assembly.GetCallingAssembly(),
                 Assembly.GetEntryAssembly()
             }
-                .Where(a => a != null)
+                .Where(assembly => assembly != null)
                 .Distinct();
 
             foreach (var assembly in assemblies)

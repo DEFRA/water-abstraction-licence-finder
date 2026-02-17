@@ -16,40 +16,39 @@ var host = Host.CreateDefaultBuilder(args)
 using (var scope = host.Services.CreateScope())
 {
     var licenceFileFinder = scope.ServiceProvider.GetRequiredService<ILicenceFileFinder>();
+    var readExtractService = scope.ServiceProvider.GetRequiredService<IReadExtract>();
     
-    // NOTE - Following used in another flow
-    //var licenseFileProcessor = scope.ServiceProvider.GetRequiredService<ILicenseFileProcessor>();
-
     try
     {
-        // Create change log template file
-        //Console.WriteLine("Creating change log template...");
-        //Console.WriteLine("Change log template created in Resources folder.");
-
-        Console.WriteLine("Starting licence file processing...");
+        var dmsRecords = readExtractService.ReadDmsExtractFiles();
         
         // FLOW - Licence file finder
-        //var resultFilePath = licenseFileFinder.FindLicenceFile();
-        //Console.WriteLine($"License processing completed. Results saved to: {resultFilePath}");
+        Console.WriteLine("Starting licence file processing...");
+        var resultFilePath = licenceFileFinder.FindLicenceFiles(dmsRecords);
+        Console.WriteLine($"License processing completed. Results saved to: {resultFilePath}");
         
         // FLOW - Build Version Download Info Excel
-        var regionName = "North West Region";
-        var filePath = licenceFileFinder.BuildVersionDownloadInfoExcel(regionName);
+        //Console.WriteLine("Started building version download info excel...");
+        //var regionName = "North West Region";
+        //Console.WriteLine($"File saved to {licenceFileFinder.BuildVersionDownloadInfoExcel(dmsRecords, regionName)}");
 
         // FLOW - Build Download Info Excel
+        //Console.WriteLine("Started building download info excel...");
         //var regionName = "North West Region";
-        //var downloadInfo = licenseFileFinder.BuildDownloadInfoExcel(regionName);
+        //Console.WriteLine($"File saved to {licenceFileFinder.BuildDownloadInfoExcel(dmsRecords, regionName)}");
 
         // FLOW - Build file template identification extract
-        //var result = licenseFileFinder.BuildFileTemplateIdentificationExtract();
+        //Console.WriteLine("Started building file template identification extract...");
+        //var resultFilePath = licenceFileFinder.BuildFileTemplateIdentificationExtract();
+        //Console.WriteLine($"File saved to {resultFilePath}");
 
         // FLOW - Find duplicate licence files
-        //var duplicateFilePath = licenseFileFinder.FindDuplicateLicenseFiles();
-        //Console.WriteLine($"Duplicate detection completed. Results saved to: {duplicateFilePath}");
+        var duplicateFilePath = licenceFileFinder.FindDuplicateLicenseFiles(dmsRecords);
+        Console.WriteLine($"Results saved to: {duplicateFilePath}");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error processing license files: {ex.Message}");
+        Console.WriteLine($"ERROR - Error processing license files: {ex.Message}");
     }
 }
 

@@ -19,7 +19,7 @@ public static class ServiceCollectionExtensions
     {
         // Register core services
         services.AddScoped<ILicenceFileProcessor, LicenceFileProcessor>();
-        services.AddScoped<IReadExtract, ReadExtractService>();
+        services.AddScoped<IReadExtract, EmbeddedFileReadExtractService>();
         services.AddScoped<ILicenceFileFinder, LicenceFileFinder>();
 
         // Register all matching rules

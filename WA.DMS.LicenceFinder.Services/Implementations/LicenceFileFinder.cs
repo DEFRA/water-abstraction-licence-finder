@@ -90,17 +90,18 @@ public class LicenceFileFinder : ILicenceFileFinder
         }
     }
 
-    public string FindLicenceFile()
+    public string FindLicenceFiles(List<DMSExtract> dmsRecords)
     {
         try
         {
-            // Step 1: Read all DMS extract files
-            var dmsRecords = _readExtract.ReadDMSExtractFiles();
+            // Step 1: Receive all DMS extract files (e.g. Site_N)
 
-            // Step 2: Read NALD extract files
-            var naldRecords = _readExtract.ReadNALDExtractFiles();
+            // Step 2: Read NALD extract files (e.g NALD_Extract)
+            var naldRecords = _readExtract.ReadNaldExtractFiles();
 
             // Step 3: Process each NALD record and find matches using rules
+            // NOTE - Fetches more files - Manual_Fix_Extract, Previous_Iteration_Matches, NALD_Metadata,
+            // NALD_Metadata_Reference, Overrides, File_Reader_Extract, Template_Results, File_Identification_Extract
             var (licenceMatchResults, unmatchedLicenceMatchResults)
                 = ProcessLicenceMatching(naldRecords, dmsRecords);
 
@@ -121,10 +122,10 @@ public class LicenceFileFinder : ILicenceFileFinder
         }
     }
 
-    public string  BuildDownloadInfoExcel(string filterRegion = "")
+    public string BuildDownloadInfoExcel(List<DMSExtract> dmsRecords, string filterRegion = "")
     {
         var allFilesInventory = _readExtract.ReadWaterPdfsInventoryFiles();
-        var consolidated = _readExtract.ReadDMSExtractFiles();
+        var consolidated = dmsRecords; // NOTE - It isn't consolidated
         var currentMatches = _readExtract.ReadLastIterationMatchesFiles(true);
         var prevMatches = _readExtract.ReadLastIterationMatchesFiles();
 
@@ -248,10 +249,10 @@ public class LicenceFileFinder : ILicenceFileFinder
         return outputFileName;
     }
     
-     public string  BuildVersionDownloadInfoExcel(string filterRegion = "")
+    public string BuildVersionDownloadInfoExcel(List<DMSExtract> dmsRecords, string filterRegion = "")
     {
         var allFilesInventory = _readExtract.ReadWaterPdfsInventoryFiles();
-        var consolidated = _readExtract.ReadDMSExtractFiles();
+        var consolidated = dmsRecords; // NOTE - It isn't consolidated
         var currentMatches = _readExtract.ReadLastIterationMatchesFiles(true)
             .Where(c => !c.DOISignatureDateMatch
                 && !c.ChangeAuditAction.Contains("Override", StringComparison.CurrentCultureIgnoreCase));
@@ -415,12 +416,11 @@ public class LicenceFileFinder : ILicenceFileFinder
         return string.Empty;
     }
 
-    public string FindDuplicateLicenseFiles()
+    public string FindDuplicateLicenseFiles(List<DMSExtract> dmsRecords)
     {
         try
         {
-            // Step 1: Read all DMS extract files
-            var dmsRecords = _readExtract.ReadDMSExtractFiles();
+            // Step 1: Receive all DMS extract files
             
             // Step 2: Process duplicate detection
             var results = ProcessDuplicateDetection(dmsRecords);
@@ -442,24 +442,25 @@ public class LicenceFileFinder : ILicenceFileFinder
     }
 
     private List<UnmatchedLicenceMatchResult> FindUnmatchedLicenceFile(
-        List<DMSExtract> dmsRecords, List<NALDMetadataExtract> naldRecords)
+        List<DMSExtract> dmsRecords,
+        List<NALDMetadataExtract> naldRecords)
     {
         // Step 1: Read previous iteration matches files
         var previousIterationMatches = _readExtract.ReadLastIterationMatchesFiles();
-        var prevFileDetails = _readExtract.ReadDMSExtractFiles(consolidated: true);
+        //var prevFileDetails = _readExtract.ReadDmsExtractFiles(consolidated: true);
         
         //"22713211R01", "22718132R01", "NE0270009030", "NE0230001004", "NE0270023047", "NE0270011011", "22709198R01"
 
         // Step 2: From previous matches file find records who have date of issue but date of issue isn't equal to signature date
         var recordsWithDifferentDates = previousIterationMatches?
             .Where(record => !string.IsNullOrWhiteSpace(record.DateOfIssue) && 
-                           !string.IsNullOrWhiteSpace(record.SignatureDate) &&
-                           !record.DateOfIssue.Equals(record.SignatureDate, StringComparison.OrdinalIgnoreCase))
+                !string.IsNullOrWhiteSpace(record.SignatureDate) &&
+                !record.DateOfIssue.Equals(record.SignatureDate, StringComparison.OrdinalIgnoreCase))
             .ToList() ?? [];
 
         Console.WriteLine($"Found {recordsWithDifferentDates.Count} records where Date of Issue differs from Signature Date.");
 
-        var fileIdentificatonExtract = _readExtract.ReadFileIdentificationExtract()
+        var fileIdentificationExtract = _readExtract.ReadFileIdentificationExtract()
             .Distinct()
             .ToList();
         
@@ -467,7 +468,8 @@ public class LicenceFileFinder : ILicenceFileFinder
         
         foreach (var record in recordsWithDifferentDates)
         {
-            Console.WriteLine($"Record with permit number {record.PermitNumber} has Date of Issue: {record.DateOfIssue} and Signature Date: {record.SignatureDate}");
+            Console.WriteLine($"Record with permit number {record.PermitNumber} has Date of " +
+                $"Issue: {record.DateOfIssue} and Signature Date: {record.SignatureDate}");
             
             // Step 5: Read DMS extract files for permit number
             var dmsRecordsForPermit = dmsRecords
@@ -480,7 +482,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                 .ToList();
             
             // Step 7: Find files from fileIdentificatonExtract whose file name matches the dmsRecordsForPermit File name and is of Type Licence or Addendum
-            var allMatchingIdentificationFiles = fileIdentificatonExtract
+            var allMatchingIdentificationFiles = fileIdentificationExtract
                 .Where(file => dmsRecordsForPermit.Any(dms => dms.FileName.Equals(file.FileName, StringComparison.OrdinalIgnoreCase)
                     && file.OriginalFileName.StartsWith(record.PermitNumber, StringComparison.OrdinalIgnoreCase)
                 ))
@@ -550,7 +552,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                 // Step 9: If no Licence files, look for Addendum and find corresponding Licence
                 var addendumFiles = matchingIdentificationFiles
                     .Where(f => f.FileType.Equals("Addendum", StringComparison.OrdinalIgnoreCase)
-                                && f.DateOfIssue?.Equals(record.SignatureDate, StringComparison.OrdinalIgnoreCase) == true)
+                        && f.DateOfIssue?.Equals(record.SignatureDate, StringComparison.OrdinalIgnoreCase) == true)
                     .DistinctBy(f => f.FileName)
                     .ToList();
                 
@@ -668,7 +670,7 @@ public class LicenceFileFinder : ILicenceFileFinder
 
     public string BuildFileTemplateIdentificationExtract()
     {
-        var passResults = new List<string>()
+        var passResults = new List<string>
         {
             "12100004",
             "12100052",
@@ -827,9 +829,12 @@ public class LicenceFileFinder : ILicenceFileFinder
         
         // Step 1: Read all PreviousExtract
         var prevMatchResults = _readExtract.ReadLastIterationMatchesFiles()
-            .Where(d => !string.IsNullOrWhiteSpace(d.DateOfIssue) && d.DateOfIssue.Equals(d.SignatureDate,  StringComparison.OrdinalIgnoreCase));
+            .Where(d => !string.IsNullOrWhiteSpace(d.DateOfIssue)
+                && d.DateOfIssue.Equals(d.SignatureDate,  StringComparison.OrdinalIgnoreCase));
+        
         // Step 2: Read Overrides
         var overrides = _readExtract.ReadOverrideFile();
+        
         // Step 3: Read previous iteration version files
         var previousIterationMatches = _readExtract
             .ReadFileVersionResultsFile().Where(d => passResults.Contains(d.PermitNumber.Trim()));
@@ -855,6 +860,7 @@ public class LicenceFileFinder : ILicenceFileFinder
             NaldIssueNumber = p.NALDIssueNo.ToString(),
             FileName = LicenseFileHelpers.ExtractFilenameFromUrl(p.FileUrl),
         }));
+        
         results.AddRange(overrides.Select(p => new TemplateFinderResult
         {
             PermitNumber = p.PermitNumber,
@@ -862,6 +868,7 @@ public class LicenceFileFinder : ILicenceFileFinder
             NaldIssueNumber = p.IssueNo,
             FileName = LicenseFileHelpers.ExtractFilenameFromUrl(p.FileUrl),
         }));
+        
         // Generate output Excel file with appropriate header mapping for TemplateFinderResult
         var templateHeaderMapping = new Dictionary<string, string>
         {
@@ -876,7 +883,10 @@ public class LicenceFileFinder : ILicenceFileFinder
         var outputFileName = $"TemplateIdentificationResults_{DateTime.Now:yyyyMMdd_HHmmss}";
         var worksheetData = new List<(string SheetName, Dictionary<string, string>? HeaderMapping, object Data)>
         {
-            ("Template Results", templateHeaderMapping, (object)results.DistinctBy(f => f.FileUrl).OrderBy(p => p.PermitNumber).ToList())
+            ("Template Results", templateHeaderMapping, results
+                .DistinctBy(f => f.FileUrl)
+                .OrderBy(p => p.PermitNumber)
+                .ToList())
         };
 
         return _fileProcessor.GenerateExcel(worksheetData, outputFileName);
@@ -892,8 +902,11 @@ public class LicenceFileFinder : ILicenceFileFinder
         var results = new List<DuplicateResult>();
 
         // Read NALD records to get region information
-        var naldRecords = _readExtract.ReadNALDExtractFiles();
-        var regionLookup = naldRecords.ToDictionary(n => n.PermitNo, n => n.Region, StringComparer.OrdinalIgnoreCase);
+        var naldRecords = _readExtract.ReadNaldExtractFiles();
+        var regionLookup = naldRecords.ToDictionary(
+            n => n.PermitNo,
+            n => n.Region,
+            StringComparer.OrdinalIgnoreCase);
 
         // Group records by permit number
         var groupedByPermit = dmsRecords
@@ -929,31 +942,33 @@ public class LicenceFileFinder : ILicenceFileFinder
                                  !dms.FileUrl.Equals(priority4File.FileUrl, StringComparison.OrdinalIgnoreCase))
                     .ToList();
 
-                if (duplicateFiles.Any())
+                if (!duplicateFiles.Any())
                 {
-                    foreach (var duplicateFile in duplicateFiles)
+                    continue;
+                }
+                
+                foreach (var duplicateFile in duplicateFiles)
+                {
+                    // Get region information for this permit number
+                    var region = regionLookup.TryGetValue(permitNumber, out var foundRegion) ? foundRegion : string.Empty;
+
+                    // Add the Priority4 file as one row
+                    results.Add(new DuplicateResult
                     {
-                        // Get region information for this permit number
-                        var region = regionLookup.TryGetValue(permitNumber, out var foundRegion) ? foundRegion : string.Empty;
+                        PermitNumber = permitNumber,
+                        FileUrl = priority4File.FileUrl,
+                        FileName = priority4File.FileName,
+                        Region = region
+                    });
 
-                        // Add the Priority4 file as one row
-                        results.Add(new DuplicateResult
-                        {
-                            PermitNumber = permitNumber,
-                            FileUrl = priority4File.FileUrl,
-                            FileName = priority4File.FileName,
-                            Region = region
-                        });
-
-                        // Add the duplicate file as another row
-                        results.Add(new DuplicateResult
-                        {
-                            PermitNumber = permitNumber,
-                            FileUrl = duplicateFile.FileUrl,
-                            FileName = duplicateFile.FileName,
-                            Region = region
-                        });
-                    }
+                    // Add the duplicate file as another row
+                    results.Add(new DuplicateResult
+                    {
+                        PermitNumber = permitNumber,
+                        FileUrl = duplicateFile.FileUrl,
+                        FileName = duplicateFile.FileName,
+                        Region = region
+                    });
                 }
             }
         }
@@ -1139,6 +1154,7 @@ public class LicenceFileFinder : ILicenceFileFinder
     /// <param name="record">The license match record</param>
     /// <param name="dmsRecordsForPermit">DMS records for the permit</param>
     /// <param name="fileIdentification">File identification record</param>
+    /// <param name="allFileIdentification"></param>
     /// <returns>UnmatchedLicenseMatchResult if NALD data issue found, null otherwise</returns>
     private UnmatchedLicenceMatchResult? CheckForNaldDataIssue(
         NALDMetadataExtract? matchedNaldRecords,
@@ -1165,12 +1181,13 @@ public class LicenceFileFinder : ILicenceFileFinder
                 OriginalFileUrlIdentifiedAsLicence = record.FileUrl
             };
         }
-        if (matchedNaldRecords != null && int.TryParse(matchedNaldRecords.IssueNo, out var matchedIssueNo))
+        
+        if (int.TryParse(matchedNaldRecords.IssueNo, out var matchedIssueNo))
         {
             var higherIssueRecords = naldRecordsForPermit
                 .Where(n => int.TryParse(n.IssueNo, out var issueNo) 
-                            && issueNo >= matchedIssueNo 
-                            && (string.IsNullOrWhiteSpace(n.SignatureDate) || n.SignatureDate.Equals("null", StringComparison.OrdinalIgnoreCase)))
+                    && issueNo >= matchedIssueNo 
+                    && (string.IsNullOrWhiteSpace(n.SignatureDate) || n.SignatureDate.Equals("null", StringComparison.OrdinalIgnoreCase)))
                 .ToList();
 
             if (higherIssueRecords.Any() || 
@@ -1228,19 +1245,23 @@ public class LicenceFileFinder : ILicenceFileFinder
 
             lookupIndexes.ByPermitNumber[permitNumber].Add(dmsRecord);
                 
-            if (manualFixes.Any(mf => !string.IsNullOrWhiteSpace(mf.PermitNumberFolder)
-                && mf.PermitNumberFolder.Contains(permitNumber, StringComparison.OrdinalIgnoreCase)))
+            var hasMatchingManualFix = manualFixes.Any(mf => !string.IsNullOrWhiteSpace(mf.PermitNumberFolder)
+                && mf.PermitNumberFolder.Contains(permitNumber, StringComparison.OrdinalIgnoreCase));
+
+            if (!hasMatchingManualFix)
             {
-                var matchedFix = manualFixes.First(mf => !string.IsNullOrWhiteSpace(mf.PermitNumberFolder)
-                    && mf.PermitNumberFolder.Contains(permitNumber, StringComparison.OrdinalIgnoreCase));
-
-                if (!lookupIndexes.ByManualFixPermitNumber.ContainsKey(permitNumber))
-                {
-                    lookupIndexes.ByManualFixPermitNumber[matchedFix.PermitNumber] = [];
-                }
-
-                lookupIndexes.ByManualFixPermitNumber[matchedFix.PermitNumber].Add(dmsRecord);
+                continue;
             }
+            
+            var matchedFix = manualFixes.First(mf => !string.IsNullOrWhiteSpace(mf.PermitNumberFolder)
+                && mf.PermitNumberFolder.Contains(permitNumber, StringComparison.OrdinalIgnoreCase));
+
+            if (!lookupIndexes.ByManualFixPermitNumber.ContainsKey(permitNumber))
+            {
+                lookupIndexes.ByManualFixPermitNumber[matchedFix.PermitNumber] = [];
+            }
+
+            lookupIndexes.ByManualFixPermitNumber[matchedFix.PermitNumber].Add(dmsRecord);
         }
 
         return lookupIndexes;

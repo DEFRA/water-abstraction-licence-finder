@@ -11,13 +11,13 @@ public interface IReadExtract
     /// Reads all files starting with 'DMS_Extract' from the resources folder
     /// </summary>
     /// <returns>Combined list of DMS extract records from all matching files</returns>
-    List<DMSExtract> ReadDMSExtractFiles(bool consolidated = false);
+    List<DMSExtract> ReadDmsExtractFiles(bool consolidated = false);
 
     /// <summary>
     /// Reads all files starting with 'NALD_Extract' from the resources folder
     /// </summary>
     /// <returns>Combined list of NALD extract records from all matching files</returns>
-    List<NALDExtract> ReadNALDExtractFiles();
+    List<NALDExtract> ReadNaldExtractFiles();
 
     /// <summary>
     /// Reads Previous Iteration Matches from the resources folder

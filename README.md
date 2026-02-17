@@ -1,6 +1,7 @@
 # WA DMS Licence Finder
 
-A .NET console application that matches licence records between NALD (National Activities Licensing Database) extracts and DMS (Document Management System) extracts using configurable matching rules.
+A .NET console application that matches licence records between NALD (National Activities Licensing Database)
+extracts and DMS (Document Management System) extracts using configurable matching rules.
 
 ## Overview
 
@@ -27,7 +28,7 @@ The application expects the following Excel files to be placed in a `Resources` 
 ### Required Input Files
 
 1. **DMS Extract Files**
-   - **Pattern**: Files starting with `Site`
+   - **Pattern**: XLSX files starting with `Site`
    - **Required columns**:
      - `Permit Number`
      - `Document Date`
@@ -37,21 +38,35 @@ The application expects the following Excel files to be placed in a `Resources` 
      - `File Size`
      - `Disclosure Status`
      - `Other Reference`
+     - `Modified Date`
+     - `File ID`
 
 2. **NALD Extract Files**
-   - **Pattern**: Files starting with `NALD_Extract`
+   - **Pattern**: XLSX files starting with `NALD_Extract`
    - **Required columns**:
      - `Licence No.`
      - `Region`
 
-3. **Previous Iteration Files** (Optional)
-   - **Pattern**: Files starting with `Previous_Iteration_Matches`
+3. **Manual Fix Files** (Optional)
+    - **Pattern**: XLSX files starting with `Manual_Fix_Extract`
+    - **Required columns**:
+        - `DMS Version Of Licence No.`
+        - `DMS Permit Folder No.`
+
+4. **Previous Iteration Files** (Optional)
+   - **Pattern**: XLSX files starting with `Previous_Iteration_Matches`
    - **Required columns**: Same as output format (see below)
 
-4. **Manual Fix Files** (Optional)
-   - **Pattern**: Files starting with `Manual_Fix_Extract`
-   - **Required columns**:
-     - `DMS Version Of Licence No.`
-     - `DMS Permit Folder No.`
+5. **NALD_Metadata** (Optional)
+
+6. **NALD_Metadata_Reference** (Optional)
+
+7. **Overrides** (Optional)
+
+8. **File_Reader_Extract** (Optional)
+
+9. **Template_Results** (Optional)
+
+10. **File_Identification_Extract** (Optional)
 
 ### Resource Folder Structure
