@@ -11,13 +11,13 @@ public interface IReadExtract
     /// Reads all files starting with 'DMS_Extract' from the resources folder
     /// </summary>
     /// <returns>Combined list of DMS extract records from all matching files</returns>
-    List<DMSExtract> ReadDmsExtractFiles(bool consolidated);
+    Dictionary<string, List<DmsExtract>> GetDmsExtractFiles(bool consolidated);
 
     /// <summary>
     /// Reads all files starting with 'NALD_Extract' from the resources folder
     /// </summary>
     /// <returns>Combined list of NALD extract records from all matching files</returns>
-    List<NALDExtract> ReadNaldExtractFiles();
+    List<NALDExtract> GetNaldExtractFiles();
 
     /// <summary>
     /// Reads Previous Iteration Matches from the resources folder
@@ -29,7 +29,7 @@ public interface IReadExtract
     /// Reads NALD Metadata from the resources folder
     /// </summary>
     /// <returns>NALD Metadata results grouped by LicNo with maximum SignatureDate</returns>
-    List<NALDMetadataExtract> ReadNaldMetadataFile(bool getLatest);
+    public Dictionary<string, List<NALDMetadataExtract>> GetNaldMetadataFile(bool getLatest);
 
     /// <summary>
     /// Reads File_Identification_Extract.csv file from the resources folder
@@ -59,7 +59,7 @@ public interface IReadExtract
     /// Reads all files starting with 'Manual_Fix_Extract' from the resources folder
     /// </summary>
     /// <returns>Combined list of manual fix extract records from all matching files</returns>
-    List<ManualFixExtract> ReadManualFixExtractFiles();
+    Dictionary<string, DmsManualFixExtract> GetDmsManualFixExtractFiles();
 
     /// <summary>
     /// Reads Change_Audit.xlsx file from the resources folder

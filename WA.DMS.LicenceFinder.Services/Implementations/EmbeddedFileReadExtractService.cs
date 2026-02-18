@@ -45,9 +45,9 @@ public class EmbeddedFileReadExtractService(ILicenceFileProcessor fileProcessor)
     /// Reads all files starting with 'DMS_Extract' from the resources folder
     /// </summary>
     /// <returns>Combined list of DMS extract records from all matching files</returns>
-    public List<DMSExtract> ReadDmsExtractFiles(bool consolidated)
+    public Dictionary<string, List<DmsExtract>> GetDmsExtractFiles(bool consolidated)
     {
-        var allDmsRecords = new List<DMSExtract>();
+        var allDmsRecords = new Dictionary<string, List<DmsExtract>>(StringComparer.OrdinalIgnoreCase);
         
         var dmsFiles = consolidated ? _fileProcessor.FindFilesByPattern("Consolidated")
             : _fileProcessor.FindFilesByPattern("Site");
@@ -56,7 +56,7 @@ public class EmbeddedFileReadExtractService(ILicenceFileProcessor fileProcessor)
         {
             try
             {
-                var records = _fileProcessor.ExtractExcel<List<DMSExtract>>(
+                var records = _fileProcessor.ExtractExcel<List<DmsExtract>>(
                     fileName,
                     new Dictionary<string, string>
                     {
@@ -71,8 +71,18 @@ public class EmbeddedFileReadExtractService(ILicenceFileProcessor fileProcessor)
                         {"Modified Date", "ModifiedDate"},
                         {"File ID", "FileId"}
                     });
+
+                foreach (var record in records)
+                {
+                    if (allDmsRecords.TryGetValue(record.PermitNumber, out var list))
+                    {
+                        list.Add(record);
+                        continue;
+                    }
+                    
+                    allDmsRecords.Add(record.PermitNumber, [record]);
+                }
                 
-                allDmsRecords.AddRange(records);
             }
             catch (Exception ex)
             {
@@ -88,7 +98,7 @@ public class EmbeddedFileReadExtractService(ILicenceFileProcessor fileProcessor)
     /// Reads all files starting with 'NALD_Extract' from the resources folder
     /// </summary>
     /// <returns>Combined list of NALD extract records from all matching files</returns>
-    public List<NALDExtract> ReadNaldExtractFiles()
+    public List<NALDExtract> GetNaldExtractFiles()
     {
         var allNaldRecords = new List<NALDExtract>();
         var naldFiles = _fileProcessor.FindFilesByPattern("NALD_Extract");
@@ -151,35 +161,45 @@ public class EmbeddedFileReadExtractService(ILicenceFileProcessor fileProcessor)
     /// Reads NALD Metadata from the resources folder
     /// </summary>
     /// <returns>NALD Metadata results grouped by LicNo with maximum SignatureDate</returns>
-    public List<NALDMetadataExtract> ReadNaldMetadataFile(bool getLatest)
+    public Dictionary<string, List<NALDMetadataExtract>> GetNaldMetadataFile(bool getLatest)
     {
         var naldMetadataResults = new List<NALDMetadataExtract>();
         var naldMetadataReferenceResults = new List<NALDMetadataReferenceExtract>();
-        var naldMetadata = _fileProcessor.FindFilesByPattern("NALD_Metadata").FirstOrDefault();
-        var naldMetadataReference = _fileProcessor.FindFilesByPattern("NALD_Metadata_Reference").FirstOrDefault();
+        
+        var naldMetadata = _fileProcessor
+            .FindFilesByPattern("NALD_Metadata")
+            .FirstOrDefault();
 
         if (naldMetadata != null)
         {
-            var records = _fileProcessor.ExtractCsv<List<NALDMetadataExtract>>(naldMetadata, new Dictionary<string, string>
-            {
-                {"AABL_ID", "AablId"},
-                {"AABV_TYPE", "AabvType"},
-                {"ISSUE_NO", "IssueNo"},
-                {"LIC_SIG_DATE", "SignatureDate"}, 
-                {"FGAC_REGION_CODE", "Region"}
-            });
+            var records = _fileProcessor.ExtractCsv<List<NALDMetadataExtract>>(
+                naldMetadata,
+                new Dictionary<string, string>
+                {
+                    {"AABL_ID", "AablId"},
+                    {"AABV_TYPE", "AabvType"},
+                    {"ISSUE_NO", "IssueNo"},
+                    {"LIC_SIG_DATE", "SignatureDate"}, 
+                    {"FGAC_REGION_CODE", "Region"}
+                });
             
             naldMetadataResults.AddRange(records);
         }
 
+        var naldMetadataReference = _fileProcessor
+            .FindFilesByPattern("NALD_Metadata_Reference")
+            .FirstOrDefault();
+        
         if (naldMetadataReference != null)
         {
-            var records = _fileProcessor.ExtractCsv<List<NALDMetadataReferenceExtract>>(naldMetadataReference, new Dictionary<string, string>
-            {
-                {"ID", "AablId"},
-                {"LIC_NO", "LicNo"}, 
-                {"FGAC_REGION_CODE", "Region"}
-            });
+            var records = _fileProcessor.ExtractCsv<List<NALDMetadataReferenceExtract>>(
+                naldMetadataReference,
+                new Dictionary<string, string>
+                {
+                    {"ID", "AablId"},
+                    {"LIC_NO", "LicNo"}, 
+                    {"FGAC_REGION_CODE", "Region"}
+                });
             
             naldMetadataReferenceResults.AddRange(records);
         }
@@ -202,26 +222,48 @@ public class EmbeddedFileReadExtractService(ILicenceFileProcessor fileProcessor)
 
         // Filter by AabvType = "Issue" first, then group by LicNo
         var groupedRecords = naldMetadataResults
-            .Where(r => r.AabvType.Equals("Issue", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(r.LicNo))
-            .GroupBy(r => r.LicNo);
+            .Where(r => r.AabvType.Equals("Issue", StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrWhiteSpace(r.LicNo))
+            .GroupBy(r => r.LicNo)
+            .ToList();
 
+        var returnDict = new Dictionary<string, List<NALDMetadataExtract>>(StringComparer.OrdinalIgnoreCase);
+        
         if (getLatest)
         {
-            // Select record with maximum SignatureDate from each group, then take only the first group
+            // Select record with maximum SignatureDate from each group
             var filteredRecords = groupedRecords
                 .Select(group => group
                     .OrderByDescending(r => SafeParseDateTime(r.SignatureDate))
                     .First())
                 .ToList();
+
+            foreach (var record in filteredRecords)
+            {
+                returnDict.Add(record.LicNo, [record]);
+            }
             
-            return filteredRecords;
+            return returnDict;
         }
 
         // Return all records from all groups, ordered by SignatureDate within each group
         var allRecords = groupedRecords
-            .SelectMany(group => group.OrderByDescending(r => SafeParseDateTime(r.SignatureDate)))
+            .SelectMany(group =>
+                group.OrderByDescending(r => SafeParseDateTime(r.SignatureDate)))
             .ToList();
-        return allRecords;
+        
+        foreach (var record in allRecords)
+        {
+            if (!returnDict.TryGetValue(record.LicNo, out var list))
+            {
+                list = [];
+                returnDict.Add(record.LicNo, list);
+            }
+
+            list.Add(record);
+        }
+        
+        return returnDict;
     }
 
     /// <summary>
@@ -325,27 +367,32 @@ public class EmbeddedFileReadExtractService(ILicenceFileProcessor fileProcessor)
     /// Reads all files starting with 'Manual_Fix_Extract' from the resources folder
     /// </summary>
     /// <returns>Combined list of manual fix extract records from all matching files</returns>
-    public List<ManualFixExtract> ReadManualFixExtractFiles()
+    public Dictionary<string, DmsManualFixExtract> GetDmsManualFixExtractFiles()
     {
-        var allManualFixes = new List<ManualFixExtract>();
+        var allManualFixes = new Dictionary<string, DmsManualFixExtract>(StringComparer.OrdinalIgnoreCase);
         var manualFixFiles = _fileProcessor.FindFilesByPattern("Manual_Fix_Extract");
 
         foreach (var fileName in manualFixFiles)
         {
             try
             {
-                var records = _fileProcessor.ExtractExcel<List<ManualFixExtract>>(fileName,new Dictionary<string, string>
+                var records = _fileProcessor.ExtractExcel<List<DmsManualFixExtract>>(
+                    fileName,
+                    new Dictionary<string, string>
+                    {
+                        {"DMS Version Of Licence No.", "PermitNumber"},
+                        {"DMS Permit Folder No.", "PermitNumberFolder"},
+                    });
+                
+                foreach (var record in records)
                 {
-                    {"DMS Version Of Licence No.", "PermitNumber"},
-                    {"DMS Permit Folder No.", "PermitNumberFolder"},
-                });
-
-                allManualFixes.AddRange(records);
+                    allManualFixes.TryAdd(record.PermitNumberFolder, record);
+                }
             }
             catch (Exception ex)
             {
                 // Log warning but continue processing other files
-                Console.WriteLine($"Warning: Failed to read Manual Fix file '{fileName}': {ex.Message}");
+                Console.WriteLine($"WARNING - Failed to read Manual Fix file '{fileName}': {ex.Message}");
             }
         }
 

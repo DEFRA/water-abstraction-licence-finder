@@ -12,25 +12,37 @@ public interface ILicenceFileFinder
     /// </summary>
     /// <returns>The path to the generated Excel results file</returns>
     string FindLicenceFiles(
-        List<DMSExtract> dmsRecords,
+        Dictionary<string, List<DmsExtract>> dmsRecords,
+        Dictionary<string, DmsManualFixExtract> dmsManualFixes,
         List<NALDExtract> naldRecords,
-        List<ManualFixExtract> manualFixes,
+        Dictionary<string, List<NALDMetadataExtract>> naldMetadata,
         List<LicenceMatchResult> previousIterationMatches,
-        List<NALDMetadataExtract>  naldMetadataExtracts,
         List<Override> changeAudits,
         List<FileReaderExtract> fileReaderExtracts,
         List<TemplateFinderResult> templateFinderResults,
-        List<FileIdentificationExtract>  fileIdentificationExtracts);
+        List<FileIdentificationExtract> fileIdentificationExtracts);
     
     /// <summary>
     /// Finds all potential duplicates in DMS extract
     /// </summary>
     /// <returns>The path to the generated Excel results file</returns>
-    string FindDuplicateLicenseFiles(List<DMSExtract> dmsRecords, List<NALDExtract> naldRecords);
+    string FindDuplicateLicenseFiles(List<DmsExtract> dmsRecords, List<NALDExtract> naldRecords);
 
-    string BuildFileTemplateIdentificationExtract();
+    string BuildFileTemplateIdentificationExtract(
+        List<LicenceMatchResult> previousIterationMatches,
+        List<Override> overrides,
+        List<UnmatchedLicenceMatchResult> fileVersionResults);
 
-    string BuildDownloadInfoExcel(List<DMSExtract> dmsRecords, string region = "");
+    string BuildDownloadInfoExcel(
+        List<DmsExtract> dmsRecords,
+        List<FileInventory> allFilesInventory,
+        List<LicenceMatchResult> previousIterationMatches,
+        List<LicenceMatchResult> currentIterationMatches,
+        string region = "");
 
-    string BuildVersionDownloadInfoExcel(List<DMSExtract> dmsRecords, string filterRegion = "");
+    string BuildVersionDownloadInfoExcel(
+        List<DmsExtract> dmsRecords,
+        List<LicenceMatchResult> currentIterationMatches,
+        List<FileInventory> allFilesInventory,
+        string filterRegion = "");
 }

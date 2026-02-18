@@ -15,7 +15,7 @@ public class PermitDocumentMatchRule : BaseRuleWithPriorityMatching
 
     protected override string GetRuleBaseName() => "Found In Permit Documents Folder";
 
-    protected override IEnumerable<DMSExtract> GetMatchingRecords(NALDExtract naldRecord, DMSLookupIndexes dmsLookups)
+    protected override IEnumerable<DmsExtract> GetMatchingRecords(NALDExtract naldRecord, DmsLookupIndexes dmsLookups)
     {
         var permitNo = naldRecord.PermitNo;
         

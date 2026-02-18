@@ -16,7 +16,7 @@ public class ManualFolderApplicationOrRootFolderMatchRule : BaseRuleWithPriority
 
     protected override string GetRuleBaseName() => "Manual Folder Match Fix - In Application Or Root Folder";
 
-    protected override IEnumerable<DMSExtract> GetMatchingRecords(NALDExtract naldRecord, DMSLookupIndexes dmsLookups)
+    protected override IEnumerable<DmsExtract> GetMatchingRecords(NALDExtract naldRecord, DmsLookupIndexes dmsLookups)
     {
         var permitNo = naldRecord.PermitNo;
         

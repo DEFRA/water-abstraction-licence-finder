@@ -28,5 +28,5 @@ public interface ILicenceMatchingRule
     /// <param name="naldRecord">NALD record to find match for</param>
     /// <param name="dmsLookups">Pre-built lookup dictionaries for fast searching</param>
     /// <returns>Matching DMS record or null if no match found</returns>
-    DMSExtract? FindMatch(NALDExtract naldRecord, DMSLookupIndexes dmsLookups);
+    DmsExtract? FindMatch(NALDExtract naldRecord, DmsLookupIndexes dmsLookups);
 }

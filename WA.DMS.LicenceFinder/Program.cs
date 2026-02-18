@@ -20,20 +20,20 @@ using (var scope = host.Services.CreateScope())
     
     try
     {
-        // All DMS extract files (e.g. Site_N.xlsx)
-        var dmsRecords = readExtractService.ReadDmsExtractFiles(false);
+        // DMS extract files (e.g. Site_N.xlsx)
+        var dmsRecords = readExtractService.GetDmsExtractFiles(false);
 
-        // All NALD extract files (e.g NALD_Extract.xlsx)
-        var naldRecords = readExtractService.ReadNaldExtractFiles();
-        
         // Manual fixes (e.g. Manual_Fix_Extract.xlsx)
-        var manualFixes = readExtractService.ReadManualFixExtractFiles();
+        var dmsManualFixes = readExtractService.GetDmsManualFixExtractFiles();
+        
+        // NALD extract files (e.g NALD_Extract.xlsx)
+        var naldRecords = readExtractService.GetNaldExtractFiles();
+        
+        // Nald metadata files (e.g. NALD_Metadata.xlsx AND NALD_Metadata_Reference.xlsx)
+        var naldMetadata = readExtractService.GetNaldMetadataFile(true);
         
         // Previous iteration matches (e.g. Previous_Iteration_Matches.xlsx)
         var previousIterationMatches = readExtractService.ReadLastIterationMatchesFiles(false);
-            
-        // Nald metadata 2 files (e.g. NALD_Metadata.xlsx and NALD_Metadata_Reference.xlsx)
-        var naldMetadata = readExtractService.ReadNaldMetadataFile(true);
         
         // Override files (e.g. Overrides.xlsx)
         var changeAudits = readExtractService.ReadOverrideFile();
@@ -47,39 +47,67 @@ using (var scope = host.Services.CreateScope())
         // File identification extracts (e.g. File_Identification_Extract.csv)
         var fileIdentificationExtract = readExtractService.ReadFileIdentificationExtract();
         
+        // Current iteration matches (e.g. Current_Iteration_Matches.xlsx)
+        var currentIterationMatches = readExtractService.ReadLastIterationMatchesFiles(true);
+        
+        // All files inventory (e.g. WaterPdfs_Inventory.csv)
+        var allFilesInventory = readExtractService.ReadWaterPdfsInventoryFiles();
+        
+        // File version results (e.g. LicenceVersionResults.xlsx)
+        var fileVersionResults = readExtractService.ReadFileVersionResultsFile();
+        
         // FLOW - Licence file finder
-        Console.WriteLine("Starting licence file processing...");
+        /*Console.WriteLine("Starting licence file processing...");
         var resultFilePath = licenceFileFinder.FindLicenceFiles(
             dmsRecords,
+            dmsManualFixes,
             naldRecords,
-            manualFixes,
+            naldMetadata,            
             previousIterationMatches,
-            naldMetadata,
             changeAudits,
             fileReaderExtract,
             templateFinderResults,
             fileIdentificationExtract);
         
-        Console.WriteLine($"License processing completed. Results saved to: {resultFilePath}");
+        Console.WriteLine($"License processing completed. Results saved to: {resultFilePath}");*/
         
         // FLOW - Build Version Download Info Excel
-        //Console.WriteLine("Started building version download info excel...");
-        //var regionName = "North West Region";
-        //Console.WriteLine($"File saved to {licenceFileFinder.BuildVersionDownloadInfoExcel(dmsRecords, regionName)}");
+        /*Console.WriteLine("Started building version download info excel...");
+        
+        var regionName = "North West Region";
+        var result = licenceFileFinder.BuildVersionDownloadInfoExcel(
+            dmsRecords,
+            currentIterationMatches,
+            allFilesInventory,
+            regionName);
+        
+        Console.WriteLine($"File saved to {result}");*/
 
         // FLOW - Build Download Info Excel
-        //Console.WriteLine("Started building download info excel...");
-        //var regionName = "North West Region";
-        //Console.WriteLine($"File saved to {licenceFileFinder.BuildDownloadInfoExcel(dmsRecords, regionName)}");
+        /*Console.WriteLine("Started building download info excel...");
+        
+        var regionName = "North West Region";
+        var fileName = licenceFileFinder.BuildDownloadInfoExcel(
+            dmsRecords,
+            allFilesInventory,
+            previousIterationMatches,
+            currentIterationMatches,
+            regionName);
+        
+        Console.WriteLine($"File saved to {fileName}");*/
 
         // FLOW - Build file template identification extract
-        //Console.WriteLine("Started building file template identification extract...");
-        //var resultFilePath = licenceFileFinder.BuildFileTemplateIdentificationExtract();
-        //Console.WriteLine($"File saved to {resultFilePath}");
+        /*Console.WriteLine("Started building file template identification extract...");
+        var resultFilePath = licenceFileFinder.BuildFileTemplateIdentificationExtract(
+            previousIterationMatches,
+            changeAudits,
+            fileVersionResults);
+        
+        Console.WriteLine($"File saved to {resultFilePath}");*/
 
-        // FLOW - Find duplicate licence files
-        //var duplicateFilePath = licenceFileFinder.FindDuplicateLicenseFiles(dmsRecords, naldRecords);
-        //Console.WriteLine($"Results saved to: {duplicateFilePath}");
+        // FLOW - Find duplicate licence files (NOT USED ANYMORE - we read the files and check the hashes)
+        /*var duplicateFilePath = licenceFileFinder.FindDuplicateLicenseFiles(dmsRecords, naldRecords);
+        Console.WriteLine($"Results saved to: {duplicateFilePath}");*/
     }
     catch (Exception ex)
     {

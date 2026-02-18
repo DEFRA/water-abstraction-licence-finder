@@ -3,7 +3,7 @@ namespace WA.DMS.LicenceFinder.Core.Models;
 /// <summary>
 /// Represents DMS (Document Management System) extract data that can be extracted from Excel or CSV files.
 /// </summary>
-public class DMSExtract
+public class DmsExtract
 {
     /// <summary>
     /// Site Collection identifier

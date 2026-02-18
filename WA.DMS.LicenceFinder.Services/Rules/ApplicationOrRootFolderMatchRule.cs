@@ -15,7 +15,7 @@ public class ApplicationOrRootFolderMatchRule : BaseRuleWithPriorityMatching
 
     protected override string GetRuleBaseName() => "Found In Application Or Root Folder";
 
-    protected override IEnumerable<DMSExtract> GetMatchingRecords(NALDExtract naldRecord, DMSLookupIndexes dmsLookups)
+    protected override IEnumerable<DmsExtract> GetMatchingRecords(NALDExtract naldRecord, DmsLookupIndexes dmsLookups)
     {
         var permitNo = naldRecord.PermitNo;
         

@@ -29,7 +29,7 @@ public abstract class BaseRuleWithPriorityMatching : ILicenceMatchingRule
     /// <param name="naldRecord">NALD record to find match for</param>
     /// <param name="dmsLookups">Pre-built lookup dictionaries for fast searching</param>
     /// <returns>Matching DMS record or null if no match found</returns>
-    public DMSExtract? FindMatch(NALDExtract naldRecord, DMSLookupIndexes dmsLookups)
+    public DmsExtract? FindMatch(NALDExtract naldRecord, DmsLookupIndexes dmsLookups)
     {
         // Reset state for new search
         _dynamicRuleName = null;
@@ -72,5 +72,5 @@ public abstract class BaseRuleWithPriorityMatching : ILicenceMatchingRule
     /// <param name="naldRecord">NALD record to find matches for</param>
     /// <param name="dmsLookups">Pre-built lookup dictionaries for fast searching</param>
     /// <returns>Collection of matching DMS records</returns>
-    protected abstract IEnumerable<DMSExtract> GetMatchingRecords(NALDExtract naldRecord, DMSLookupIndexes dmsLookups);
+    protected abstract IEnumerable<DmsExtract> GetMatchingRecords(NALDExtract naldRecord, DmsLookupIndexes dmsLookups);
 }

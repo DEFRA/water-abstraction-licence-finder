@@ -38,7 +38,7 @@ public class LicenceFileFinderTests
     public void Constructor_WithNullFileProcessor_ShouldThrowArgumentNullException()
     {
         // Act & Assert
-        var act = () => new LicenceFileFinder(null!, _mockReadExtract.Object, _matchingRules);
+        var act = () => new LicenceFileFinder(null!, _matchingRules);
         act.Should().Throw<ArgumentNullException>().WithParameterName("fileProcessor");
     }
 
@@ -46,7 +46,7 @@ public class LicenceFileFinderTests
     public void Constructor_WithNullReadExtract_ShouldThrowArgumentNullException()
     {
         // Act & Assert
-        var act = () => new LicenceFileFinder(_mockFileProcessor.Object, null!, _matchingRules);
+        var act = () => new LicenceFileFinder(_mockFileProcessor.Object, _matchingRules);
         act.Should().Throw<ArgumentNullException>().WithParameterName("readExtract");
     }
 
@@ -54,7 +54,7 @@ public class LicenceFileFinderTests
     public void Constructor_WithNullMatchingRules_ShouldThrowArgumentNullException()
     {
         // Act & Assert
-        var act = () => new LicenceFileFinder(_mockFileProcessor.Object, _mockReadExtract.Object, null!);
+        var act = () => new LicenceFileFinder(_mockFileProcessor.Object, null!);
         act.Should().Throw<ArgumentNullException>().WithParameterName("matchingRules");
     }
 
@@ -62,7 +62,7 @@ public class LicenceFileFinderTests
     public void Constructor_WithEmptyMatchingRules_ShouldThrowArgumentException()
     {
         // Act & Assert
-        var act = () => new LicenceFileFinder(_mockFileProcessor.Object, _mockReadExtract.Object, new List<ILicenceMatchingRule>());
+        var act = () => new LicenceFileFinder(_mockFileProcessor.Object, new List<ILicenceMatchingRule>());
         act.Should().Throw<ArgumentException>().WithParameterName("matchingRules");
     }
 
@@ -70,7 +70,7 @@ public class LicenceFileFinderTests
     public void Constructor_WithValidParameters_ShouldOrderRulesByPriority()
     {
         // Act
-        var finder = new LicenceFileFinder(_mockFileProcessor.Object, _mockReadExtract.Object, _matchingRules);
+        var finder = new LicenceFileFinder(_mockFileProcessor.Object, _matchingRules);
 
         // Assert - This is tested indirectly through the behavior when rules are applied
         finder.Should().NotBeNull();
@@ -80,28 +80,31 @@ public class LicenceFileFinderTests
     public void FindLicenseFile_WithValidData_ShouldReturnExcelFilePath()
     {
         // Arrange
-        var dmsRecords = new List<DMSExtract>
+        var dmsRecords = new Dictionary<string, List<DmsExtract>>
         {
-            new() { PermitNumber = "12345", FileUrl = "test.pdf", FileName = "test.pdf" }
+            {
+                "12345",
+                [new DmsExtract { PermitNumber = "12345", FileUrl = "test.pdf", FileName = "test.pdf" }]
+            }
         };
-        
+
         var naldRecords = new List<NALDExtract>
         {
             new() { LicNo = "1/23/45", Region = "Test Region" }
         };
 
-        _mockReadExtract.Setup(r => r.ReadDmsExtractFiles(It.IsAny<bool>())).Returns(dmsRecords);
-        _mockReadExtract.Setup(r => r.ReadNaldExtractFiles()).Returns(naldRecords);
+        _mockReadExtract.Setup(r => r.GetDmsExtractFiles(It.IsAny<bool>())).Returns(dmsRecords);
+        _mockReadExtract.Setup(r => r.GetNaldExtractFiles()).Returns(naldRecords);
         _mockReadExtract.Setup(r => r.ReadChangeAuditFiles()).Returns(new List<ChangeAudit>());
         _mockReadExtract.Setup(r => r.ReadLastIterationMatchesFiles(It.IsAny<bool>())).Returns(new List<LicenceMatchResult>());
-        _mockReadExtract.Setup(r => r.ReadNaldMetadataFile(It.IsAny<bool>())).Returns(new List<NALDMetadataExtract>());
+        _mockReadExtract.Setup(r => r.GetNaldMetadataFile(It.IsAny<bool>())).Returns(new Dictionary<string, List<NALDMetadataExtract>>());
         _mockReadExtract.Setup(r => r.ReadFileReaderExtract()).Returns(new List<FileReaderExtract>());
-        _mockReadExtract.Setup(r => r.ReadManualFixExtractFiles()).Returns(new List<ManualFixExtract>());
-
+        _mockReadExtract.Setup(r => r.GetDmsManualFixExtractFiles()).Returns(new Dictionary<string, DmsManualFixExtract>());
+        
         _mockFileProcessor.Setup(p => p.GenerateExcel(It.IsAny<List<LicenceMatchResult>>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
             .Returns("output.xlsx");
 
-        var finder = new LicenceFileFinder(_mockFileProcessor.Object, _mockReadExtract.Object, _matchingRules);
+        var finder = new LicenceFileFinder(_mockFileProcessor.Object, _matchingRules);
 
         // Act
         var result = finder.FindLicenceFiles(
@@ -124,10 +127,10 @@ public class LicenceFileFinderTests
     public void FindLicenseFile_WhenExceptionOccurs_ShouldThrowInvalidOperationException()
     {
         // Arrange
-        _mockReadExtract.Setup(r => r.ReadDmsExtractFiles(It.IsAny<bool>()))
+        _mockReadExtract.Setup(r => r.GetDmsExtractFiles(It.IsAny<bool>()))
             .Throws(new Exception("Test exception"));
 
-        var finder = new LicenceFileFinder(_mockFileProcessor.Object, _mockReadExtract.Object, _matchingRules);
+        var finder = new LicenceFileFinder(_mockFileProcessor.Object, _matchingRules);
 
         // Act & Assert
         var act = () => finder.FindLicenceFiles(
@@ -149,10 +152,14 @@ public class LicenceFileFinderTests
     public void FindLicenseFile_WithNoMatches_ShouldCreateNoMatchResult()
     {
         // Arrange
-        var dmsRecords = new List<DMSExtract>
+        var dmsRecords = new Dictionary<string, List<DmsExtract>>
         {
-            new() { PermitNumber = "99999", FileUrl = "other.pdf", FileName = "other.pdf" }
+            {
+                "99999",
+                [new DmsExtract { PermitNumber = "99999", FileUrl = "other.pdf", FileName = "other.pdf" }]
+            }
         };
+
         var naldRecords = new List<NALDExtract>
         {
             new() { LicNo = "1/23/45", Region = "Test Region" }
@@ -160,12 +167,12 @@ public class LicenceFileFinderTests
 
         SetupMocksForBasicTest(dmsRecords, naldRecords);
 
-        _mockRule1.Setup(r => r.FindMatch(It.IsAny<NALDExtract>(), It.IsAny<DMSLookupIndexes>()))
-            .Returns((DMSExtract?)null);
-        _mockRule2.Setup(r => r.FindMatch(It.IsAny<NALDExtract>(), It.IsAny<DMSLookupIndexes>()))
-            .Returns((DMSExtract?)null);
+        _mockRule1.Setup(r => r.FindMatch(It.IsAny<NALDExtract>(), It.IsAny<DmsLookupIndexes>()))
+            .Returns((DmsExtract?)null);
+        _mockRule2.Setup(r => r.FindMatch(It.IsAny<NALDExtract>(), It.IsAny<DmsLookupIndexes>()))
+            .Returns((DmsExtract?)null);
 
-        var finder = new LicenceFileFinder(_mockFileProcessor.Object, _mockReadExtract.Object, _matchingRules);
+        var finder = new LicenceFileFinder(_mockFileProcessor.Object, _matchingRules);
 
         // Act
         var result = finder.FindLicenceFiles(
@@ -194,7 +201,7 @@ public class LicenceFileFinderTests
     public void FindLicenseFile_WithSuccessfulMatch_ShouldCreateMatchResult()
     {
         // Arrange
-        var dmsRecord = new DMSExtract
+        var dmsRecord = new DmsExtract
         { 
             PermitNumber = "12345", 
             FileUrl = "test.pdf", 
@@ -203,7 +210,15 @@ public class LicenceFileFinderTests
             FileSize = "1MB",
             DisclosureStatus = "Public"
         };
-        var dmsRecords = new List<DMSExtract> { dmsRecord };
+        
+        var dmsRecords = new Dictionary<string, List<DmsExtract>>
+        {
+            {
+                dmsRecord.PermitNumber,
+                [dmsRecord]
+            }
+        };
+        
         var naldRecords = new List<NALDExtract>
         {
             new() { LicNo = "1/23/45", Region = "Test Region" }
@@ -211,11 +226,11 @@ public class LicenceFileFinderTests
 
         SetupMocksForBasicTest(dmsRecords, naldRecords);
 
-        _mockRule1.Setup(r => r.FindMatch(It.IsAny<NALDExtract>(), It.IsAny<DMSLookupIndexes>()))
+        _mockRule1.Setup(r => r.FindMatch(It.IsAny<NALDExtract>(), It.IsAny<DmsLookupIndexes>()))
             .Returns(dmsRecord);
         _mockRule1.Setup(r => r.HasDuplicates).Returns(false);
 
-        var finder = new LicenceFileFinder(_mockFileProcessor.Object, _mockReadExtract.Object, _matchingRules);
+        var finder = new LicenceFileFinder(_mockFileProcessor.Object, _matchingRules);
 
         // Act
         var result = finder.FindLicenceFiles(
@@ -241,15 +256,15 @@ public class LicenceFileFinderTests
             It.IsAny<Dictionary<string, string>>()), Times.Once);
     }
 
-    private void SetupMocksForBasicTest(List<DMSExtract> dmsRecords, List<NALDExtract> naldRecords)
+    private void SetupMocksForBasicTest(Dictionary<string, List<DmsExtract>> dmsRecords, List<NALDExtract> naldRecords)
     {
-        _mockReadExtract.Setup(r => r.ReadDmsExtractFiles(It.IsAny<bool>())).Returns(dmsRecords);
-        _mockReadExtract.Setup(r => r.ReadNaldExtractFiles()).Returns(naldRecords);
+        _mockReadExtract.Setup(r => r.GetDmsExtractFiles(It.IsAny<bool>())).Returns(dmsRecords);
+        _mockReadExtract.Setup(r => r.GetNaldExtractFiles()).Returns(naldRecords);
         _mockReadExtract.Setup(r => r.ReadChangeAuditFiles()).Returns(new List<ChangeAudit>());
         _mockReadExtract.Setup(r => r.ReadLastIterationMatchesFiles(It.IsAny<bool>())).Returns(new List<LicenceMatchResult>());
-        _mockReadExtract.Setup(r => r.ReadNaldMetadataFile(It.IsAny<bool>())).Returns(new List<NALDMetadataExtract>());
+        _mockReadExtract.Setup(r => r.GetNaldMetadataFile(It.IsAny<bool>())).Returns(new Dictionary<string, List<NALDMetadataExtract>>());
         _mockReadExtract.Setup(r => r.ReadFileReaderExtract()).Returns(new List<FileReaderExtract>());
-        _mockReadExtract.Setup(r => r.ReadManualFixExtractFiles()).Returns(new List<ManualFixExtract>());
+        _mockReadExtract.Setup(r => r.GetDmsManualFixExtractFiles()).Returns(new Dictionary<string, DmsManualFixExtract>());
 
         _mockFileProcessor.Setup(p => p.GenerateExcel(It.IsAny<List<LicenceMatchResult>>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
             .Returns("output.xlsx");

@@ -16,9 +16,9 @@ public static class RuleHelpers
     /// <param name="ruleName">Base rule name</param>
     /// <param name="priorityLabel">Label for this priority level (e.g., "Priority 1")</param>
     /// <returns>Match result tuple or null if no matches at this priority</returns>
-    private static (DMSExtract? dmsExtract, string? ruleName, bool hasDuplicate)? ProcessPriorityLevel(
-        List<DMSExtract> matchingRecords,
-        Func<DMSExtract, bool> priorityFilter,
+    private static (DmsExtract? dmsExtract, string? ruleName, bool hasDuplicate)? ProcessPriorityLevel(
+        List<DmsExtract> matchingRecords,
+        Func<DmsExtract, bool> priorityFilter,
         string ruleName,
         string priorityLabel)
     {
@@ -39,7 +39,7 @@ public static class RuleHelpers
         return (document, $@"{ruleName} - {priorityLabel}", priorityMatches.Count > 1);
     }
 
-    public static (DMSExtract? dmsExtract, string? ruleName, bool hasDuplicate) FindPriorityMatch(List<DMSExtract> matchingRecords, string ruleName)
+    public static (DmsExtract? dmsExtract, string? ruleName, bool hasDuplicate) FindPriorityMatch(List<DmsExtract> matchingRecords, string ruleName)
     {
         // Define priority levels with their filters and labels
         var priorityLevels = new[]
@@ -47,7 +47,7 @@ public static class RuleHelpers
             (filter: dms => ContainsLicenseVariationPriority1(dms.FileName), label: "Priority 1"),
             (filter: dms => ContainsLicenseVariationPriority2(dms.FileName), label: "Priority 2"),
             (filter: dms => ContainsLicenseVariationPriority3(dms.FileName), label: "Priority 3"),
-            (filter: new Func<DMSExtract, bool>(dms => ContainsLicenseVariationPriority4(dms.FileName, dms.PermitNumber)), label: "Permit Number Match - Priority 4")
+            (filter: new Func<DmsExtract, bool>(dms => ContainsLicenseVariationPriority4(dms.FileName, dms.PermitNumber)), label: "Permit Number Match - Priority 4")
         };
 
         // Process each priority level in order
@@ -542,7 +542,7 @@ public static class RuleHelpers
     /// </summary>
     /// <param name="dmsRecords">Collection of DMS records to select from</param>
     /// <returns>Tuple containing the latest DMS record (or null) and whether duplicates with same dates exist</returns>
-    private static (DMSExtract? document, bool hasSameDateDuplicates) SelectLatestDocument(IEnumerable<DMSExtract> dmsRecords)
+    private static (DmsExtract? document, bool hasSameDateDuplicates) SelectLatestDocument(IEnumerable<DmsExtract> dmsRecords)
     {
         var recordsList = dmsRecords?.ToList();
 

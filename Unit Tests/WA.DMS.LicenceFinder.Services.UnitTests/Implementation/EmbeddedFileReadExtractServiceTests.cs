@@ -33,23 +33,23 @@ public class EmbeddedFileReadExtractServiceTests
     public void ReadDMSExtractFiles_WithValidData_ShouldReturnDMSRecords()
     {
         // Arrange
-        var expectedRecords = new List<DMSExtract>
+        var expectedRecords = new List<DmsExtract>
         {
             new() { PermitNumber = "12345", FileUrl = "test.pdf", FileName = "test.pdf" }
         };
 
         _mockFileProcessor.Setup(p => p.FindFilesByPattern("Site"))
             .Returns(new List<string> { "Site_test.xlsx" });
-        _mockFileProcessor.Setup(p => p.ExtractExcel<List<DMSExtract>>("Site_test.xlsx", It.IsAny<Dictionary<string, string>>()))
+        _mockFileProcessor.Setup(p => p.ExtractExcel<List<DmsExtract>>("Site_test.xlsx", It.IsAny<Dictionary<string, string>>()))
             .Returns(expectedRecords);
 
         // Act
-        var result = _embeddedFileReadExtractService.ReadDmsExtractFiles(false);
+        var result = _embeddedFileReadExtractService.GetDmsExtractFiles(false);
 
         // Assert
         result.Should().BeEquivalentTo(expectedRecords);
         _mockFileProcessor.Verify(p => p.FindFilesByPattern("Site"), Times.Once);
-        _mockFileProcessor.Verify(p => p.ExtractExcel<List<DMSExtract>>("Site_test.xlsx", It.IsAny<Dictionary<string, string>>()), Times.Once);
+        _mockFileProcessor.Verify(p => p.ExtractExcel<List<DmsExtract>>("Site_test.xlsx", It.IsAny<Dictionary<string, string>>()), Times.Once);
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public class EmbeddedFileReadExtractServiceTests
             .Returns(rawRecords);
 
         // Act
-        var result = _embeddedFileReadExtractService.ReadNaldExtractFiles();
+        var result = _embeddedFileReadExtractService.GetNaldExtractFiles();
 
         // Assert
         result.Should().HaveCount(1);
@@ -103,23 +103,23 @@ public class EmbeddedFileReadExtractServiceTests
     public void ReadManualFixExtractFiles_WithValidData_ShouldReturnManualFixRecords()
     {
         // Arrange
-        var expectedRecords = new List<ManualFixExtract>
+        var expectedRecords = new List<DmsManualFixExtract>
         {
             new() { PermitNumber = "12345", PermitNumberFolder = "folder123" }
         };
 
         _mockFileProcessor.Setup(p => p.FindFilesByPattern("Manual_Fix_Extract"))
             .Returns(new List<string> { "Manual_Fix_Extract_test.xlsx" });
-        _mockFileProcessor.Setup(p => p.ExtractExcel<List<ManualFixExtract>>("Manual_Fix_Extract_test.xlsx", It.IsAny<Dictionary<string, string>>()))
+        _mockFileProcessor.Setup(p => p.ExtractExcel<List<DmsManualFixExtract>>("Manual_Fix_Extract_test.xlsx", It.IsAny<Dictionary<string, string>>()))
             .Returns(expectedRecords);
 
         // Act
-        var result = _embeddedFileReadExtractService.ReadManualFixExtractFiles();
+        var result = _embeddedFileReadExtractService.GetDmsManualFixExtractFiles();
 
         // Assert
         result.Should().BeEquivalentTo(expectedRecords);
         _mockFileProcessor.Verify(p => p.FindFilesByPattern("Manual_Fix_Extract"), Times.Once);
-        _mockFileProcessor.Verify(p => p.ExtractExcel<List<ManualFixExtract>>("Manual_Fix_Extract_test.xlsx", It.IsAny<Dictionary<string, string>>()), Times.Once);
+        _mockFileProcessor.Verify(p => p.ExtractExcel<List<DmsManualFixExtract>>("Manual_Fix_Extract_test.xlsx", It.IsAny<Dictionary<string, string>>()), Times.Once);
     }
 
     [Fact]
@@ -170,7 +170,7 @@ public class EmbeddedFileReadExtractServiceTests
             .Returns(new List<string>());
 
         // Act
-        var result = _embeddedFileReadExtractService.ReadNaldMetadataFile(true);
+        var result = _embeddedFileReadExtractService.GetNaldMetadataFile(true);
 
         // Assert
         result.Should().BeEmpty();
@@ -200,7 +200,7 @@ public class EmbeddedFileReadExtractServiceTests
             .Returns(rawRecords);
 
         // Act
-        var result = _embeddedFileReadExtractService.ReadNaldExtractFiles();
+        var result = _embeddedFileReadExtractService.GetNaldExtractFiles();
 
         // Assert
         if (result.Any())
@@ -213,7 +213,7 @@ public class EmbeddedFileReadExtractServiceTests
     public void ReadDMSExtractFiles_WhenExceptionOccurs_ShouldContinueProcessingOtherFiles()
     {
         // Arrange
-        var validRecords = new List<DMSExtract>
+        var validRecords = new List<DmsExtract>
         {
             new() { PermitNumber = "12345", FileUrl = "test.pdf", FileName = "test.pdf" }
         };
@@ -221,18 +221,18 @@ public class EmbeddedFileReadExtractServiceTests
         _mockFileProcessor.Setup(p => p.FindFilesByPattern("Site"))
             .Returns(new List<string> { "Site_bad.xlsx", "Site_good.xlsx" });
 
-        _mockFileProcessor.Setup(p => p.ExtractExcel<List<DMSExtract>>("Site_bad.xlsx", It.IsAny<Dictionary<string, string>>()))
+        _mockFileProcessor.Setup(p => p.ExtractExcel<List<DmsExtract>>("Site_bad.xlsx", It.IsAny<Dictionary<string, string>>()))
             .Throws(new Exception("File processing error"));
 
-        _mockFileProcessor.Setup(p => p.ExtractExcel<List<DMSExtract>>("Site_good.xlsx", It.IsAny<Dictionary<string, string>>()))
+        _mockFileProcessor.Setup(p => p.ExtractExcel<List<DmsExtract>>("Site_good.xlsx", It.IsAny<Dictionary<string, string>>()))
             .Returns(validRecords);
 
         // Act
-        var result = _embeddedFileReadExtractService.ReadDmsExtractFiles(false);
+        var result = _embeddedFileReadExtractService.GetDmsExtractFiles(false);
 
         // Assert
         result.Should().BeEquivalentTo(validRecords);
-        _mockFileProcessor.Verify(p => p.ExtractExcel<List<DMSExtract>>("Site_bad.xlsx", It.IsAny<Dictionary<string, string>>()), Times.Once);
-        _mockFileProcessor.Verify(p => p.ExtractExcel<List<DMSExtract>>("Site_good.xlsx", It.IsAny<Dictionary<string, string>>()), Times.Once);
+        _mockFileProcessor.Verify(p => p.ExtractExcel<List<DmsExtract>>("Site_bad.xlsx", It.IsAny<Dictionary<string, string>>()), Times.Once);
+        _mockFileProcessor.Verify(p => p.ExtractExcel<List<DmsExtract>>("Site_good.xlsx", It.IsAny<Dictionary<string, string>>()), Times.Once);
     }
 }

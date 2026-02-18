@@ -3,7 +3,7 @@ namespace WA.DMS.LicenceFinder.Core.Models;
 /// <summary>
 /// Represents manual fix data for permit numbers that couldn't be automatically matched
 /// </summary>
-public class ManualFixExtract
+public class DmsManualFixExtract
 {
     /// <summary>
     /// The DMS permit number to match
