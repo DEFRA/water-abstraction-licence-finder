@@ -104,7 +104,7 @@ public class LicenceFileFinderTests
         var finder = new LicenceFileFinder(_mockFileProcessor.Object, _mockReadExtract.Object, _matchingRules);
 
         // Act
-        var result = finder.FindLicenceFiles([]);
+        var result = finder.FindLicenceFiles([], []);
 
         // Assert
         result.Should().Be("output.xlsx");
@@ -121,7 +121,7 @@ public class LicenceFileFinderTests
         var finder = new LicenceFileFinder(_mockFileProcessor.Object, _mockReadExtract.Object, _matchingRules);
 
         // Act & Assert
-        var act = () => finder.FindLicenceFiles([]);
+        var act = () => finder.FindLicenceFiles([], []);
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("Error occurred while finding license files: Test exception");
     }
@@ -149,7 +149,7 @@ public class LicenceFileFinderTests
         var finder = new LicenceFileFinder(_mockFileProcessor.Object, _mockReadExtract.Object, _matchingRules);
 
         // Act
-        var result = finder.FindLicenceFiles([]);
+        var result = finder.FindLicenceFiles([],[]);
 
         // Assert
         result.Should().NotBeNull();
@@ -166,7 +166,7 @@ public class LicenceFileFinderTests
     public void FindLicenseFile_WithSuccessfulMatch_ShouldCreateMatchResult()
     {
         // Arrange
-        var dmsRecord = new DMSExtract 
+        var dmsRecord = new DMSExtract
         { 
             PermitNumber = "12345", 
             FileUrl = "test.pdf", 
@@ -190,7 +190,7 @@ public class LicenceFileFinderTests
         var finder = new LicenceFileFinder(_mockFileProcessor.Object, _mockReadExtract.Object, _matchingRules);
 
         // Act
-        var result = finder.FindLicenceFiles([]);
+        var result = finder.FindLicenceFiles([], []);
 
         // Assert
         result.Should().NotBeNull();

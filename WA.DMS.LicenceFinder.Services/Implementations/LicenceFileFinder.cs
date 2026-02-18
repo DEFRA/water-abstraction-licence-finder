@@ -90,20 +90,19 @@ public class LicenceFileFinder : ILicenceFileFinder
         }
     }
 
-    public string FindLicenceFiles(List<DMSExtract> dmsRecords)
+    public string FindLicenceFiles(
+        List<DMSExtract> dmsRecords,
+        List<NALDExtract> naldRecords,
+        List<ManualFixExtract> manualFixes)
     {
         try
         {
-            // Step 1: Receive all DMS extract files (e.g. Site_N)
-
-            // Step 2: Read NALD extract files (e.g NALD_Extract)
-            var naldRecords = _readExtract.ReadNaldExtractFiles();
-
             // Step 3: Process each NALD record and find matches using rules
-            // NOTE - Fetches more files - Manual_Fix_Extract, Previous_Iteration_Matches, NALD_Metadata,
+            // NOTE - Fetches more files - revious_Iteration_Matches, NALD_Metadata,
             // NALD_Metadata_Reference, Overrides, File_Reader_Extract, Template_Results, File_Identification_Extract
+            
             var (licenceMatchResults, unmatchedLicenceMatchResults)
-                = ProcessLicenceMatching(naldRecords, dmsRecords);
+                = ProcessLicenceMatching(naldRecords, dmsRecords, manualFixes);
 
             // Step 4: Generate output Excel file
             var outputFileName = $"LicenceMatchResults_{DateTime.Now:yyyyMMdd_HHmmss}";
@@ -416,14 +415,14 @@ public class LicenceFileFinder : ILicenceFileFinder
         return string.Empty;
     }
 
-    public string FindDuplicateLicenseFiles(List<DMSExtract> dmsRecords)
+    public string FindDuplicateLicenseFiles(List<DMSExtract> dmsRecords, List<NALDExtract> naldRecords)
     {
         try
         {
             // Step 1: Receive all DMS extract files
             
             // Step 2: Process duplicate detection
-            var results = ProcessDuplicateDetection(dmsRecords);
+            var results = ProcessDuplicateDetection(dmsRecords, naldRecords);
 
             // Step 3: Generate output Excel file
             var outputFileName = $"DuplicateResults_{DateTime.Now:yyyyMMdd_HHmmss}";
@@ -892,17 +891,20 @@ public class LicenceFileFinder : ILicenceFileFinder
         return _fileProcessor.GenerateExcel(worksheetData, outputFileName);
 
     }
+
     /// <summary>
     /// Processes duplicate detection by identifying files that satisfy Priority4 rule and their potential duplicates
     /// </summary>
     /// <param name="dmsRecords">DMS extract records to process</param>
+    /// <param name="naldRecords"></param>
     /// <returns>List of duplicate detection results</returns>
-    private List<DuplicateResult> ProcessDuplicateDetection(List<DMSExtract> dmsRecords)
+    private List<DuplicateResult> ProcessDuplicateDetection(
+        List<DMSExtract> dmsRecords,
+        List<NALDExtract> naldRecords)
     {
         var results = new List<DuplicateResult>();
 
         // Read NALD records to get region information
-        var naldRecords = _readExtract.ReadNaldExtractFiles();
         var regionLookup = naldRecords.ToDictionary(
             n => n.PermitNo,
             n => n.Region,
@@ -984,13 +986,17 @@ public class LicenceFileFinder : ILicenceFileFinder
     /// </summary>
     /// <param name="naldRecords">NALD extract records to process</param>
     /// <param name="dmsRecords">DMS extract records to search in</param>
+    /// <param name="manualFixes"></param>
     /// <returns>List of license matching results</returns>
     private (List<LicenceMatchResult> LicenceMatchResults,
         List<UnmatchedLicenceMatchResult> UnmatchedLicenseMatchResults)
-        ProcessLicenceMatching(List<NALDExtract> naldRecords, List<DMSExtract> dmsRecords)
+        ProcessLicenceMatching(
+            List<NALDExtract> naldRecords,
+            List<DMSExtract> dmsRecords,
+            List<ManualFixExtract> manualFixes)
     {
         // Build lookup indexes for optimized searching
-        var dmsLookups = BuildLookupIndexes(dmsRecords);
+        var dmsLookups = BuildLookupIndexes(dmsRecords, manualFixes);
         var results = new List<LicenceMatchResult>();
         var totalRecords = naldRecords.Count;
         
@@ -1218,11 +1224,12 @@ public class LicenceFileFinder : ILicenceFileFinder
     /// Builds lookup indexes from DMS records for optimized searching
     /// </summary>
     /// <param name="dmsRecords">The DMS records to build indexes from</param>
+    /// <param name="manualFixes"></param>
     /// <returns>DMSLookupIndexes containing various lookup dictionaries</returns>
-    private DMSLookupIndexes BuildLookupIndexes(List<DMSExtract> dmsRecords)
+    private static DMSLookupIndexes BuildLookupIndexes(
+        List<DMSExtract> dmsRecords,
+        List<ManualFixExtract> manualFixes)
     {
-        var manualFixes = _readExtract.ReadManualFixExtractFiles();
-        
         var lookupIndexes = new DMSLookupIndexes
         {
             AllRecords = dmsRecords

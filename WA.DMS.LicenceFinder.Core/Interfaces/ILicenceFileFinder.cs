@@ -11,13 +11,16 @@ public interface ILicenceFileFinder
     /// Finds and matches license files, generating an Excel report with results
     /// </summary>
     /// <returns>The path to the generated Excel results file</returns>
-    string FindLicenceFiles(List<DMSExtract> dmsRecords);
+    string FindLicenceFiles(
+        List<DMSExtract> dmsRecords,
+        List<NALDExtract> naldRecords,
+        List<ManualFixExtract> manualFixes);
     
     /// <summary>
     /// Finds all potential duplicates in DMS extract
     /// </summary>
     /// <returns>The path to the generated Excel results file</returns>
-    string FindDuplicateLicenseFiles(List<DMSExtract> dmsRecords);
+    string FindDuplicateLicenseFiles(List<DMSExtract> dmsRecords, List<NALDExtract> naldRecords);
 
     string BuildFileTemplateIdentificationExtract();
 

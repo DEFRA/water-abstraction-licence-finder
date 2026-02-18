@@ -20,11 +20,18 @@ using (var scope = host.Services.CreateScope())
     
     try
     {
+        // All DMS extract files (e.g. Site_N.xlsx)
         var dmsRecords = readExtractService.ReadDmsExtractFiles(false);
+
+        // All NALD extract files (e.g NALD_Extract.xlsx)
+        var naldRecords = readExtractService.ReadNaldExtractFiles();
+        
+        // Manual fixes (e.g. Manual_Fix_Extract.xlsx)
+        var manualFixes = readExtractService.ReadManualFixExtractFiles();
         
         // FLOW - Licence file finder
         Console.WriteLine("Starting licence file processing...");
-        var resultFilePath = licenceFileFinder.FindLicenceFiles(dmsRecords);
+        var resultFilePath = licenceFileFinder.FindLicenceFiles(dmsRecords, naldRecords, manualFixes);
         Console.WriteLine($"License processing completed. Results saved to: {resultFilePath}");
         
         // FLOW - Build Version Download Info Excel
@@ -43,8 +50,8 @@ using (var scope = host.Services.CreateScope())
         //Console.WriteLine($"File saved to {resultFilePath}");
 
         // FLOW - Find duplicate licence files
-        var duplicateFilePath = licenceFileFinder.FindDuplicateLicenseFiles(dmsRecords);
-        Console.WriteLine($"Results saved to: {duplicateFilePath}");
+        //var duplicateFilePath = licenceFileFinder.FindDuplicateLicenseFiles(dmsRecords, naldRecords);
+        //Console.WriteLine($"Results saved to: {duplicateFilePath}");
     }
     catch (Exception ex)
     {
