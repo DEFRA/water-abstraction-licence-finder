@@ -29,9 +29,37 @@ using (var scope = host.Services.CreateScope())
         // Manual fixes (e.g. Manual_Fix_Extract.xlsx)
         var manualFixes = readExtractService.ReadManualFixExtractFiles();
         
+        // Previous iteration matches (e.g. Previous_Iteration_Matches.xlsx)
+        var previousIterationMatches = readExtractService.ReadLastIterationMatchesFiles(false);
+            
+        // Nald metadata 2 files (e.g. NALD_Metadata.xlsx and NALD_Metadata_Reference.xlsx)
+        var naldMetadata = readExtractService.ReadNaldMetadataFile(true);
+        
+        // Override files (e.g. Overrides.xlsx)
+        var changeAudits = readExtractService.ReadOverrideFile();
+        
+        // File reader extracts (e.g. File_Reader_Extract.xlsx)
+        var fileReaderExtract = readExtractService.ReadFileReaderExtract();
+        
+        // Template results (e.g. Template_Results.xlsx)
+        var templateFinderResults = readExtractService.ReadTemplateFinderResults();
+
+        // File identification extracts (e.g. File_Identification_Extract.csv)
+        var fileIdentificationExtract = readExtractService.ReadFileIdentificationExtract();
+        
         // FLOW - Licence file finder
         Console.WriteLine("Starting licence file processing...");
-        var resultFilePath = licenceFileFinder.FindLicenceFiles(dmsRecords, naldRecords, manualFixes);
+        var resultFilePath = licenceFileFinder.FindLicenceFiles(
+            dmsRecords,
+            naldRecords,
+            manualFixes,
+            previousIterationMatches,
+            naldMetadata,
+            changeAudits,
+            fileReaderExtract,
+            templateFinderResults,
+            fileIdentificationExtract);
+        
         Console.WriteLine($"License processing completed. Results saved to: {resultFilePath}");
         
         // FLOW - Build Version Download Info Excel

@@ -127,7 +127,7 @@ public class EmbeddedFileReadExtractService(ILicenceFileProcessor fileProcessor)
     /// Reads Previous Iteration Matches from the resources folder
     /// </summary>
     /// <returns>Previous iteration match results</returns>
-    public List<LicenceMatchResult> ReadLastIterationMatchesFiles(bool current = false)
+    public List<LicenceMatchResult> ReadLastIterationMatchesFiles(bool current)
     {
         var allPreviousIterationResults = new List<LicenceMatchResult>();
 
@@ -151,7 +151,7 @@ public class EmbeddedFileReadExtractService(ILicenceFileProcessor fileProcessor)
     /// Reads NALD Metadata from the resources folder
     /// </summary>
     /// <returns>NALD Metadata results grouped by LicNo with maximum SignatureDate</returns>
-    public List<NALDMetadataExtract> ReadNALDMetadataFile(bool getLatest = true)
+    public List<NALDMetadataExtract> ReadNaldMetadataFile(bool getLatest)
     {
         var naldMetadataResults = new List<NALDMetadataExtract>();
         var naldMetadataReferenceResults = new List<NALDMetadataReferenceExtract>();

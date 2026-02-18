@@ -23,13 +23,13 @@ public interface IReadExtract
     /// Reads Previous Iteration Matches from the resources folder
     /// </summary>
     /// <returns>Previous iteration match results</returns>
-    List<LicenceMatchResult> ReadLastIterationMatchesFiles(bool current = false);
+    List<LicenceMatchResult> ReadLastIterationMatchesFiles(bool current);
 
     /// <summary>
     /// Reads NALD Metadata from the resources folder
     /// </summary>
     /// <returns>NALD Metadata results grouped by LicNo with maximum SignatureDate</returns>
-    List<NALDMetadataExtract> ReadNALDMetadataFile(bool getLatest = true);
+    List<NALDMetadataExtract> ReadNaldMetadataFile(bool getLatest);
 
     /// <summary>
     /// Reads File_Identification_Extract.csv file from the resources folder

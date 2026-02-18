@@ -153,7 +153,7 @@ public class EmbeddedFileReadExtractServiceTests
             .Returns(new List<string>());
 
         // Act
-        var result = _embeddedFileReadExtractService.ReadLastIterationMatchesFiles();
+        var result = _embeddedFileReadExtractService.ReadLastIterationMatchesFiles(false);
 
         // Assert
         result.Should().BeEmpty();
@@ -170,7 +170,7 @@ public class EmbeddedFileReadExtractServiceTests
             .Returns(new List<string>());
 
         // Act
-        var result = _embeddedFileReadExtractService.ReadNALDMetadataFile();
+        var result = _embeddedFileReadExtractService.ReadNaldMetadataFile(true);
 
         // Assert
         result.Should().BeEmpty();

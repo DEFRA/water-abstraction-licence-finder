@@ -94,7 +94,7 @@ public class LicenceFileFinderTests
         _mockReadExtract.Setup(r => r.ReadNaldExtractFiles()).Returns(naldRecords);
         _mockReadExtract.Setup(r => r.ReadChangeAuditFiles()).Returns(new List<ChangeAudit>());
         _mockReadExtract.Setup(r => r.ReadLastIterationMatchesFiles(It.IsAny<bool>())).Returns(new List<LicenceMatchResult>());
-        _mockReadExtract.Setup(r => r.ReadNALDMetadataFile(It.IsAny<bool>())).Returns(new List<NALDMetadataExtract>());
+        _mockReadExtract.Setup(r => r.ReadNaldMetadataFile(It.IsAny<bool>())).Returns(new List<NALDMetadataExtract>());
         _mockReadExtract.Setup(r => r.ReadFileReaderExtract()).Returns(new List<FileReaderExtract>());
         _mockReadExtract.Setup(r => r.ReadManualFixExtractFiles()).Returns(new List<ManualFixExtract>());
 
@@ -104,7 +104,16 @@ public class LicenceFileFinderTests
         var finder = new LicenceFileFinder(_mockFileProcessor.Object, _mockReadExtract.Object, _matchingRules);
 
         // Act
-        var result = finder.FindLicenceFiles([], []);
+        var result = finder.FindLicenceFiles(
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []);
 
         // Assert
         result.Should().Be("output.xlsx");
@@ -121,7 +130,17 @@ public class LicenceFileFinderTests
         var finder = new LicenceFileFinder(_mockFileProcessor.Object, _mockReadExtract.Object, _matchingRules);
 
         // Act & Assert
-        var act = () => finder.FindLicenceFiles([], []);
+        var act = () => finder.FindLicenceFiles(
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []);
+        
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("Error occurred while finding license files: Test exception");
     }
@@ -149,7 +168,16 @@ public class LicenceFileFinderTests
         var finder = new LicenceFileFinder(_mockFileProcessor.Object, _mockReadExtract.Object, _matchingRules);
 
         // Act
-        var result = finder.FindLicenceFiles([],[]);
+        var result = finder.FindLicenceFiles(
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []);
 
         // Assert
         result.Should().NotBeNull();
@@ -190,7 +218,16 @@ public class LicenceFileFinderTests
         var finder = new LicenceFileFinder(_mockFileProcessor.Object, _mockReadExtract.Object, _matchingRules);
 
         // Act
-        var result = finder.FindLicenceFiles([], []);
+        var result = finder.FindLicenceFiles(
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []);
 
         // Assert
         result.Should().NotBeNull();
@@ -210,7 +247,7 @@ public class LicenceFileFinderTests
         _mockReadExtract.Setup(r => r.ReadNaldExtractFiles()).Returns(naldRecords);
         _mockReadExtract.Setup(r => r.ReadChangeAuditFiles()).Returns(new List<ChangeAudit>());
         _mockReadExtract.Setup(r => r.ReadLastIterationMatchesFiles(It.IsAny<bool>())).Returns(new List<LicenceMatchResult>());
-        _mockReadExtract.Setup(r => r.ReadNALDMetadataFile(It.IsAny<bool>())).Returns(new List<NALDMetadataExtract>());
+        _mockReadExtract.Setup(r => r.ReadNaldMetadataFile(It.IsAny<bool>())).Returns(new List<NALDMetadataExtract>());
         _mockReadExtract.Setup(r => r.ReadFileReaderExtract()).Returns(new List<FileReaderExtract>());
         _mockReadExtract.Setup(r => r.ReadManualFixExtractFiles()).Returns(new List<ManualFixExtract>());
 

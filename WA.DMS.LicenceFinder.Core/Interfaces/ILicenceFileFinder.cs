@@ -14,7 +14,13 @@ public interface ILicenceFileFinder
     string FindLicenceFiles(
         List<DMSExtract> dmsRecords,
         List<NALDExtract> naldRecords,
-        List<ManualFixExtract> manualFixes);
+        List<ManualFixExtract> manualFixes,
+        List<LicenceMatchResult> previousIterationMatches,
+        List<NALDMetadataExtract>  naldMetadataExtracts,
+        List<Override> changeAudits,
+        List<FileReaderExtract> fileReaderExtracts,
+        List<TemplateFinderResult> templateFinderResults,
+        List<FileIdentificationExtract>  fileIdentificationExtracts);
     
     /// <summary>
     /// Finds all potential duplicates in DMS extract

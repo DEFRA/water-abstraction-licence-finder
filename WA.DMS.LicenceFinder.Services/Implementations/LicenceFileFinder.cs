@@ -93,16 +93,30 @@ public class LicenceFileFinder : ILicenceFileFinder
     public string FindLicenceFiles(
         List<DMSExtract> dmsRecords,
         List<NALDExtract> naldRecords,
-        List<ManualFixExtract> manualFixes)
+        List<ManualFixExtract> manualFixes,
+        List<LicenceMatchResult> previousIterationMatches,
+        List<NALDMetadataExtract> naldMetadataExtracts,
+        List<Override> changeAudits,
+        List<FileReaderExtract> fileReaderExtracts,
+        List<TemplateFinderResult> templateFinderResults,
+        List<FileIdentificationExtract> fileIdentificationExtracts)
     {
         try
         {
             // Step 3: Process each NALD record and find matches using rules
-            // NOTE - Fetches more files - revious_Iteration_Matches, NALD_Metadata,
-            // NALD_Metadata_Reference, Overrides, File_Reader_Extract, Template_Results, File_Identification_Extract
+            // NOTE - Fetches more files - Overrides, File_Reader_Extract, Template_Results, File_Identification_Extract
             
             var (licenceMatchResults, unmatchedLicenceMatchResults)
-                = ProcessLicenceMatching(naldRecords, dmsRecords, manualFixes);
+                = ProcessLicenceMatching(
+                    naldRecords,
+                    dmsRecords,
+                    manualFixes,
+                    previousIterationMatches,
+                    naldMetadataExtracts,
+                    changeAudits,
+                    fileReaderExtracts,
+                    templateFinderResults,
+                    fileIdentificationExtracts);
 
             // Step 4: Generate output Excel file
             var outputFileName = $"LicenceMatchResults_{DateTime.Now:yyyyMMdd_HHmmss}";
@@ -126,7 +140,7 @@ public class LicenceFileFinder : ILicenceFileFinder
         var allFilesInventory = _readExtract.ReadWaterPdfsInventoryFiles();
         var consolidated = dmsRecords; // NOTE - It isn't consolidated
         var currentMatches = _readExtract.ReadLastIterationMatchesFiles(true);
-        var prevMatches = _readExtract.ReadLastIterationMatchesFiles();
+        var prevMatches = _readExtract.ReadLastIterationMatchesFiles(false);
 
         // Filter prevMatches by region if specified, otherwise use all
         var filteredPrevMatches = string.IsNullOrWhiteSpace(filterRegion)
@@ -442,10 +456,12 @@ public class LicenceFileFinder : ILicenceFileFinder
 
     private List<UnmatchedLicenceMatchResult> FindUnmatchedLicenceFile(
         List<DMSExtract> dmsRecords,
-        List<NALDMetadataExtract> naldRecords)
+        List<NALDMetadataExtract> naldRecords,
+        List<LicenceMatchResult> previousIterationMatches,
+        List<FileIdentificationExtract> fileIdentificationExtracts)
     {
-        // Step 1: Read previous iteration matches files
-        var previousIterationMatches = _readExtract.ReadLastIterationMatchesFiles();
+        // Step 1: Recieve previous iteration matches files
+        
         //var prevFileDetails = _readExtract.ReadDmsExtractFiles(consolidated: true);
         
         //"22713211R01", "22718132R01", "NE0270009030", "NE0230001004", "NE0270023047", "NE0270011011", "22709198R01"
@@ -459,10 +475,7 @@ public class LicenceFileFinder : ILicenceFileFinder
 
         Console.WriteLine($"Found {recordsWithDifferentDates.Count} records where Date of Issue differs from Signature Date.");
 
-        var fileIdentificationExtract = _readExtract.ReadFileIdentificationExtract()
-            .Distinct()
-            .ToList();
-        
+        var fileIdentificationExtract = fileIdentificationExtracts.Distinct().ToList();
         var result = new List<UnmatchedLicenceMatchResult>();
         
         foreach (var record in recordsWithDifferentDates)
@@ -827,7 +840,7 @@ public class LicenceFileFinder : ILicenceFileFinder
         };
         
         // Step 1: Read all PreviousExtract
-        var prevMatchResults = _readExtract.ReadLastIterationMatchesFiles()
+        var prevMatchResults = _readExtract.ReadLastIterationMatchesFiles(false)
             .Where(d => !string.IsNullOrWhiteSpace(d.DateOfIssue)
                 && d.DateOfIssue.Equals(d.SignatureDate,  StringComparison.OrdinalIgnoreCase));
         
@@ -987,26 +1000,37 @@ public class LicenceFileFinder : ILicenceFileFinder
     /// <param name="naldRecords">NALD extract records to process</param>
     /// <param name="dmsRecords">DMS extract records to search in</param>
     /// <param name="manualFixes"></param>
+    /// <param name="previousIterationMatches"></param>
+    /// <param name="naldMetadata"></param>
+    /// <param name="changeAudits"></param>
+    /// <param name="fileReaderExtracts"></param>
+    /// <param name="templateFinderResults"></param>
+    /// <param name="fileIdentificationExtracts"></param>
     /// <returns>List of license matching results</returns>
     private (List<LicenceMatchResult> LicenceMatchResults,
         List<UnmatchedLicenceMatchResult> UnmatchedLicenseMatchResults)
         ProcessLicenceMatching(
             List<NALDExtract> naldRecords,
             List<DMSExtract> dmsRecords,
-            List<ManualFixExtract> manualFixes)
+            List<ManualFixExtract> manualFixes,
+            List<LicenceMatchResult> previousIterationMatches,
+            List<NALDMetadataExtract> naldMetadata,
+            List<Override> changeAudits,
+            List<FileReaderExtract> fileReaderExtracts,
+            List<TemplateFinderResult> templateFinderResults,
+            List<FileIdentificationExtract> fileIdentificationExtracts)
     {
         // Build lookup indexes for optimized searching
         var dmsLookups = BuildLookupIndexes(dmsRecords, manualFixes);
         var results = new List<LicenceMatchResult>();
         var totalRecords = naldRecords.Count;
         
-        var previousIterationMatches = _readExtract.ReadLastIterationMatchesFiles();
-        var naldMetadata = _readExtract.ReadNALDMetadataFile();
-        var changeAudits = _readExtract.ReadOverrideFile();
-        var fileReaderExtract = _readExtract.ReadFileReaderExtract();
-        var templateResults = _readExtract.ReadTemplateFinderResults();
+        var versionResults = FindUnmatchedLicenceFile(
+            dmsRecords,
+            naldMetadata,
+            previousIterationMatches,
+            fileIdentificationExtracts);
         
-        var versionResults = FindUnmatchedLicenceFile(dmsRecords, naldMetadata);
         var processedRecords = 0;
        
         Console.WriteLine($"Processing {totalRecords} NALD records...");
@@ -1051,7 +1075,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                 
                 results.Add(result);
                 
-                var templateResultOverride = templateResults
+                var templateResultOverride = templateFinderResults
                     .FirstOrDefault(t => 
                         t.PermitNumber.Contains(result.PermitNumber, StringComparison.OrdinalIgnoreCase) &&
                         result.FileUrl.Contains(t.FileName!, StringComparison.OrdinalIgnoreCase) == true);
@@ -1113,7 +1137,7 @@ public class LicenceFileFinder : ILicenceFileFinder
             result.RuleUsed = ruleUsed;
             result.Region = naldRecord.Region;
             result.DateOfIssue = LicenseFileHelpers.ConvertDateToStandardFormat(
-                fileReaderExtract.FirstOrDefault(r => r.PermitNumber.Equals(result.PermitNumber, StringComparison.OrdinalIgnoreCase))?.DateOfIssue);
+                fileReaderExtracts.FirstOrDefault(r => r.PermitNumber.Equals(result.PermitNumber, StringComparison.OrdinalIgnoreCase))?.DateOfIssue);
             result.PreviousIterationRuleUsed = previousIterationMatches?.FirstOrDefault(m => m.PermitNumber == result.PermitNumber)?.RuleUsed;   
             result.PreviousIterationFileUrl = previousIterationMatches?.FirstOrDefault(m => m.PermitNumber == result.PermitNumber)?.FileUrl;
             result.DifferenceInFileUrlInIterations = result.PreviousIterationFileUrl != result.FileUrl;
@@ -1132,7 +1156,7 @@ public class LicenceFileFinder : ILicenceFileFinder
             result.DuplicateLicenceInVersionMatchResult = versionMatch?.LicenceCount > 1;
             result.NaldIssue = versionMatch?.NALDDataQualityIssue;
             
-            var templateResult = templateResults.FirstOrDefault(t => 
+            var templateResult = templateFinderResults.FirstOrDefault(t => 
                 t.PermitNumber.Contains(result.PermitNumber, StringComparison.OrdinalIgnoreCase) && 
                 result.FileUrl.Contains(t.FileName!, StringComparison.OrdinalIgnoreCase));
             
