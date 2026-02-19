@@ -5,9 +5,9 @@ using WA.DMS.LicenceFinder.Services.Helpers;
 namespace WA.DMS.LicenceFinder.Services.Implementations;
 
 /// <summary>
-/// Service for reading and extracting data from embedded files
+/// Service for reading and extracting data from files
 /// </summary>
-public class EmbeddedFileReadExtractService(ILicenceFileProcessor fileProcessor) : IReadExtract
+public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IReadExtract
 {
     private readonly ILicenceFileProcessor _fileProcessor = fileProcessor
         ?? throw new ArgumentNullException(nameof(fileProcessor));
@@ -42,22 +42,22 @@ public class EmbeddedFileReadExtractService(ILicenceFileProcessor fileProcessor)
     };
 
     /// <summary>
-    /// Reads all files starting with 'DMS_Extract' from the resources folder
+    /// Reads all files starting with 'Site' or 'Consolidated' from the resources folder
     /// </summary>
     /// <returns>Combined list of DMS extract records from all matching files</returns>
     public Dictionary<string, List<DmsExtract>> GetDmsExtractFiles(bool consolidated)
     {
         var allDmsRecords = new Dictionary<string, List<DmsExtract>>(StringComparer.OrdinalIgnoreCase);
         
-        var dmsFiles = consolidated ? _fileProcessor.FindFilesByPattern("Consolidated")
+        var filenames = consolidated ? _fileProcessor.FindFilesByPattern("Consolidated")
             : _fileProcessor.FindFilesByPattern("Site");
 
-        foreach (var fileName in dmsFiles)
+        foreach (var filename in filenames)
         {
             try
             {
                 var records = _fileProcessor.ExtractExcel<List<DmsExtract>>(
-                    fileName,
+                    filename,
                     new Dictionary<string, string>
                     {
                         {"Permit Number", "PermitNumber"},
@@ -87,7 +87,7 @@ public class EmbeddedFileReadExtractService(ILicenceFileProcessor fileProcessor)
             catch (Exception ex)
             {
                 // Log warning but continue processing other files
-                Console.WriteLine($"Warning: Failed to read DMS file '{fileName}': {ex.Message}");
+                Console.WriteLine($"Warning: Failed to read DMS file '{filename}': {ex.Message}");
             }
         }
 
@@ -98,16 +98,16 @@ public class EmbeddedFileReadExtractService(ILicenceFileProcessor fileProcessor)
     /// Reads all files starting with 'NALD_Extract' from the resources folder
     /// </summary>
     /// <returns>Combined list of NALD extract records from all matching files</returns>
-    public List<NALDExtract> GetNaldExtractFiles()
+    public List<NaldReportExtract> GetNaldReportRecords()
     {
-        var allNaldRecords = new List<NALDExtract>();
+        var allNaldRecords = new List<NaldReportExtract>();
         var naldFiles = _fileProcessor.FindFilesByPattern("NALD_Extract");
 
         foreach (var fileName in naldFiles)
         {
             try
             {
-                var records = _fileProcessor.ExtractExcel<List<NALDExtract>>(
+                var records = _fileProcessor.ExtractExcel<List<NaldReportExtract>>(
                     fileName,
                     new Dictionary<string, string>
                     {
@@ -137,7 +137,7 @@ public class EmbeddedFileReadExtractService(ILicenceFileProcessor fileProcessor)
     /// Reads Previous Iteration Matches from the resources folder
     /// </summary>
     /// <returns>Previous iteration match results</returns>
-    public List<LicenceMatchResult> ReadLastIterationMatchesFiles(bool current)
+    public List<LicenceMatchResult> GetLicenceFinderLastIterationResults(bool current)
     {
         var allPreviousIterationResults = new List<LicenceMatchResult>();
 
@@ -161,13 +161,13 @@ public class EmbeddedFileReadExtractService(ILicenceFileProcessor fileProcessor)
     /// Reads NALD Metadata from the resources folder
     /// </summary>
     /// <returns>NALD Metadata results grouped by LicNo with maximum SignatureDate</returns>
-    public Dictionary<string, List<NALDMetadataExtract>> GetNaldMetadataFile(bool getLatest)
+    public Dictionary<string, List<NALDMetadataExtract>> GetNaldAbsLicencesAndVersions(bool getLatest)
     {
         var naldMetadataResults = new List<NALDMetadataExtract>();
         var naldMetadataReferenceResults = new List<NALDMetadataReferenceExtract>();
         
         var naldMetadata = _fileProcessor
-            .FindFilesByPattern("NALD_Metadata")
+            .FindFilesByPattern("NALD_Metadata.")
             .FirstOrDefault();
 
         if (naldMetadata != null)
@@ -303,7 +303,7 @@ public class EmbeddedFileReadExtractService(ILicenceFileProcessor fileProcessor)
     /// Reads Change_Audit.xlsx file from the resources folder
     /// </summary>
     /// <returns>List of change audit records</returns>
-    public List<Override> ReadOverrideFile()
+    public List<Override> GetDmsChangeAuditOverrides()
     {
         var allOverrides = new List<Override>();
         var overrides = _fileProcessor.FindFilesByPattern("Overrides");
@@ -336,9 +336,9 @@ public class EmbeddedFileReadExtractService(ILicenceFileProcessor fileProcessor)
     /// Reads File_Reader_Extract.xlsx file from the resources folder
     /// </summary>
     /// <returns>List of file reader records</returns>
-    public List<FileReaderExtract> ReadFileReaderExtract()
+    public List<FileReaderExtract> GetWradiFileReaderScrapeResults()
     {
-        var allChangeAudits = new List<FileReaderExtract>();
+        var fileReaderResults = new List<FileReaderExtract>();
         var fileReaderRecords = _fileProcessor.FindFilesByPattern("File_Reader_Extract");
 
         foreach (var fileName in fileReaderRecords)
@@ -351,7 +351,7 @@ public class EmbeddedFileReadExtractService(ILicenceFileProcessor fileProcessor)
                     {"DateOfIssue", "DateOfIssue"}
                 });
 
-                allChangeAudits.AddRange(records);
+                fileReaderResults.AddRange(records);
             }
             catch (Exception ex)
             {
@@ -359,15 +359,20 @@ public class EmbeddedFileReadExtractService(ILicenceFileProcessor fileProcessor)
                 Console.WriteLine($"Warning: Failed to read file reader extract '{fileName}': {ex.Message}");
             }
         }
+        
+        fileReaderResults = fileReaderResults
+            .Where(line => !string.IsNullOrEmpty(line.PermitNumber)
+                || !string.IsNullOrEmpty(line.DateOfIssue))
+            .ToList();
 
-        return allChangeAudits;
+        return fileReaderResults;
     }
 
     /// <summary>
     /// Reads all files starting with 'Manual_Fix_Extract' from the resources folder
     /// </summary>
     /// <returns>Combined list of manual fix extract records from all matching files</returns>
-    public Dictionary<string, DmsManualFixExtract> GetDmsManualFixExtractFiles()
+    public Dictionary<string, DmsManualFixExtract> GetDmsManualFixes()
     {
         var allManualFixes = new Dictionary<string, DmsManualFixExtract>(StringComparer.OrdinalIgnoreCase);
         var manualFixFiles = _fileProcessor.FindFilesByPattern("Manual_Fix_Extract");
@@ -403,7 +408,7 @@ public class EmbeddedFileReadExtractService(ILicenceFileProcessor fileProcessor)
     /// Reads File_Identification_Extract.csv file from the resources folder
     /// </summary>
     /// <returns>List of file identification records</returns>
-    public List<FileIdentificationExtract> ReadFileIdentificationExtract()
+    public List<FileIdentificationExtract> GetWradiFileTypeScrapeResults()
     {
         var allFileIdentificationRecords = new List<FileIdentificationExtract>();
         var fileIdentificationFiles = _fileProcessor.FindFilesByPattern("File_Identification_Extract");
@@ -447,7 +452,7 @@ public class EmbeddedFileReadExtractService(ILicenceFileProcessor fileProcessor)
     /// Template_Results.xlsx file from the resources folder
     /// </summary>
     /// <returns>List of template finder results records</returns>
-    public List<TemplateFinderResult> ReadTemplateFinderResults()
+    public List<TemplateFinderResult> GetWradiTemplateFinderScrapeResults()
     {
         var allTemplateFinderResults = new List<TemplateFinderResult>();
         var templateFiles = _fileProcessor.FindFilesByPattern("Template_Results");

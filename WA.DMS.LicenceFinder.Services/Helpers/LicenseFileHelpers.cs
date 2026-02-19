@@ -25,16 +25,16 @@ public static class LicenseFileHelpers
     /// Converts date strings in formats like "27Dec2017" or "27 December2017" to "dd/mm/yyyy" format.
     /// If conversion fails, returns the original string unchanged.
     /// </summary>
-    /// <param name="dateString1">The date string to convert</param>
+    /// <param name="inputDateString">The date string to convert</param>
     /// <returns>Formatted date string in "dd/mm/yyyy" format or original string if conversion fails</returns>
-    public static string? ConvertDateToStandardFormat(string? dateString1)
+    public static string? ConvertDateToStandardFormat(string? inputDateString)
     {
-        if (string.IsNullOrWhiteSpace(dateString1))
+        if (string.IsNullOrWhiteSpace(inputDateString))
         {
-            return dateString1;
+            return inputDateString;
         }
 
-        var dateString =  DateFormatConsistent(dateString1);
+        var dateString = DateFormatConsistent(inputDateString);
         
         // Try to parse various date formats
         string[] formats = {
@@ -85,6 +85,12 @@ public static class LicenseFileHelpers
         if (input == null)
         {
             return null;
+        }
+        
+        // Check if its already in the correct format
+        if (DateTime.TryParse(input, out _))
+        {
+            return input;
         }
         
         ReplaceIfContains(input, " ", string.Empty, out input);

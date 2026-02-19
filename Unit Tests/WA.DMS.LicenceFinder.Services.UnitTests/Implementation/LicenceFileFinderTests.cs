@@ -88,18 +88,18 @@ public class LicenceFileFinderTests
             }
         };
 
-        var naldRecords = new List<NALDExtract>
+        var naldRecords = new List<NaldReportExtract>
         {
             new() { LicNo = "1/23/45", Region = "Test Region" }
         };
 
         _mockReadExtract.Setup(r => r.GetDmsExtractFiles(It.IsAny<bool>())).Returns(dmsRecords);
-        _mockReadExtract.Setup(r => r.GetNaldExtractFiles()).Returns(naldRecords);
+        _mockReadExtract.Setup(r => r.GetNaldReportRecords()).Returns(naldRecords);
         _mockReadExtract.Setup(r => r.ReadChangeAuditFiles()).Returns(new List<ChangeAudit>());
-        _mockReadExtract.Setup(r => r.ReadLastIterationMatchesFiles(It.IsAny<bool>())).Returns(new List<LicenceMatchResult>());
-        _mockReadExtract.Setup(r => r.GetNaldMetadataFile(It.IsAny<bool>())).Returns(new Dictionary<string, List<NALDMetadataExtract>>());
-        _mockReadExtract.Setup(r => r.ReadFileReaderExtract()).Returns(new List<FileReaderExtract>());
-        _mockReadExtract.Setup(r => r.GetDmsManualFixExtractFiles()).Returns(new Dictionary<string, DmsManualFixExtract>());
+        _mockReadExtract.Setup(r => r.GetLicenceFinderLastIterationResults(It.IsAny<bool>())).Returns(new List<LicenceMatchResult>());
+        _mockReadExtract.Setup(r => r.GetNaldAbsLicencesAndVersions(It.IsAny<bool>())).Returns(new Dictionary<string, List<NALDMetadataExtract>>());
+        _mockReadExtract.Setup(r => r.GetWradiFileReaderScrapeResults()).Returns(new List<FileReaderExtract>());
+        _mockReadExtract.Setup(r => r.GetDmsManualFixes()).Returns(new Dictionary<string, DmsManualFixExtract>());
         
         _mockFileProcessor.Setup(p => p.GenerateExcel(It.IsAny<List<LicenceMatchResult>>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
             .Returns("output.xlsx");
@@ -160,16 +160,16 @@ public class LicenceFileFinderTests
             }
         };
 
-        var naldRecords = new List<NALDExtract>
+        var naldRecords = new List<NaldReportExtract>
         {
             new() { LicNo = "1/23/45", Region = "Test Region" }
         };
 
         SetupMocksForBasicTest(dmsRecords, naldRecords);
 
-        _mockRule1.Setup(r => r.FindMatch(It.IsAny<NALDExtract>(), It.IsAny<DmsLookupIndexes>()))
+        _mockRule1.Setup(r => r.FindMatch(It.IsAny<NaldReportExtract>(), It.IsAny<DmsLookupIndexes>()))
             .Returns((DmsExtract?)null);
-        _mockRule2.Setup(r => r.FindMatch(It.IsAny<NALDExtract>(), It.IsAny<DmsLookupIndexes>()))
+        _mockRule2.Setup(r => r.FindMatch(It.IsAny<NaldReportExtract>(), It.IsAny<DmsLookupIndexes>()))
             .Returns((DmsExtract?)null);
 
         var finder = new LicenceFileFinder(_mockFileProcessor.Object, _matchingRules);
@@ -219,14 +219,14 @@ public class LicenceFileFinderTests
             }
         };
         
-        var naldRecords = new List<NALDExtract>
+        var naldRecords = new List<NaldReportExtract>
         {
             new() { LicNo = "1/23/45", Region = "Test Region" }
         };
 
         SetupMocksForBasicTest(dmsRecords, naldRecords);
 
-        _mockRule1.Setup(r => r.FindMatch(It.IsAny<NALDExtract>(), It.IsAny<DmsLookupIndexes>()))
+        _mockRule1.Setup(r => r.FindMatch(It.IsAny<NaldReportExtract>(), It.IsAny<DmsLookupIndexes>()))
             .Returns(dmsRecord);
         _mockRule1.Setup(r => r.HasDuplicates).Returns(false);
 
@@ -256,15 +256,15 @@ public class LicenceFileFinderTests
             It.IsAny<Dictionary<string, string>>()), Times.Once);
     }
 
-    private void SetupMocksForBasicTest(Dictionary<string, List<DmsExtract>> dmsRecords, List<NALDExtract> naldRecords)
+    private void SetupMocksForBasicTest(Dictionary<string, List<DmsExtract>> dmsRecords, List<NaldReportExtract> naldRecords)
     {
         _mockReadExtract.Setup(r => r.GetDmsExtractFiles(It.IsAny<bool>())).Returns(dmsRecords);
-        _mockReadExtract.Setup(r => r.GetNaldExtractFiles()).Returns(naldRecords);
+        _mockReadExtract.Setup(r => r.GetNaldReportRecords()).Returns(naldRecords);
         _mockReadExtract.Setup(r => r.ReadChangeAuditFiles()).Returns(new List<ChangeAudit>());
-        _mockReadExtract.Setup(r => r.ReadLastIterationMatchesFiles(It.IsAny<bool>())).Returns(new List<LicenceMatchResult>());
-        _mockReadExtract.Setup(r => r.GetNaldMetadataFile(It.IsAny<bool>())).Returns(new Dictionary<string, List<NALDMetadataExtract>>());
-        _mockReadExtract.Setup(r => r.ReadFileReaderExtract()).Returns(new List<FileReaderExtract>());
-        _mockReadExtract.Setup(r => r.GetDmsManualFixExtractFiles()).Returns(new Dictionary<string, DmsManualFixExtract>());
+        _mockReadExtract.Setup(r => r.GetLicenceFinderLastIterationResults(It.IsAny<bool>())).Returns(new List<LicenceMatchResult>());
+        _mockReadExtract.Setup(r => r.GetNaldAbsLicencesAndVersions(It.IsAny<bool>())).Returns(new Dictionary<string, List<NALDMetadataExtract>>());
+        _mockReadExtract.Setup(r => r.GetWradiFileReaderScrapeResults()).Returns(new List<FileReaderExtract>());
+        _mockReadExtract.Setup(r => r.GetDmsManualFixes()).Returns(new Dictionary<string, DmsManualFixExtract>());
 
         _mockFileProcessor.Setup(p => p.GenerateExcel(It.IsAny<List<LicenceMatchResult>>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
             .Returns("output.xlsx");

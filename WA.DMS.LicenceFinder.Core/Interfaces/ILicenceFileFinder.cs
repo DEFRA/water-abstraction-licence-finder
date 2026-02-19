@@ -14,19 +14,19 @@ public interface ILicenceFileFinder
     string FindLicenceFiles(
         Dictionary<string, List<DmsExtract>> dmsRecords,
         Dictionary<string, DmsManualFixExtract> dmsManualFixes,
-        List<NALDExtract> naldRecords,
-        Dictionary<string, List<NALDMetadataExtract>> naldMetadata,
-        List<LicenceMatchResult> previousIterationMatches,
-        List<Override> changeAudits,
-        List<FileReaderExtract> fileReaderExtracts,
-        List<TemplateFinderResult> templateFinderResults,
-        List<FileIdentificationExtract> fileIdentificationExtracts);
+        List<Override> dmsChangeAuditOverrides,
+        List<NaldReportExtract> naldReportRecords,
+        Dictionary<string, List<NALDMetadataExtract>> naldLicencesAndVersions,
+        List<FileReaderExtract> wradiFileReaderExtracts,
+        List<TemplateFinderResult> wradiTemplateFinderResults,
+        List<FileIdentificationExtract> wradiFileIdentificationExtracts,
+        List<LicenceMatchResult> licenceFinderPreviousIterationMatches);
     
     /// <summary>
     /// Finds all potential duplicates in DMS extract
     /// </summary>
     /// <returns>The path to the generated Excel results file</returns>
-    string FindDuplicateLicenseFiles(List<DmsExtract> dmsRecords, List<NALDExtract> naldRecords);
+    string FindDuplicateLicenseFiles(List<DmsExtract> dmsRecords, List<NaldReportExtract> naldRecords);
 
     string BuildFileTemplateIdentificationExtract(
         List<LicenceMatchResult> previousIterationMatches,

@@ -16,9 +16,9 @@ public class ManualFolderPermitDocumentMatchRule : BaseRuleWithPriorityMatching
 
     protected override string GetRuleBaseName() => "Manual Folder Match Fix - In Permit Documents Folder";
 
-    protected override IEnumerable<DmsExtract> GetMatchingRecords(NALDExtract naldRecord, DmsLookupIndexes dmsLookups)
+    protected override IEnumerable<DmsExtract> GetMatchingRecords(NaldReportExtract naldReportRecord, DmsLookupIndexes dmsLookups)
     {
-        var permitNo = naldRecord.PermitNo;
+        var permitNo = naldReportRecord.PermitNo;
         
         if (dmsLookups.ByManualFixPermitNumber.TryGetValue(permitNo, out var matches))
         {

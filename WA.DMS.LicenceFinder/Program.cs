@@ -20,35 +20,39 @@ using (var scope = host.Services.CreateScope())
     
     try
     {
-        // DMS extract files (e.g. Site_N.xlsx)
+        // DMS data file export (e.g. Site_N.xlsx)
         var dmsRecords = readExtractService.GetDmsExtractFiles(false);
 
-        // Manual fixes (e.g. Manual_Fix_Extract.xlsx)
-        var dmsManualFixes = readExtractService.GetDmsManualFixExtractFiles();
+        // DMS manual fixes by our team (e.g. Manual_Fix_Extract.xlsx)
+        var dmsManualFixes = readExtractService.GetDmsManualFixes();
         
-        // NALD extract files (e.g NALD_Extract.xlsx)
-        var naldRecords = readExtractService.GetNaldExtractFiles();
+        // DMS change audit overrides by our team (e.g. Overrides.xlsx)
+        var dmsChangeAuditOverrides = readExtractService.GetDmsChangeAuditOverrides();
         
-        // Nald metadata files (e.g. NALD_Metadata.xlsx AND NALD_Metadata_Reference.xlsx)
-        var naldMetadata = readExtractService.GetNaldMetadataFile(true);
+        // NALD records report export (e.g NALD_Extract.xlsx)
+        var naldReportRecords = readExtractService.GetNaldReportRecords();
         
-        // Previous iteration matches (e.g. Previous_Iteration_Matches.xlsx)
-        var previousIterationMatches = readExtractService.ReadLastIterationMatchesFiles(false);
+        // NALD licences and versions from the raw tables (e.g. NALD_Metadata.xlsx [NALD_ABS_LIC_VERSIONS]
+        // AND NALD_Metadata_Reference.xlsx [NALD_ABS_LICENCES])
+        var naldAbsLicencesAndVersions =
+            readExtractService.GetNaldAbsLicencesAndVersions(true);
         
-        // Override files (e.g. Overrides.xlsx)
-        var changeAudits = readExtractService.ReadOverrideFile();
+        // WRADI tool file reader extracts (e.g. File_Reader_Extract.xlsx) - Has date of issue etc.. fields
+        var wradiFileReaderScrapeResults = readExtractService.GetWradiFileReaderScrapeResults();
         
-        // File reader extracts (e.g. File_Reader_Extract.xlsx)
-        var fileReaderExtract = readExtractService.ReadFileReaderExtract();
-        
-        // Template results (e.g. Template_Results.xlsx)
-        var templateFinderResults = readExtractService.ReadTemplateFinderResults();
+        // WRADI tool template results (e.g. Template_Results.xlsx) - Has Template info etc...
+        var wradiTemplateFinderResults = readExtractService.GetWradiTemplateFinderScrapeResults();
 
-        // File identification extracts (e.g. File_Identification_Extract.csv)
-        var fileIdentificationExtract = readExtractService.ReadFileIdentificationExtract();
+        // WRADI tool file identification extracts (e.g. File_Identification_Extract.csv) - Says wether addendum etc...
+        var wradiFileIdentificationExtract = readExtractService.GetWradiFileTypeScrapeResults();
         
-        // Current iteration matches (e.g. Current_Iteration_Matches.xlsx)
-        var currentIterationMatches = readExtractService.ReadLastIterationMatchesFiles(true);
+        // Licence finder previous iteration matches (e.g. Previous_Iteration_Matches.xlsx)
+        var licenceFinderLastIterationMatches =
+            readExtractService.GetLicenceFinderLastIterationResults(false);
+        
+        // Licence finder Current iteration matches (e.g. Current_Iteration_Matches.xlsx)
+        var licenceFinderCurrentIterationMatches =
+            readExtractService.GetLicenceFinderLastIterationResults(true);
         
         // All files inventory (e.g. WaterPdfs_Inventory.csv)
         var allFilesInventory = readExtractService.ReadWaterPdfsInventoryFiles();
@@ -57,19 +61,19 @@ using (var scope = host.Services.CreateScope())
         var fileVersionResults = readExtractService.ReadFileVersionResultsFile();
         
         // FLOW - Licence file finder
-        /*Console.WriteLine("Starting licence file processing...");
+        Console.WriteLine("Starting licence file processing...");
         var resultFilePath = licenceFileFinder.FindLicenceFiles(
             dmsRecords,
             dmsManualFixes,
-            naldRecords,
-            naldMetadata,            
-            previousIterationMatches,
-            changeAudits,
-            fileReaderExtract,
-            templateFinderResults,
-            fileIdentificationExtract);
+            dmsChangeAuditOverrides,
+            naldReportRecords,
+            naldAbsLicencesAndVersions,
+            wradiFileReaderScrapeResults,
+            wradiTemplateFinderResults,
+            wradiFileIdentificationExtract,
+            licenceFinderLastIterationMatches);
         
-        Console.WriteLine($"License processing completed. Results saved to: {resultFilePath}");*/
+        Console.WriteLine($"License processing completed. Results saved to: {resultFilePath}");
         
         // FLOW - Build Version Download Info Excel
         /*Console.WriteLine("Started building version download info excel...");

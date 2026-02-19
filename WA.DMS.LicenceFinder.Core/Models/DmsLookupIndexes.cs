@@ -7,6 +7,6 @@ public class DmsLookupIndexes
 {
     public Dictionary<string, List<DmsExtract>> ByPermitNumber { get; set; }
         = new(StringComparer.OrdinalIgnoreCase);
-    public Dictionary<string, List<DmsExtract>> ByManualFixPermitNumber { get; }
+    public Dictionary<string, List<DmsExtract>> ByManualFixPermitNumber { get; set; }
         = new(StringComparer.OrdinalIgnoreCase);
 }

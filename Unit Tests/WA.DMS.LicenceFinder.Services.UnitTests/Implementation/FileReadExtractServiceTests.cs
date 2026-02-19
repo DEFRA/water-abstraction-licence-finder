@@ -10,22 +10,22 @@ namespace WA.DMS.LicenceFinder.Services.UnitTests.Implementation;
 /// <summary>
 /// Unit tests for ReadExtractService class
 /// </summary>
-public class EmbeddedFileReadExtractServiceTests
+public class FileReadExtractServiceTests
 {
     private readonly Mock<ILicenceFileProcessor> _mockFileProcessor;
-    private readonly EmbeddedFileReadExtractService _embeddedFileReadExtractService;
+    private readonly FileReadExtractService _fileReadExtractService;
 
-    public EmbeddedFileReadExtractServiceTests()
+    public FileReadExtractServiceTests()
     {
         _mockFileProcessor = new Mock<ILicenceFileProcessor>();
-        _embeddedFileReadExtractService = new EmbeddedFileReadExtractService(_mockFileProcessor.Object);
+        _fileReadExtractService = new FileReadExtractService(_mockFileProcessor.Object);
     }
 
     [Fact]
     public void Constructor_WithNullFileProcessor_ShouldThrowArgumentNullException()
     {
         // Act & Assert
-        var act = () => new EmbeddedFileReadExtractService(null!);
+        var act = () => new FileReadExtractService(null!);
         act.Should().Throw<ArgumentNullException>().WithParameterName("fileProcessor");
     }
 
@@ -44,7 +44,7 @@ public class EmbeddedFileReadExtractServiceTests
             .Returns(expectedRecords);
 
         // Act
-        var result = _embeddedFileReadExtractService.GetDmsExtractFiles(false);
+        var result = _fileReadExtractService.GetDmsExtractFiles(false);
 
         // Assert
         result.Should().BeEquivalentTo(expectedRecords);
@@ -56,18 +56,18 @@ public class EmbeddedFileReadExtractServiceTests
     public void ReadNALDExtractFiles_WithValidData_ShouldReturnNALDRecordsWithCleanedPermitNumbers()
     {
         // Arrange
-        var rawRecords = new List<NALDExtract>
+        var rawRecords = new List<NaldReportExtract>
         {
             new() { LicNo = "1/23/45", Region = "Test Region" }
         };
 
         _mockFileProcessor.Setup(p => p.FindFilesByPattern("NALD_Extract"))
             .Returns(new List<string> { "NALD_Extract_test.xlsx" });
-        _mockFileProcessor.Setup(p => p.ExtractExcel<List<NALDExtract>>("NALD_Extract_test.xlsx", It.IsAny<Dictionary<string, string>>()))
+        _mockFileProcessor.Setup(p => p.ExtractExcel<List<NaldReportExtract>>("NALD_Extract_test.xlsx", It.IsAny<Dictionary<string, string>>()))
             .Returns(rawRecords);
 
         // Act
-        var result = _embeddedFileReadExtractService.GetNaldExtractFiles();
+        var result = _fileReadExtractService.GetNaldReportRecords();
 
         // Assert
         result.Should().HaveCount(1);
@@ -91,7 +91,7 @@ public class EmbeddedFileReadExtractServiceTests
             .Returns(expectedRecords);
 
         // Act
-        var result = _embeddedFileReadExtractService.ReadChangeAuditFiles();
+        var result = _fileReadExtractService.ReadChangeAuditFiles();
 
         // Assert
         result.Should().BeEquivalentTo(expectedRecords);
@@ -114,7 +114,7 @@ public class EmbeddedFileReadExtractServiceTests
             .Returns(expectedRecords);
 
         // Act
-        var result = _embeddedFileReadExtractService.GetDmsManualFixExtractFiles();
+        var result = _fileReadExtractService.GetDmsManualFixes();
 
         // Assert
         result.Should().BeEquivalentTo(expectedRecords);
@@ -137,7 +137,7 @@ public class EmbeddedFileReadExtractServiceTests
             .Returns(expectedRecords);
 
         // Act
-        var result = _embeddedFileReadExtractService.ReadFileReaderExtract();
+        var result = _fileReadExtractService.GetWradiFileReaderScrapeResults();
 
         // Assert
         result.Should().BeEquivalentTo(expectedRecords);
@@ -153,7 +153,7 @@ public class EmbeddedFileReadExtractServiceTests
             .Returns(new List<string>());
 
         // Act
-        var result = _embeddedFileReadExtractService.ReadLastIterationMatchesFiles(false);
+        var result = _fileReadExtractService.GetLicenceFinderLastIterationResults(false);
 
         // Assert
         result.Should().BeEmpty();
@@ -170,7 +170,7 @@ public class EmbeddedFileReadExtractServiceTests
             .Returns(new List<string>());
 
         // Act
-        var result = _embeddedFileReadExtractService.GetNaldMetadataFile(true);
+        var result = _fileReadExtractService.GetNaldAbsLicencesAndVersions(true);
 
         // Assert
         result.Should().BeEmpty();
@@ -189,18 +189,18 @@ public class EmbeddedFileReadExtractServiceTests
     {
         // This test verifies the behavior through ReadNALDExtractFiles since CleanPermitNumber is private
         // Arrange
-        var rawRecords = new List<NALDExtract>
+        var rawRecords = new List<NaldReportExtract>
         {
             new() { LicNo = input, Region = "Test Region" }
         };
 
         _mockFileProcessor.Setup(p => p.FindFilesByPattern("NALD_Extract"))
             .Returns(new List<string> { "NALD_Extract_test.xlsx" });
-        _mockFileProcessor.Setup(p => p.ExtractExcel<List<NALDExtract>>("NALD_Extract_test.xlsx", It.IsAny<Dictionary<string, string>>()))
+        _mockFileProcessor.Setup(p => p.ExtractExcel<List<NaldReportExtract>>("NALD_Extract_test.xlsx", It.IsAny<Dictionary<string, string>>()))
             .Returns(rawRecords);
 
         // Act
-        var result = _embeddedFileReadExtractService.GetNaldExtractFiles();
+        var result = _fileReadExtractService.GetNaldReportRecords();
 
         // Assert
         if (result.Any())
@@ -228,7 +228,7 @@ public class EmbeddedFileReadExtractServiceTests
             .Returns(validRecords);
 
         // Act
-        var result = _embeddedFileReadExtractService.GetDmsExtractFiles(false);
+        var result = _fileReadExtractService.GetDmsExtractFiles(false);
 
         // Assert
         result.Should().BeEquivalentTo(validRecords);

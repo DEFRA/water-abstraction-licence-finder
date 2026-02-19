@@ -8,7 +8,7 @@ namespace WA.DMS.LicenceFinder.Core.Interfaces;
 public interface IReadExtract
 {
     /// <summary>
-    /// Reads all files starting with 'DMS_Extract' from the resources folder
+    /// Reads all files starting with 'Site' or 'Consolidated' from the resources folder
     /// </summary>
     /// <returns>Combined list of DMS extract records from all matching files</returns>
     Dictionary<string, List<DmsExtract>> GetDmsExtractFiles(bool consolidated);
@@ -17,31 +17,31 @@ public interface IReadExtract
     /// Reads all files starting with 'NALD_Extract' from the resources folder
     /// </summary>
     /// <returns>Combined list of NALD extract records from all matching files</returns>
-    List<NALDExtract> GetNaldExtractFiles();
+    List<NaldReportExtract> GetNaldReportRecords();
 
     /// <summary>
     /// Reads Previous Iteration Matches from the resources folder
     /// </summary>
     /// <returns>Previous iteration match results</returns>
-    List<LicenceMatchResult> ReadLastIterationMatchesFiles(bool current);
+    List<LicenceMatchResult> GetLicenceFinderLastIterationResults(bool current);
 
     /// <summary>
     /// Reads NALD Metadata from the resources folder
     /// </summary>
     /// <returns>NALD Metadata results grouped by LicNo with maximum SignatureDate</returns>
-    public Dictionary<string, List<NALDMetadataExtract>> GetNaldMetadataFile(bool getLatest);
+    public Dictionary<string, List<NALDMetadataExtract>> GetNaldAbsLicencesAndVersions(bool getLatest);
 
     /// <summary>
     /// Reads File_Identification_Extract.csv file from the resources folder
     /// </summary>
     /// <returns>List of file identification records</returns>
-    List<FileIdentificationExtract> ReadFileIdentificationExtract();
+    List<FileIdentificationExtract> GetWradiFileTypeScrapeResults();
 
     /// <summary>
     /// Template_Results.xlsx file from the resources folder
     /// </summary>
     /// <returns>List of template finder results records</returns>
-    List<TemplateFinderResult> ReadTemplateFinderResults();
+    List<TemplateFinderResult> GetWradiTemplateFinderScrapeResults();
 
     /// <summary>
     /// Reads Change_Audit.xlsx file from the resources folder
@@ -53,19 +53,19 @@ public interface IReadExtract
     /// Reads File_Reader_Extract.xlsx file from the resources folder
     /// </summary>
     /// <returns>List of file reader records</returns>
-    List<FileReaderExtract> ReadFileReaderExtract();
+    List<FileReaderExtract> GetWradiFileReaderScrapeResults();
 
     /// <summary>
     /// Reads all files starting with 'Manual_Fix_Extract' from the resources folder
     /// </summary>
     /// <returns>Combined list of manual fix extract records from all matching files</returns>
-    Dictionary<string, DmsManualFixExtract> GetDmsManualFixExtractFiles();
+    Dictionary<string, DmsManualFixExtract> GetDmsManualFixes();
 
     /// <summary>
     /// Reads Change_Audit.xlsx file from the resources folder
     /// </summary>
     /// <returns>List of change audit records</returns>
-    List<Override> ReadOverrideFile();
+    List<Override> GetDmsChangeAuditOverrides();
 
     /// <summary>
     /// Reads LicenceVersionResult.xlsx file from the resources folder

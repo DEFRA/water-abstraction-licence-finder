@@ -23,29 +23,16 @@ public class LicenceFileProcessor : ILicenceFileProcessor
         // Register encoding provider for ExcelDataReader
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
-        // Find file in resources folder or embedded resources
+        // Find file in resources folder
         var filePath = FindFile(fileName, ".xlsx", ".xls");
-
-        Stream stream;
+        var stream = File.Open(filePath, FileMode.Open, FileAccess.Read);
         
-        if (filePath.StartsWith("embedded:"))
-        {
-            var embeddedFileName = filePath["embedded:".Length..];
-            
-            stream = GetEmbeddedResourceStream(embeddedFileName) 
-                ?? throw new FileNotFoundException($"Embedded resource '{embeddedFileName}' not found.");
-        }
-        else
-        {
-            stream = File.Open(filePath, FileMode.Open, FileAccess.Read);
-        }
-
         using (stream)
         using (var reader = ExcelReaderFactory.CreateReader(stream))
         {
-            var dataSet = reader.AsDataSet(new ExcelDataSetConfiguration()
+            var dataSet = reader.AsDataSet(new ExcelDataSetConfiguration
             {
-                ConfigureDataTable = _ => new ExcelDataTableConfiguration()
+                ConfigureDataTable = _ => new ExcelDataTableConfiguration
                 {
                     UseHeaderRow = true
                 }
@@ -102,29 +89,14 @@ public class LicenceFileProcessor : ILicenceFileProcessor
             throw new ArgumentException("File name cannot be null or empty", nameof(fileName));
         }
 
-        // Find file in resources folder or embedded resources
+        // Find file in resources folder
         var filePath = FindFile(fileName, ".csv");
-
-        string[] lines;
-
-        if (filePath.StartsWith("embedded:"))
-        {
-            var embeddedFileName = filePath.Substring("embedded:".Length);
-            using (var stream = GetEmbeddedResourceStream(embeddedFileName) 
-                ?? throw new FileNotFoundException($"Embedded resource '{embeddedFileName}' not found."))
-            using (var reader = new StreamReader(stream))
-            {
-                var content = reader.ReadToEnd();
-                lines = content.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-            }
-        }
-        else
-        {
-            lines = File.ReadAllLines(filePath);
-        }
+        var lines = File.ReadAllLines(filePath);
 
         if (lines.Length == 0)
+        {
             throw new InvalidOperationException("CSV file is empty.");
+        }
 
         // Parse header row
         var headers = lines[0].Split(',').Select(h => h.Trim('"', ' '));
@@ -136,10 +108,12 @@ public class LicenceFileProcessor : ILicenceFileProcessor
 
         // Map all data rows to objects
         var items = new List<object>();
-        for (int i = 1; i < lines.Length; i++)
+        
+        for (var i = 1; i < lines.Length; i++)
         {
             var values = ParseCsvLine(lines[i]);
             var item = MapRowToObject(values, targetType, columnMapping);
+            
             items.Add(item);
         }
 
@@ -147,8 +121,10 @@ public class LicenceFileProcessor : ILicenceFileProcessor
         if (isCollection)
         {
             var list = (IList)Activator.CreateInstance(typeof(T))!;
+            
             foreach (var item in items)
                 list.Add(item);
+            
             return (T)list;
         }
 
@@ -243,12 +219,8 @@ public class LicenceFileProcessor : ILicenceFileProcessor
             throw new ArgumentException("Pattern cannot be null or empty", nameof(pattern));
         }
 
-        var matchingFiles = new List<string>();
+        var matchingFiles = FindResourcesByPattern(pattern);
         
-        // Then, search embedded resources
-        var embeddedFiles = FindEmbeddedResourcesByPattern(pattern);
-        matchingFiles.AddRange(embeddedFiles);
-
         return matchingFiles
             .Distinct()
             .ToList();
@@ -257,89 +229,33 @@ public class LicenceFileProcessor : ILicenceFileProcessor
     #region Private Helper Methods
 
     /// <summary>
-    /// Finds embedded resources by pattern from all loaded assemblies.
+    /// Finds resources by pattern from resources folder
     /// </summary>
     /// <param name="pattern">The pattern to search for</param>
-    /// <returns>List of matching embedded resource names</returns>
-    private static List<string> FindEmbeddedResourcesByPattern(string pattern)
+    /// <returns>List of matching resource names</returns>
+    private static List<string> FindResourcesByPattern(string pattern)
     {
         var matchingResources = new List<string>();
+        var resourceNames = Directory.GetFiles("Resources");
 
-        try
+        foreach (var resourceName in resourceNames)
         {
-            var assemblies = new[]
+            // Extract just the filename from the resource name
+            var fileName = Path.GetFileName(resourceName);
+
+            if (string.IsNullOrEmpty(fileName))
             {
-                Assembly.GetExecutingAssembly(),
-                Assembly.GetCallingAssembly(),
-                Assembly.GetEntryAssembly()
+                fileName = resourceName.Split('.').LastOrDefault();
             }
-                .Where(assembly => assembly != null)
-                .Distinct();
 
-            foreach (var assembly in assemblies)
+            if (!string.IsNullOrEmpty(fileName)
+                && fileName.Contains(pattern, StringComparison.OrdinalIgnoreCase))
             {
-                var resourceNames = assembly!.GetManifestResourceNames();
-
-                foreach (var resourceName in resourceNames)
-                {
-                    // Extract just the filename from the resource name
-                    var fileName = Path.GetFileName(resourceName);
-
-                    if (string.IsNullOrEmpty(fileName))
-                    {
-                        fileName = resourceName.Split('.').LastOrDefault();
-                    }
-
-                    if (!string.IsNullOrEmpty(fileName) && 
-                        (fileName.Contains(pattern, StringComparison.OrdinalIgnoreCase) ||
-                         fileName.StartsWith(pattern, StringComparison.OrdinalIgnoreCase)))
-                    {
-                        matchingResources.Add(fileName);
-                    }
-                }
+                matchingResources.Add(fileName);
             }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("ERROR - " + ex.Message);
-            // If embedded resource search fails, return empty list
         }
 
         return matchingResources;
-    }
-
-    /// <summary>
-    /// Gets a stream for an embedded resource by filename.
-    /// </summary>
-    /// <param name="fileName">The name of the file to find</param>
-    /// <returns>Stream of the embedded resource or null if not found</returns>
-    private static Stream? GetEmbeddedResourceStream(string fileName)
-    {
-        var assemblies = new[]
-        {
-            Assembly.GetExecutingAssembly(),
-            Assembly.GetCallingAssembly(),
-            Assembly.GetEntryAssembly()
-        }.Where(a => a != null).Distinct();
-
-        foreach (var assembly in assemblies)
-        {
-            var resourceNames = assembly!.GetManifestResourceNames();
-
-            foreach (var resourceName in resourceNames)
-            {
-                var resourceFileName = Path.GetFileName(resourceName);
-                if (string.IsNullOrEmpty(resourceFileName))
-                    resourceFileName = resourceName.Split('.').LastOrDefault();
-
-                if (string.Equals(resourceFileName, fileName, StringComparison.OrdinalIgnoreCase))
-                {
-                    return assembly.GetManifestResourceStream(resourceName);
-                }
-            }
-        }
-
-        return null;
     }
 
     /// <summary>
@@ -373,19 +289,13 @@ public class LicenceFileProcessor : ILicenceFileProcessor
             foreach (var folder in possibleFolders)
             {
                 var path = Path.Combine(folder, fileName);
+
                 if (File.Exists(path))
+                {
                     return path;
+                }
             }
-
-            // Then try embedded resources - return special marker for embedded resource
-            var embeddedStream = GetEmbeddedResourceStream(fileName);
-            if (embeddedStream != null)
-            {
-                embeddedStream.Dispose();
-                return $"embedded:{fileName}";
-            }
-
-            throw new FileNotFoundException($"File '{fileName}' not found in resources folder or embedded resources.");
+            throw new FileNotFoundException($"File '{fileName}' not found in resources folder.");
         }
 
         // If no extension, try each extension in priority order
@@ -400,20 +310,13 @@ public class LicenceFileProcessor : ILicenceFileProcessor
                 if (File.Exists(path))
                     return path;
             }
-
-            // Then try embedded resources
-            var embeddedStream = GetEmbeddedResourceStream(fileNameWithExt);
-            if (embeddedStream != null)
-            {
-                embeddedStream.Dispose();
-                return $"embedded:{fileNameWithExt}";
-            }
         }
 
         // File not found with any extension
         var fileType = extensions.Length == 1 && extensions[0] == ".csv" ? "CSV" : 
-                      extensions.Any(e => e == ".xlsx" || e == ".xls") ? "Excel" : "File";
-        throw new FileNotFoundException($"{fileType} file '{fileName}' not found in resources folder or embedded resources.");
+            extensions.Any(e => e == ".xlsx" || e == ".xls") ? "Excel" : "File";
+        
+        throw new FileNotFoundException($"{fileType} file '{fileName}' not found in resources folder.");
     }
 
     /// <summary>
@@ -428,7 +331,7 @@ public class LicenceFileProcessor : ILicenceFileProcessor
         var headerArray = headers.ToArray();
 
         // Map column headers to property names
-        for (int i = 0; i < headerArray.Length; i++)
+        for (var i = 0; i < headerArray.Length; i++)
         {
             var columnName = headerArray[i];
 
@@ -463,43 +366,43 @@ public class LicenceFileProcessor : ILicenceFileProcessor
     private static object MapRowToObject(object rowData, Type targetType, Dictionary<string, int> columnMapping)
     {
         var item = Activator.CreateInstance(targetType)!;
+        
         var properties = targetType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(p => p.CanWrite)
             .ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
 
-        foreach (var kvp in columnMapping)
+        foreach (var (propertyName, columnIndex) in columnMapping)
         {
-            var propertyName = kvp.Key;
-            var columnIndex = kvp.Value;
-
-            if (properties.TryGetValue(propertyName, out var property))
+            if (!properties.TryGetValue(propertyName, out var property))
             {
-                try
-                {
-                    string? cellValue = null;
+                continue;
+            }
+            
+            try
+            {
+                string? cellValue = null;
 
-                    // Handle different row data types
-                    switch (rowData)
-                    {
-                        case DataRow excelRow when columnIndex < excelRow.ItemArray.Length && excelRow[columnIndex] != DBNull.Value:
-                            cellValue = excelRow[columnIndex].ToString();
-                            break;
-                        case string[] csvRow when columnIndex < csvRow.Length && !string.IsNullOrEmpty(csvRow[columnIndex]):
-                            cellValue = csvRow[columnIndex].Trim('"', ' ');
-                            break;
-                    }
-
-                    if (!string.IsNullOrEmpty(cellValue))
-                    {
-                        var propertyType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
-                        var convertedValue = Convert.ChangeType(cellValue, propertyType);
-                        property.SetValue(item, convertedValue);
-                    }
-                }
-                catch
+                // Handle different row data types
+                switch (rowData)
                 {
-                    // Skip conversion errors and continue
+                    case DataRow excelRow when columnIndex < excelRow.ItemArray.Length && excelRow[columnIndex] != DBNull.Value:
+                        cellValue = excelRow[columnIndex].ToString();
+                        break;
+                    case string[] csvRow when columnIndex < csvRow.Length && !string.IsNullOrEmpty(csvRow[columnIndex]):
+                        cellValue = csvRow[columnIndex].Trim('"', ' ');
+                        break;
                 }
+
+                if (!string.IsNullOrEmpty(cellValue))
+                {
+                    var propertyType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+                    var convertedValue = Convert.ChangeType(cellValue, propertyType);
+                    property.SetValue(item, convertedValue);
+                }
+            }
+            catch
+            {
+                // Skip conversion errors and continue
             }
         }
 
@@ -507,7 +410,7 @@ public class LicenceFileProcessor : ILicenceFileProcessor
     }
 
     /// <summary>
-    /// Parses a single CSV line, handling quoted values and embedded commas.
+    /// Parses a single CSV line, handling quoted values and commas inside them.
     /// </summary>
     /// <param name="line">The CSV line to parse</param>
     /// <returns>Array of field values from the CSV line</returns>
@@ -517,7 +420,7 @@ public class LicenceFileProcessor : ILicenceFileProcessor
         var inQuotes = false;
         var currentValue = new StringBuilder();
 
-        for (int i = 0; i < line.Length; i++)
+        for (var i = 0; i < line.Length; i++)
         {
             var character = line[i];
 
@@ -699,7 +602,9 @@ public class LicenceFileProcessor : ILicenceFileProcessor
     private static string ValidateSheetName(string sheetName)
     {
         if (string.IsNullOrWhiteSpace(sheetName))
+        {
             return "Sheet1";
+        }
 
         // Excel sheet name restrictions:
         // - Maximum 31 characters
@@ -714,7 +619,9 @@ public class LicenceFileProcessor : ILicenceFileProcessor
 
         // Trim to max 31 characters
         if (validName.Length > 31)
+        {
             validName = validName.Substring(0, 31);
+        }
 
         return validName.Trim();
     }
@@ -727,7 +634,9 @@ public class LicenceFileProcessor : ILicenceFileProcessor
     private static (List<object> Items, Type ItemType) ProcessWorksheetData(object data)
     {
         if (data == null)
-            return (new List<object>(), typeof(object));
+        {
+            return ([], typeof(object));
+        }
 
         var dataType = data.GetType();
         var items = new List<object>();
@@ -738,8 +647,11 @@ public class LicenceFileProcessor : ILicenceFileProcessor
         {
             itemType = dataType.GetGenericArguments()[0];
             var enumerable = (IEnumerable)data;
+
             foreach (var item in enumerable)
+            {
                 items.Add(item);
+            }
         }
         else if (data is IEnumerable enumerable && dataType != typeof(string))
         {
@@ -750,14 +662,20 @@ public class LicenceFileProcessor : ILicenceFileProcessor
             if (enumerableType != null)
             {
                 itemType = enumerableType.GetGenericArguments()[0];
+
                 foreach (var item in enumerable)
+                {
                     items.Add(item);
+                }
             }
             else
             {
                 itemType = typeof(object);
+
                 foreach (var item in enumerable)
+                {
                     items.Add(item);
+                }
             }
         }
         else
@@ -818,7 +736,7 @@ public class LicenceFileProcessor : ILicenceFileProcessor
     {
         var headers = new string[properties.Length];
 
-        for (int i = 0; i < properties.Length; i++)
+        for (var i = 0; i < properties.Length; i++)
         {
             var propertyName = properties[i].Name;
 
@@ -845,7 +763,7 @@ public class LicenceFileProcessor : ILicenceFileProcessor
     {
         var headerRow = new Row() { RowIndex = 1 };
 
-        for (int i = 0; i < headers.Length; i++)
+        for (var i = 0; i < headers.Length; i++)
         {
             var cell = new Cell()
             {
@@ -853,6 +771,7 @@ public class LicenceFileProcessor : ILicenceFileProcessor
                 DataType = CellValues.InlineString,
                 InlineString = new InlineString() { Text = new Text(headers[i]) }
             };
+            
             headerRow.AppendChild(cell);
         }
 
@@ -868,12 +787,12 @@ public class LicenceFileProcessor : ILicenceFileProcessor
     /// <param name="headerMapping">Optional header mapping to identify special columns</param>
     private static void AddDataRows(SheetData sheetData, List<object> items, PropertyInfo[] properties, Dictionary<string, string>? headerMapping = null)
     {
-        for (int rowIndex = 0; rowIndex < items.Count; rowIndex++)
+        for (var rowIndex = 0; rowIndex < items.Count; rowIndex++)
         {
             var dataRow = new Row() { RowIndex = (uint)(rowIndex + 2) }; // +2 because Excel is 1-based and we have a header row
             var item = items[rowIndex];
 
-            for (int colIndex = 0; colIndex < properties.Length; colIndex++)
+            for (var colIndex = 0; colIndex < properties.Length; colIndex++)
             {
                 var property = properties[colIndex];
                 var value = property.GetValue(item);
@@ -955,11 +874,13 @@ public class LicenceFileProcessor : ILicenceFileProcessor
     private static string GetColumnName(int columnIndex)
     {
         var columnName = string.Empty;
+        
         while (columnIndex >= 0)
         {
             columnName = (char)('A' + (columnIndex % 26)) + columnName;
             columnIndex = (columnIndex / 26) - 1;
         }
+        
         return columnName;
     }
 

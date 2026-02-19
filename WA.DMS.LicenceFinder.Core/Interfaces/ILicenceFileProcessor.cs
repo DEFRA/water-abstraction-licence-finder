@@ -60,7 +60,7 @@ public interface ILicenceFileProcessor
     /// <summary>
     /// Finds files in resources folder that start with the given pattern.
     /// </summary>
-    /// <param name="pattern">The pattern to search for (e.g., "DMS_Extract")</param>
+    /// <param name="pattern">The pattern to search for (e.g., "A_FILE_PATTERN")</param>
     /// <returns>List of file names (without path) that match the pattern</returns>
     /// <exception cref="ArgumentException">Thrown when pattern is null or empty</exception>
     List<string> FindFilesByPattern(string pattern);

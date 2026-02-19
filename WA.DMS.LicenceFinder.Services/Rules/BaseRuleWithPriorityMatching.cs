@@ -26,23 +26,23 @@ public abstract class BaseRuleWithPriorityMatching : ILicenceMatchingRule
     /// <summary>
     /// Finds a matching DMS record based on priority matching logic
     /// </summary>
-    /// <param name="naldRecord">NALD record to find match for</param>
+    /// <param name="naldReportRecord">NALD record to find match for</param>
     /// <param name="dmsLookups">Pre-built lookup dictionaries for fast searching</param>
     /// <returns>Matching DMS record or null if no match found</returns>
-    public DmsExtract? FindMatch(NALDExtract naldRecord, DmsLookupIndexes dmsLookups)
+    public DmsExtract? FindMatch(NaldReportExtract naldReportRecord, DmsLookupIndexes dmsLookups)
     {
         // Reset state for new search
         _dynamicRuleName = null;
         _hasDuplicates = false;
 
         // Input validation
-        if (string.IsNullOrWhiteSpace(naldRecord.LicNo) || string.IsNullOrWhiteSpace(naldRecord.PermitNo))
+        if (string.IsNullOrWhiteSpace(naldReportRecord.LicNo) || string.IsNullOrWhiteSpace(naldReportRecord.PermitNo))
         {
             return null;
         }
 
         // Get matching records using the specific rule's logic
-        var matchingRecords = GetMatchingRecords(naldRecord, dmsLookups).ToList();
+        var matchingRecords = GetMatchingRecords(naldReportRecord, dmsLookups).ToList();
 
         if (!matchingRecords.Any())
         {
@@ -69,8 +69,8 @@ public abstract class BaseRuleWithPriorityMatching : ILicenceMatchingRule
     /// Gets the matching DMS records based on the specific rule's logic
     /// Each derived class implements its own matching strategy
     /// </summary>
-    /// <param name="naldRecord">NALD record to find matches for</param>
+    /// <param name="naldReportRecord">NALD record to find matches for</param>
     /// <param name="dmsLookups">Pre-built lookup dictionaries for fast searching</param>
     /// <returns>Collection of matching DMS records</returns>
-    protected abstract IEnumerable<DmsExtract> GetMatchingRecords(NALDExtract naldRecord, DmsLookupIndexes dmsLookups);
+    protected abstract IEnumerable<DmsExtract> GetMatchingRecords(NaldReportExtract naldReportRecord, DmsLookupIndexes dmsLookups);
 }

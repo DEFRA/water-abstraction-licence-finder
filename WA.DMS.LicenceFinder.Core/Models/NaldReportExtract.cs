@@ -3,18 +3,34 @@ namespace WA.DMS.LicenceFinder.Core.Models;
 /// <summary>
 /// Represents NALD (National Abstraction Licensing Database) extract data that can be extracted from CSV files.
 /// </summary>
-public class NALDExtract
+public class NaldReportExtract
 {
     /// <summary>
     /// License number
     /// </summary>
-    public string LicNo { get; set; } = string.Empty;
+    public string LicNo { get; init; } = string.Empty;
     
     /// <summary>
     /// Permit number
     /// </summary>
     public string PermitNo { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Cross registration indicator
+    /// </summary>
+    public string Region { get; init; } = string.Empty;
+
+    /*
+    /// <summary>
+    /// Previous license number
+    /// </summary>
+    public string PrevLicNo { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Following license number
+    /// </summary>
+    public string FollLicNo { get; set; } = string.Empty;
+    
     /// <summary>
     /// Area representative success code
     /// </summary>
@@ -83,20 +99,5 @@ public class NALDExtract
     /// <summary>
     /// Area representative CAMS code
     /// </summary>
-    public string ArepCamsCode { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Cross registration indicator
-    /// </summary>
-    public string Region { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Previous license number
-    /// </summary>
-    public string PrevLicNo { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Following license number
-    /// </summary>
-    public string FollLicNo { get; set; } = string.Empty;
+    public string ArepCamsCode { get; set; } = string.Empty;*/
 }
