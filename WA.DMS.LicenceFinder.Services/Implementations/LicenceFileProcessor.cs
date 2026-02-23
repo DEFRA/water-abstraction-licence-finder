@@ -449,31 +449,24 @@ public class LicenceFileProcessor : ILicenceFileProcessor
                     $" cannot be found in destination model ({modelFields})");
             }
             
-            try
+            string? cellValue = null;
+
+            // Handle different row data types
+            switch (rowData)
             {
-                string? cellValue = null;
-
-                // Handle different row data types
-                switch (rowData)
-                {
-                    case DataRow excelRow when columnIndex < excelRow.ItemArray.Length && excelRow[columnIndex] != DBNull.Value:
-                        cellValue = excelRow[columnIndex].ToString();
-                        break;
-                    case string[] csvRow when columnIndex < csvRow.Length && !string.IsNullOrEmpty(csvRow[columnIndex]):
-                        cellValue = csvRow[columnIndex].Trim('"', ' ');
-                        break;
-                }
-
-                if (!string.IsNullOrEmpty(cellValue))
-                {
-                    var propertyType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
-                    var convertedValue = Convert.ChangeType(cellValue, propertyType);
-                    property.SetValue(item, convertedValue);
-                }
+                case DataRow excelRow when columnIndex < excelRow.ItemArray.Length && excelRow[columnIndex] != DBNull.Value:
+                    cellValue = excelRow[columnIndex].ToString();
+                    break;
+                case string[] csvRow when columnIndex < csvRow.Length && !string.IsNullOrEmpty(csvRow[columnIndex]):
+                    cellValue = csvRow[columnIndex].Trim('"', ' ');
+                    break;
             }
-            catch
+
+            if (!string.IsNullOrEmpty(cellValue))
             {
-                // Skip conversion errors and continue
+                var propertyType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+                var convertedValue = Convert.ChangeType(cellValue, propertyType);
+                property.SetValue(item, convertedValue);
             }
         }
 

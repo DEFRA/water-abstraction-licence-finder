@@ -361,25 +361,17 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
 
         foreach (var fileName in changeAuditFiles)
         {
-            try
+            var records = _fileProcessor.ExtractExcel<List<ChangeAudit>>(
+                fileName,
+                new Dictionary<string, List<string>>
             {
-                var records = _fileProcessor.ExtractExcel<List<ChangeAudit>>(
-                    fileName,
-                    new Dictionary<string, List<string>>
-                {
-                    {"Permit Number", ["PermitNumber"]},
-                    {"Original File Path", ["OriginalPath"]},
-                    {"New File Path", ["UpdatedPath"]},
-                    {"Action", ["Action"]}
-                });
+                {"Permit Number", ["PermitNumber"]},
+                {"Original File Path", ["OriginalPath"]},
+                {"New File Path", ["UpdatedPath"]},
+                {"Action", ["Action"]}
+            });
 
-                allChangeAudits.AddRange(records);
-            }
-            catch (Exception ex)
-            {
-                // Log warning but continue processing other files
-                Console.WriteLine($"Warning: Failed to read Change Audit file '{fileName}': {ex.Message}");
-            }
+            allChangeAudits.AddRange(records);
         }
 
         return allChangeAudits;
@@ -491,7 +483,8 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
 
         foreach (var fileName in fileIdentificationFiles)
         {
-            var records = _fileProcessor.ExtractCsv<List<FileIdentificationExtract>>(fileName,
+            var records = _fileProcessor.ExtractCsv<List<FileIdentificationExtract>>(
+                fileName,
                 new Dictionary<string, List<string>>
             {
                 {"FilePath",["FilePath"]},
