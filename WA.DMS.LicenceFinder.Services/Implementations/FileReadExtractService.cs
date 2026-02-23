@@ -38,7 +38,10 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
         { "DifferenceInFileUrlInIterations", "Difference In File URL In Iterations" },
         { "FileId", "File ID" },
         { "DOISignatureDateMatch", "Latest issued signature date = Scraped Date of Issue"},
-        { "ChangeAuditAction", "Override Action"}
+        { "ChangeAuditAction", "Override Action"},
+        { "IncludedInVersionMatch", "Included in VersionMatch process"},
+        { "SingleLicenceInVersionMatch", "Single Licence found in VersionMatch process"},
+        { "VersionMatchLicenceURL", "Version Match Licence URL"}
     };
 
     /// <summary>
@@ -60,6 +63,7 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
                     filename,
                     new Dictionary<string, string>
                     {
+                        {"Site Collection", "SiteCollection"},
                         {"Permit Number", "PermitNumber"},
                         {"Document Date", "DocumentDate"},
                         {"Uploaded Date", "UploadDate"},
@@ -70,7 +74,12 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
                         {"Other Reference", "OtherReference"},
                         {"Modified Date", "ModifiedDate"},
                         {"File ID", "FileId"}
-                    });
+                    },
+                    [
+                        "ActivityGrouping",
+                        "EPRNumber",
+                        "CurrentPermit"
+                    ]);
 
                 foreach (var record in records)
                 {
@@ -113,7 +122,29 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
                     {
                         { "Licence No.", "LicNo" },
                         { "Region", "Region" }
-                    });
+                    },
+                    [
+                        "WALicTypeDescription",
+                        "OrigEffectiveDate",
+                        "ExpiryDate",
+                        "VersionStartDate",
+                        "MaxAnnualQuantity",
+                        "MaxDailyQuantity",
+                        "PurposePointDescriptor",
+                        "AggregatetoOtherLic",
+                        "Salutation",
+                        "Initials",
+                        "Forename",
+                        "Name",
+                        "Line1",
+                        "Line2",
+                        "Line3",
+                        "Line4",
+                        "Town",
+                        "County",
+                        "Postcode",
+                        "SourceType"
+                    ]);
 
                 // Enrich records with cleaned permit numbers
                 foreach (var record in records)
@@ -137,24 +168,41 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
     /// Reads Previous Iteration Matches from the resources folder
     /// </summary>
     /// <returns>Previous iteration match results</returns>
-    public List<LicenceMatchResult> GetLicenceFinderLastIterationResults(bool current)
+    public List<LicenceMatchResult> GetLicenceFinderPreviousIterationResults(string filename, string? region)
     {
         var allPreviousIterationResults = new List<LicenceMatchResult>();
 
-        var prevIterationMatch = current ?
-            _fileProcessor.FindFilesByPattern("Current_Iteration_Matches").FirstOrDefault() :
-            _fileProcessor.FindFilesByPattern("Previous_Iteration_Matches").FirstOrDefault();
-
-        if (prevIterationMatch != null)
+        if (string.IsNullOrWhiteSpace(filename))
         {
-            var records = _fileProcessor.ExtractExcel<List<LicenceMatchResult>>(
-                prevIterationMatch,
-                ReverseMapping(LicenseMatchResultHeaderMapping));
-            
-            allPreviousIterationResults.AddRange(records);
+            return allPreviousIterationResults;
         }
+        
+        var prevIterationMatch =
+            _fileProcessor.FindFilesByPattern(filename).FirstOrDefault();
 
-        return allPreviousIterationResults;//.Where(r => r.Region == "Anglian Region").ToList();
+        if (prevIterationMatch == null)
+        {
+            throw new FileNotFoundException($"No files were found with the given filename '{filename}'.");
+        }
+        
+        var records = _fileProcessor.ExtractExcel<List<LicenceMatchResult>>(
+            prevIterationMatch,
+            ReverseMapping(LicenseMatchResultHeaderMapping),
+            [
+                "NALDAABL_ID",
+                "NALDIssue_No"
+            ]);
+        
+        allPreviousIterationResults.AddRange(records);
+
+        if (string.IsNullOrWhiteSpace(region))
+        {
+            return allPreviousIterationResults;
+        }
+        
+        return allPreviousIterationResults
+            .Where(r => r.Region == region)
+            .ToList();
     }
 
     /// <summary>
@@ -164,7 +212,7 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
     public Dictionary<string, List<NALDMetadataExtract>> GetNaldAbsLicencesAndVersions(bool getLatest)
     {
         var naldMetadataResults = new List<NALDMetadataExtract>();
-        var naldMetadataReferenceResults = new List<NALDMetadataReferenceExtract>();
+        var naldMetadataReferenceResults = new List<NaldMetadataReferenceExtract>();
         
         var naldMetadata = _fileProcessor
             .FindFilesByPattern("NALD_Metadata.")
@@ -179,9 +227,32 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
                     {"AABL_ID", "AablId"},
                     {"AABV_TYPE", "AabvType"},
                     {"ISSUE_NO", "IssueNo"},
-                    {"LIC_SIG_DATE", "SignatureDate"}, 
+                    {"LIC_SIG_DATE", "SignatureDate"},
                     {"FGAC_REGION_CODE", "Region"}
-                });
+                },
+                [
+                    "INCR_NO",
+                    "EFF_ST_DATE",
+                    "STATUS",
+                    "RETURNS_REQ",
+                    "CHARGEABLE",
+                    "ASRC_CODE",
+                    "ACON_APAR_ID",
+                    "ACON_AADD_ID",
+                    "ALTY_CODE",
+                    "ACCL_CODE",
+                    "MULTIPLE_LH",
+                    "APP_NO",
+                    "LIC_DOC_FLAG",
+                    "EFF_END_DATE",
+                    "EXPIRY_DATE1",
+                    "WA_ALTY_CODE",
+                    "VOL_CONV",
+                    "WRT_CODE",
+                    "DEREG_CODE",
+                    "SOURCE_CODE",
+                    "BATCH_RUN_DATE"
+                ]);
             
             naldMetadataResults.AddRange(records);
         }
@@ -192,14 +263,37 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
         
         if (naldMetadataReference != null)
         {
-            var records = _fileProcessor.ExtractCsv<List<NALDMetadataReferenceExtract>>(
+            var records = _fileProcessor.ExtractCsv<List<NaldMetadataReferenceExtract>>(
                 naldMetadataReference,
                 new Dictionary<string, string>
                 {
                     {"ID", "AablId"},
                     {"LIC_NO", "LicNo"}, 
                     {"FGAC_REGION_CODE", "Region"}
-                });
+                },
+                [
+                    "AREP_SUC_CODE",
+                    "AREP_AREA_CODE",
+                    "SUSP_FROM_BILLING",
+                    "AREP_LEAP_CODE",
+                    "EXPIRY_DATE",
+                    "ORIG_EFF_DATE",
+                    "ORIG_SIG_DATE",
+                    "ORIG_APP_NO",
+                    "ORIG_LIC_NO",
+                    "NOTES",
+                    "REV_DATE",
+                    "LAPSED_DATE",
+                    "SUSP_FROM_RETURNS",
+                    "AREP_CAMS_CODE",
+                    "X_REG_IND",
+                    "PREV_LIC_NO",
+                    "FOLL_LIC_NO",
+                    "AREP_EIUC_CODE",
+                    "FGAC_REGION_CODE",
+                    "SOURCE_CODE",
+                    "BATCH_RUN_DATE"
+                ]);
             
             naldMetadataReferenceResults.AddRange(records);
         }
@@ -303,11 +397,16 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
     /// Reads Change_Audit.xlsx file from the resources folder
     /// </summary>
     /// <returns>List of change audit records</returns>
-    public List<Override> GetDmsChangeAuditOverrides()
+    public List<Override> GetDmsChangeAuditOverrides(string filename)
     {
         var allOverrides = new List<Override>();
-        var overrides = _fileProcessor.FindFilesByPattern("Overrides");
+        var overrides = _fileProcessor.FindFilesByPattern(filename);
 
+        if (!overrides.Any())
+        {
+            throw new FileNotFoundException($"No override files were found with the given filename '{filename}'.");
+        }
+        
         foreach (var fileName in overrides)
         {
             try
@@ -316,7 +415,7 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
                 {
                     { "Permit Number", "PermitNumber" },
                     { "File URL", "FileUrl" },
-                    { "NALD Issue No.", "IssueNo" },
+                    { "NALD Issue_No", "IssueNo" },
                     { "File ID", "FileId" }
                 });
 
@@ -345,11 +444,17 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
         {
             try
             {
-                var records = _fileProcessor.ExtractCsv<List<FileReaderExtract>>(fileName, new Dictionary<string, string>
+                var records = _fileProcessor.ExtractCsv<List<FileReaderExtract>>(
+                    fileName,
+                    new Dictionary<string, string>
                 {
                     {"PermitNumber", "PermitNumber"},
                     {"DateOfIssue", "DateOfIssue"}
-                });
+                },
+                [
+                    "LicenceNumber",
+                    "FileName"
+                ]);
 
                 fileReaderResults.AddRange(records);
             }
@@ -387,7 +492,8 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
                     {
                         {"DMS Version Of Licence No.", "PermitNumber"},
                         {"DMS Permit Folder No.", "PermitNumberFolder"},
-                    });
+                    },
+                    ["NALDLicenceNo"]);
                 
                 foreach (var record in records)
                 {
@@ -417,7 +523,8 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
         {
             try
             {
-                var records = _fileProcessor.ExtractCsv<List<FileIdentificationExtract>>(fileName, new Dictionary<string, string>
+                var records = _fileProcessor.ExtractCsv<List<FileIdentificationExtract>>(fileName,
+                    new Dictionary<string, string>
                 {
                     {"FilePath", "FilePath"},
                     {"FileName", "FileName"},
@@ -428,7 +535,11 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
                     {"DateOfIssue", "DateOfIssue"},
                     {"FileSize", "FileSize"},
                     {"OriginalFileName", "OriginalFileName"}
-                });
+                },
+                [
+                    "Confidence",
+                    "LicenceNumber"
+                ]);
 
                 // Update DateOfIssue format for all records
                 foreach (var record in records)
@@ -473,7 +584,8 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
                         {"NumberOfPages", "NumberOfPages"},
                         {"TemplateType", "PrimaryTemplateType"},
                         {"Template", "SecondaryTemplateType"}
-                    });
+                    },
+                    ["Header"]);
 
                 // Update DateOfIssue format for all records
                 foreach (var record in records)

@@ -153,7 +153,7 @@ public class FileReadExtractServiceTests
             .Returns(new List<string>());
 
         // Act
-        var result = _fileReadExtractService.GetLicenceFinderLastIterationResults(false);
+        var result = _fileReadExtractService.GetLicenceFinderPreviousIterationResults("Previous_Iteration_Matches", null);
 
         // Assert
         result.Should().BeEmpty();

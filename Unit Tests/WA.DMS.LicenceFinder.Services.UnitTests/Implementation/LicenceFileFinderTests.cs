@@ -96,7 +96,7 @@ public class LicenceFileFinderTests
         _mockReadExtract.Setup(r => r.GetDmsExtractFiles(It.IsAny<bool>())).Returns(dmsRecords);
         _mockReadExtract.Setup(r => r.GetNaldReportRecords()).Returns(naldRecords);
         _mockReadExtract.Setup(r => r.ReadChangeAuditFiles()).Returns(new List<ChangeAudit>());
-        _mockReadExtract.Setup(r => r.GetLicenceFinderLastIterationResults(It.IsAny<bool>())).Returns(new List<LicenceMatchResult>());
+        _mockReadExtract.Setup(r => r.GetLicenceFinderPreviousIterationResults(It.IsAny<string>(), It.IsAny<string?>())).Returns(new List<LicenceMatchResult>());
         _mockReadExtract.Setup(r => r.GetNaldAbsLicencesAndVersions(It.IsAny<bool>())).Returns(new Dictionary<string, List<NALDMetadataExtract>>());
         _mockReadExtract.Setup(r => r.GetWradiFileReaderScrapeResults()).Returns(new List<FileReaderExtract>());
         _mockReadExtract.Setup(r => r.GetDmsManualFixes()).Returns(new Dictionary<string, DmsManualFixExtract>());
@@ -145,7 +145,7 @@ public class LicenceFileFinderTests
             []);
         
         act.Should().Throw<InvalidOperationException>()
-            .WithMessage("Error occurred while finding license files: Test exception");
+            .WithMessage("Error occurred while finding licence files: Test exception");
     }
 
     [Fact]
@@ -261,7 +261,7 @@ public class LicenceFileFinderTests
         _mockReadExtract.Setup(r => r.GetDmsExtractFiles(It.IsAny<bool>())).Returns(dmsRecords);
         _mockReadExtract.Setup(r => r.GetNaldReportRecords()).Returns(naldRecords);
         _mockReadExtract.Setup(r => r.ReadChangeAuditFiles()).Returns(new List<ChangeAudit>());
-        _mockReadExtract.Setup(r => r.GetLicenceFinderLastIterationResults(It.IsAny<bool>())).Returns(new List<LicenceMatchResult>());
+        _mockReadExtract.Setup(r => r.GetLicenceFinderPreviousIterationResults(It.IsAny<string>(), It.IsAny<string?>())).Returns(new List<LicenceMatchResult>());
         _mockReadExtract.Setup(r => r.GetNaldAbsLicencesAndVersions(It.IsAny<bool>())).Returns(new Dictionary<string, List<NALDMetadataExtract>>());
         _mockReadExtract.Setup(r => r.GetWradiFileReaderScrapeResults()).Returns(new List<FileReaderExtract>());
         _mockReadExtract.Setup(r => r.GetDmsManualFixes()).Returns(new Dictionary<string, DmsManualFixExtract>());

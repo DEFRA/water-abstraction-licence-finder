@@ -13,7 +13,10 @@ namespace WA.DMS.LicenceFinder.Services.Implementations;
 /// <inheritdoc/>
 public class LicenceFileProcessor : ILicenceFileProcessor
 {
-    public T ExtractExcel<T>(string fileName, Dictionary<string, string>? headerMapping = null)
+    public T ExtractExcel<T>(
+        string fileName,
+        Dictionary<string, string>? headerMapping = null,
+        List<string>? excludeFields = null)
     {
         if (string.IsNullOrWhiteSpace(fileName))
         {
@@ -63,7 +66,7 @@ public class LicenceFileProcessor : ILicenceFileProcessor
             
             foreach (DataRow row in dataTable.Rows)
             {
-                var item = MapRowToObject(row, targetType, columnMapping);
+                var item = MapRowToObject(row, targetType, columnMapping, excludeFields);
                 items.Add(item);
             }
 
@@ -82,7 +85,10 @@ public class LicenceFileProcessor : ILicenceFileProcessor
         }
     }
     
-    public T ExtractCsv<T>(string fileName, Dictionary<string, string>? headerMapping = null)
+    public T ExtractCsv<T>(
+        string fileName,
+        Dictionary<string, string>? headerMapping = null,
+        List<string>? excludeFields = null)
     {
         if (string.IsNullOrWhiteSpace(fileName))
         {
@@ -112,7 +118,7 @@ public class LicenceFileProcessor : ILicenceFileProcessor
         for (var i = 1; i < lines.Length; i++)
         {
             var values = ParseCsvLine(lines[i]);
-            var item = MapRowToObject(values, targetType, columnMapping);
+            var item = MapRowToObject(values, targetType, columnMapping, excludeFields);
             
             items.Add(item);
         }
@@ -325,7 +331,9 @@ public class LicenceFileProcessor : ILicenceFileProcessor
     /// <param name="headers">Array or collection of header names</param>
     /// <param name="headerMapping">Optional mapping from file headers to property names</param>
     /// <returns>Dictionary mapping property names to column indexes</returns>
-    private static Dictionary<string, int> CreateColumnMapping(IEnumerable<string> headers, Dictionary<string, string>? headerMapping)
+    private static Dictionary<string, int> CreateColumnMapping(
+        IEnumerable<string> headers,
+        Dictionary<string, string>? headerMapping)
     {
         var columnMapping = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var headerArray = headers.ToArray();
@@ -362,20 +370,39 @@ public class LicenceFileProcessor : ILicenceFileProcessor
     /// <param name="rowData">The row data (DataRow for Excel, string[] for CSV)</param>
     /// <param name="targetType">The target object type to create</param>
     /// <param name="columnMapping">Dictionary mapping property names to column indexes</param>
+    /// <param name="excludeFields"></param>
     /// <returns>An instance of the target type with populated properties</returns>
-    private static object MapRowToObject(object rowData, Type targetType, Dictionary<string, int> columnMapping)
+    private static object MapRowToObject(
+        object rowData,
+        Type targetType,
+        Dictionary<string, int> columnMapping,
+        List<string>? excludeFields)
     {
         var item = Activator.CreateInstance(targetType)!;
         
-        var properties = targetType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+        var properties = targetType
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(p => p.CanWrite)
             .ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
 
-        foreach (var (propertyName, columnIndex) in columnMapping)
+        foreach (var (propertyNameLoop, columnIndex) in columnMapping)
         {
+            var propertyName = propertyNameLoop
+                .Replace(" ", string.Empty)
+                .Replace("/", string.Empty)
+                .Replace(".", string.Empty);
+            
             if (!properties.TryGetValue(propertyName, out var property))
             {
-                continue;
+                if (propertyName.StartsWith("Column") || excludeFields?.Contains(propertyName) == true)
+                {
+                    continue;
+                }
+                
+                var modelFields = string.Join(", ", properties.Values.Select(v => v.Name));
+                
+                throw new Exception($"Excel contains field {propertyName} (spaces may have been removed) that" +
+                    $" cannot be found in destination model ({modelFields})");
             }
             
             try

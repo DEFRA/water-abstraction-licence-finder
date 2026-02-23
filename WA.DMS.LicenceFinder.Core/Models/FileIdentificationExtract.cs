@@ -9,9 +9,9 @@ public class FileIdentificationExtract
 
     public string FileName { get; set; } = string.Empty;
 
-    public string FileType { get; set; } = string.Empty;
-
     public string OriginalFileName { get; set; } = string.Empty;
+    
+    public string FileType { get; set; } = string.Empty;
 
     public string IdentifiedByRule { get; set; } = string.Empty;
 

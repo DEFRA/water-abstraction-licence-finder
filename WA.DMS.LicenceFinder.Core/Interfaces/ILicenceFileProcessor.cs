@@ -12,11 +12,15 @@ public interface ILicenceFileProcessor
     /// <typeparam name="T">The target type to deserialize the Excel data into. Can be a single object or List&lt;T&gt; for multiple records.</typeparam>
     /// <param name="fileName">The name of the Excel file to read from (searches in resources folders)</param>
     /// <param name="headerMapping">Optional dictionary mapping Excel column headers to object property names. Key: Excel header, Value: Property name.</param>
+    /// <param name="excludeFields"></param>
     /// <returns>An instance of type T populated with data from the Excel file</returns>
     /// <exception cref="ArgumentException">Thrown when fileName is null or empty</exception>
     /// <exception cref="FileNotFoundException">Thrown when the Excel file is not found in any resources folder</exception>
     /// <exception cref="InvalidOperationException">Thrown when the Excel file is empty or has no worksheets</exception>
-    T ExtractExcel<T>(string fileName, Dictionary<string, string>? headerMapping = null);
+    T ExtractExcel<T>(
+        string fileName,
+        Dictionary<string, string>? headerMapping = null,
+        List<string>? excludeFields = null);
 
     /// <summary>
     /// Extracts data from a CSV file and maps it to the specified generic type.
@@ -25,11 +29,15 @@ public interface ILicenceFileProcessor
     /// <typeparam name="T">The target type to deserialize the CSV data into. Can be a single object or List&lt;T&gt; for multiple records.</typeparam>
     /// <param name="fileName">The name of the CSV file to read from (searches in resources folders)</param>
     /// <param name="headerMapping">Optional dictionary mapping CSV column headers to object property names. Key: CSV header, Value: Property name.</param>
+    /// <param name="excludeFields"></param>
     /// <returns>An instance of type T populated with data from the CSV file</returns>
     /// <exception cref="ArgumentException">Thrown when fileName is null or empty</exception>
     /// <exception cref="FileNotFoundException">Thrown when the CSV file is not found in any resources folder</exception>
     /// <exception cref="InvalidOperationException">Thrown when the CSV file is empty</exception>
-    T ExtractCsv<T>(string fileName, Dictionary<string, string>? headerMapping = null);
+    T ExtractCsv<T>(
+        string fileName,
+        Dictionary<string, string>? headerMapping = null,
+        List<string>? excludeFields = null);
 
     /// <summary>
     /// Generates an Excel file from a generic entity or collection of entities.

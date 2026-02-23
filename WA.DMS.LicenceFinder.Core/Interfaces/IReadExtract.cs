@@ -23,7 +23,7 @@ public interface IReadExtract
     /// Reads Previous Iteration Matches from the resources folder
     /// </summary>
     /// <returns>Previous iteration match results</returns>
-    List<LicenceMatchResult> GetLicenceFinderLastIterationResults(bool current);
+    List<LicenceMatchResult> GetLicenceFinderPreviousIterationResults(string filename, string? region);
 
     /// <summary>
     /// Reads NALD Metadata from the resources folder
@@ -65,7 +65,7 @@ public interface IReadExtract
     /// Reads Change_Audit.xlsx file from the resources folder
     /// </summary>
     /// <returns>List of change audit records</returns>
-    List<Override> GetDmsChangeAuditOverrides();
+    List<Override> GetDmsChangeAuditOverrides(string filename);
 
     /// <summary>
     /// Reads LicenceVersionResult.xlsx file from the resources folder

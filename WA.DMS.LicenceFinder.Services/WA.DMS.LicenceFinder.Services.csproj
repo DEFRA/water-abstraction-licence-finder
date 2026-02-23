@@ -118,6 +118,14 @@
     <Content Include="Resources\File_Identification_Extract_NW.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <None Remove="Resources\ANGLIAN_LicenceMatchResults_20260118_221710.xlsx" />
+    <Content Include="Resources\ANGLIAN_LicenceMatchResults_20260118_221710.xlsx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <None Remove="Resources\ANGLIAN_Overrides.xlsx" />
+    <Content Include="Resources\ANGLIAN_Overrides.xlsx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

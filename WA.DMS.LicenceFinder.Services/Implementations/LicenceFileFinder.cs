@@ -125,7 +125,7 @@ public class LicenceFileFinder : ILicenceFileFinder
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"Error occurred while finding license files: {ex.Message}", ex);
+            throw new InvalidOperationException($"Error occurred while finding licence files: {ex.Message}", ex);
         }
     }
 
@@ -451,7 +451,7 @@ public class LicenceFileFinder : ILicenceFileFinder
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"Error occurred while finding license files: {ex.Message}", ex);
+            throw new InvalidOperationException($"Error occurred while finding licence files: {ex.Message}", ex);
         }
     }
 
@@ -1201,7 +1201,7 @@ public class LicenceFileFinder : ILicenceFileFinder
             Console.WriteLine($"Processing record {processedRecords}/{naldReportRecords.Count}: {naldReportRecord.LicNo} - {ruleUsed}");
         }
 
-        Console.WriteLine($"License matching completed. Total records processed: {processedRecords}");
+        Console.WriteLine($"Licence matching completed. Total records processed: {processedRecords}");
         return (results, versionResults);;
     }
 
