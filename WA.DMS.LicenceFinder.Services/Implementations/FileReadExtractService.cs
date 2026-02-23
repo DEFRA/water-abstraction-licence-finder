@@ -41,7 +41,8 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
         { "ChangeAuditAction", "Override Action"},
         { "IncludedInVersionMatch", "Included in VersionMatch process"},
         { "SingleLicenceInVersionMatch", "Single Licence found in VersionMatch process"},
-        { "VersionMatchLicenceURL", "Version Match Licence URL"}
+        { "VersionMatchFileUrl", "Version Match Licence URL"},
+        { "DuplicateLicenceInVersionMatchResult", "Duplicate licences found in VersionMatch process"}
     };
 
     /// <summary>
@@ -190,7 +191,8 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
             ReverseMapping(LicenseMatchResultHeaderMapping),
             [
                 "NALDAABL_ID",
-                "NALDIssue_No"
+                "NALDIssue_No",
+                "SignaturedateDQissuefoundinVersionMatchprocess"
             ]);
         
         allPreviousIterationResults.AddRange(records);
