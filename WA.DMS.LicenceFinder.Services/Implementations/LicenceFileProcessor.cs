@@ -352,8 +352,9 @@ public class LicenceFileProcessor : ILicenceFileProcessor
                 continue;
             }
 
-            if (mappingEntry.Value.Value.Count > 1)
+            if (mappingEntry.Value.Value.Count >= 2)
             {
+                throw new Exception($"Unknown which of multiple values to use for {columnName}.");
             }
 
             var found = false;
@@ -363,7 +364,9 @@ public class LicenceFileProcessor : ILicenceFileProcessor
                 if (!string.IsNullOrEmpty(value))
                 {
                     columnMapping[value] = i;
+
                     found = true;
+                    break;
                 }
             }
 
