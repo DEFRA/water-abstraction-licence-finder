@@ -57,7 +57,7 @@ public class LicenceFileProcessorTests
     public void ExtractExcel_WithNullFileName_ShouldThrowArgumentNullException()
     {
         // Arrange
-        var mapping = new Dictionary<string, string> { { "Test", "Test" } };
+        var mapping = new Dictionary<string, List<string>> { { "Test", ["Test"] } };
 
         // Act & Assert
         var act = () => _processor.ExtractExcel<List<DmsExtract>>(null!, mapping);
@@ -76,7 +76,7 @@ public class LicenceFileProcessorTests
     public void ExtractExcel_WithEmptyFileName_ShouldThrowArgumentException()
     {
         // Arrange
-        var mapping = new Dictionary<string, string> { { "Test", "Test" } };
+        var mapping = new Dictionary<string, List<string>> { { "Test", ["Test"] } };
 
         // Act & Assert
         var act = () => _processor.ExtractExcel<List<DmsExtract>>("", mapping);
@@ -87,7 +87,7 @@ public class LicenceFileProcessorTests
     public void ExtractExcel_WithNonExistentFile_ShouldThrowFileNotFoundException()
     {
         // Arrange
-        var mapping = new Dictionary<string, string> { { "Test", "Test" } };
+        var mapping = new Dictionary<string, List<string>> { { "Test", ["Test"] } };
 
         // Act & Assert
         var act = () => _processor.ExtractExcel<List<DmsExtract>>("nonexistent.xlsx", mapping);

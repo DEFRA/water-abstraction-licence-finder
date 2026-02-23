@@ -15,34 +15,35 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
     /// <summary>
     /// Common header mapping for LicenseMatchResult - maps property names to Excel header names
     /// </summary>
-    private static readonly Dictionary<string, string> LicenseMatchResultHeaderMapping = new()
+    private static readonly Dictionary<string, List<string>> LicenseMatchResultHeaderMapping = new()
     {
-        { "PermitNumber", "Permit Number" },
-        { "FileUrl", "File URL" },
-        { "RuleUsed", "Rule Used" },
-        { "LicenseNumber", "License Number" },
-        { "DocumentDate", "Document Date" },
-        { "SignatureDate", "Latest issued signature date" },
-        { "NALDIssueNo", "NALD Issue No." },
-        { "DateOfIssue", "Scrapped Date of Issue" },
-        { "MatchFound", "Match Found" },
-        { "FoundMultipleMatches", "Found Multiple Matches" },
-        { "MatchDetails", "Match Details" },
-        { "OtherReference", "Other Reference" },
-        { "FileSize", "File Size" },
-        { "DisclosureStatus", "Disclosure Status" },
-        { "Region", "Region" },
-        { "PreviousIterationRuleUsed", "Previous Iteration Rule Used" },
-        { "DifferenceInRuleusedInIterations", "Difference In Rule Used In Iterations" },
-        { "PreviousIterationFileUrl", "Previous Iteration File URL" },
-        { "DifferenceInFileUrlInIterations", "Difference In File URL In Iterations" },
-        { "FileId", "File ID" },
-        { "DOISignatureDateMatch", "Latest issued signature date = Scraped Date of Issue"},
-        { "ChangeAuditAction", "Override Action"},
-        { "IncludedInVersionMatch", "Included in VersionMatch process"},
-        { "SingleLicenceInVersionMatch", "Single Licence found in VersionMatch process"},
-        { "VersionMatchFileUrl", "Version Match Licence URL"},
-        { "DuplicateLicenceInVersionMatchResult", "Duplicate licences found in VersionMatch process"}
+        { "PermitNumber", ["Permit Number" ]},
+        { "FileUrl", ["File URL"]},
+        { "RuleUsed", ["Rule Used" ]},
+        { "LicenseNumber", ["License Number" ]},
+        { "DocumentDate", ["Document Date" ]},
+        { "SignatureDate", ["Latest issued signature date" ]},
+        { "NALDID", ["NALD AABL_ID" ]},
+        { "NALDIssueNo", ["NALD Issue No.", "NALD Issue_No" ]},
+        { "DateOfIssue", ["Scrapped Date of Issue" ]},
+        { "MatchFound", ["Match Found" ]},
+        { "FoundMultipleMatches", ["Found Multiple Matches" ]},
+        { "MatchDetails", ["Match Details" ]},
+        { "OtherReference", ["Other Reference" ]},
+        { "FileSize", ["File Size" ]},
+        { "DisclosureStatus", ["Disclosure Status" ]},
+        { "Region", ["Region" ]},
+        { "PreviousIterationRuleUsed", ["Previous Iteration Rule Used" ]},
+        { "DifferenceInRuleusedInIterations", ["Difference In Rule Used In Iterations" ]},
+        { "PreviousIterationFileUrl", ["Previous Iteration File URL" ]},
+        { "DifferenceInFileUrlInIterations", ["Difference In File URL In Iterations" ]},
+        { "FileId", ["File ID" ]},
+        { "DOISignatureDateMatch", ["Latest issued signature date = Scraped Date of Issue" ]},
+        { "ChangeAuditAction", ["Override Action" ]},
+        { "IncludedInVersionMatch", ["Included in VersionMatch process" ]},
+        { "SingleLicenceInVersionMatch", ["Single Licence found in VersionMatch process" ]},
+        { "VersionMatchFileUrl", ["Version Match Licence URL" ]},
+        { "DuplicateLicenceInVersionMatchResult", ["Duplicate licences found in VersionMatch process" ]}
     };
 
     /// <summary>
@@ -58,46 +59,37 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
 
         foreach (var filename in filenames)
         {
-            try
-            {
-                var records = _fileProcessor.ExtractExcel<List<DmsExtract>>(
-                    filename,
-                    new Dictionary<string, string>
-                    {
-                        {"Site Collection", "SiteCollection"},
-                        {"Permit Number", "PermitNumber"},
-                        {"Document Date", "DocumentDate"},
-                        {"Uploaded Date", "UploadDate"},
-                        {"File URL", "FileUrl"},
-                        {"File Name", "FileName"},
-                        {"File Size", "FileSize"},
-                        {"Disclosure Status", "DisclosureStatus"},
-                        {"Other Reference", "OtherReference"},
-                        {"Modified Date", "ModifiedDate"},
-                        {"File ID", "FileId"}
-                    },
-                    [
-                        "ActivityGrouping",
-                        "EPRNumber",
-                        "CurrentPermit"
-                    ]);
-
-                foreach (var record in records)
+            var records = _fileProcessor.ExtractExcel<List<DmsExtract>>(
+                filename,
+                new Dictionary<string, List<string>>
                 {
-                    if (allDmsRecords.TryGetValue(record.PermitNumber, out var list))
-                    {
-                        list.Add(record);
-                        continue;
-                    }
-                    
-                    allDmsRecords.Add(record.PermitNumber, [record]);
+                    {"Site Collection", ["SiteCollection"]},
+                    {"Permit Number", ["PermitNumber"]},
+                    {"Document Date", ["DocumentDate"]},
+                    {"Uploaded Date", ["UploadDate"]},
+                    {"File URL", ["FileUrl"]},
+                    {"File Name", ["FileName"]},
+                    {"File Size", ["FileSize"]},
+                    {"Disclosure Status", ["DisclosureStatus"]},
+                    {"Other Reference", ["OtherReference"]},
+                    {"Modified Date", ["ModifiedDate"]},
+                    {"File ID", ["FileId"]}
+                },
+                [
+                    "ActivityGrouping",
+                    "EPRNumber",
+                    "CurrentPermit"
+                ]);
+
+            foreach (var record in records)
+            {
+                if (allDmsRecords.TryGetValue(record.PermitNumber, out var list))
+                {
+                    list.Add(record);
+                    continue;
                 }
                 
-            }
-            catch (Exception ex)
-            {
-                // Log warning but continue processing other files
-                Console.WriteLine($"Warning: Failed to read DMS file '{filename}': {ex.Message}");
+                allDmsRecords.Add(record.PermitNumber, [record]);
             }
         }
 
@@ -115,51 +107,44 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
 
         foreach (var fileName in naldFiles)
         {
-            try
-            {
-                var records = _fileProcessor.ExtractExcel<List<NaldReportExtract>>(
-                    fileName,
-                    new Dictionary<string, string>
-                    {
-                        { "Licence No.", "LicNo" },
-                        { "Region", "Region" }
-                    },
-                    [
-                        "WALicTypeDescription",
-                        "OrigEffectiveDate",
-                        "ExpiryDate",
-                        "VersionStartDate",
-                        "MaxAnnualQuantity",
-                        "MaxDailyQuantity",
-                        "PurposePointDescriptor",
-                        "AggregatetoOtherLic",
-                        "Salutation",
-                        "Initials",
-                        "Forename",
-                        "Name",
-                        "Line1",
-                        "Line2",
-                        "Line3",
-                        "Line4",
-                        "Town",
-                        "County",
-                        "Postcode",
-                        "SourceType"
-                    ]);
-
-                // Enrich records with cleaned permit numbers
-                foreach (var record in records)
+            var records = _fileProcessor.ExtractExcel<List<NaldReportExtract>>(
+                fileName,
+                new Dictionary<string, List<string>>
                 {
-                    record.PermitNo = CleanPermitNumber(record.LicNo);
-                }
+                    { "Licence No.", ["LicNo"]},
+                    { "Region", ["Region"]}
+                },
+                [
+                    "WALicTypeDescription",
+                    "OrigEffectiveDate",
+                    "ExpiryDate",
+                    "VersionStartDate",
+                    "MaxAnnualQuantity",
+                    "MaxDailyQuantity",
+                    "PurposePointDescriptor",
+                    "AggregatetoOtherLic",
+                    "Salutation",
+                    "Initials",
+                    "Forename",
+                    "Name",
+                    "Line1",
+                    "Line2",
+                    "Line3",
+                    "Line4",
+                    "Town",
+                    "County",
+                    "Postcode",
+                    "SourceType",
+                    "PermitNo" // In destination model - not in Excel
+                ]);
 
-                allNaldRecords.AddRange(records);
-            }
-            catch (Exception ex)
+            // Enrich records with cleaned permit numbers
+            foreach (var record in records)
             {
-                // Log warning but continue processing other files
-                Console.WriteLine($"WARNING - Failed to read NALD file '{fileName}': {ex.Message}");
+                record.PermitNo = CleanPermitNumber(record.LicNo);
             }
+
+            allNaldRecords.AddRange(records);
         }
 
         return allNaldRecords;
@@ -192,7 +177,9 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
             [
                 "NALDAABL_ID",
                 "NALDIssue_No",
-                "SignaturedateDQissuefoundinVersionMatchprocess"
+                "SignaturedateDQissuefoundinVersionMatchprocess",
+                "NaldIssue", // This isn't in the Excel - it gets set later on,
+                "FileId" // This isn't in the Excel - it gets set later on
             ]);
         
         allPreviousIterationResults.AddRange(records);
@@ -224,13 +211,13 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
         {
             var records = _fileProcessor.ExtractCsv<List<NALDMetadataExtract>>(
                 naldMetadata,
-                new Dictionary<string, string>
+                new Dictionary<string, List<string>>
                 {
-                    {"AABL_ID", "AablId"},
-                    {"AABV_TYPE", "AabvType"},
-                    {"ISSUE_NO", "IssueNo"},
-                    {"LIC_SIG_DATE", "SignatureDate"},
-                    {"FGAC_REGION_CODE", "Region"}
+                    {"AABL_ID", ["AablId"]},
+                    {"AABV_TYPE", ["AabvType"]},
+                    {"ISSUE_NO", ["IssueNo"]},
+                    {"LIC_SIG_DATE", ["SignatureDate"]},
+                    {"FGAC_REGION_CODE", ["Region"]}
                 },
                 [
                     "INCR_NO",
@@ -253,7 +240,8 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
                     "WRT_CODE",
                     "DEREG_CODE",
                     "SOURCE_CODE",
-                    "BATCH_RUN_DATE"
+                    "BATCH_RUN_DATE",
+                    "LicNo" // In destination model - not in Excel
                 ]);
             
             naldMetadataResults.AddRange(records);
@@ -267,11 +255,11 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
         {
             var records = _fileProcessor.ExtractCsv<List<NaldMetadataReferenceExtract>>(
                 naldMetadataReference,
-                new Dictionary<string, string>
+                new Dictionary<string, List<string>>
                 {
-                    {"ID", "AablId"},
-                    {"LIC_NO", "LicNo"}, 
-                    {"FGAC_REGION_CODE", "Region"}
+                    {"ID", ["AablId"]},
+                    {"LIC_NO", ["LicNo"]},
+                    {"FGAC_REGION_CODE", ["Region"]}
                 },
                 [
                     "AREP_SUC_CODE",
@@ -375,12 +363,14 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
         {
             try
             {
-                var records = _fileProcessor.ExtractExcel<List<ChangeAudit>>(fileName, new Dictionary<string, string>
+                var records = _fileProcessor.ExtractExcel<List<ChangeAudit>>(
+                    fileName,
+                    new Dictionary<string, List<string>>
                 {
-                    {"Permit Number", "PermitNumber"},
-                    {"Original File Path", "OriginalPath"},
-                    {"New File Path", "UpdatedPath"},
-                    {"Action", "Action"}
+                    {"Permit Number", ["PermitNumber"]},
+                    {"Original File Path", ["OriginalPath"]},
+                    {"New File Path", ["UpdatedPath"]},
+                    {"Action", ["Action"]}
                 });
 
                 allChangeAudits.AddRange(records);
@@ -411,23 +401,17 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
         
         foreach (var fileName in overrides)
         {
-            try
-            {
-                var records = _fileProcessor.ExtractExcel<List<Override>>(fileName, new Dictionary<string, string>
+            var records = _fileProcessor.ExtractExcel<List<Override>>(
+                fileName,
+                new Dictionary<string, List<string>>
                 {
-                    { "Permit Number", "PermitNumber" },
-                    { "File URL", "FileUrl" },
-                    { "NALD Issue_No", "IssueNo" },
-                    { "File ID", "FileId" }
+                    { "Permit Number", ["PermitNumber"]},
+                    { "File URL", ["FileUrl"]},
+                    { "NALD Issue_No", ["IssueNo"]},
+                    { "File ID", ["FileId"]}
                 });
 
-                allOverrides.AddRange(records);
-            }
-            catch (Exception ex)
-            {
-                // Log warning but continue processing other files
-                Console.WriteLine($"Warning: Failed to read Override file '{fileName}': {ex.Message}");
-            }
+            allOverrides.AddRange(records);
         }
 
         return allOverrides;
@@ -444,27 +428,19 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
 
         foreach (var fileName in fileReaderRecords)
         {
-            try
+            var records = _fileProcessor.ExtractCsv<List<FileReaderExtract>>(
+                fileName,
+                new Dictionary<string, List<string>>
             {
-                var records = _fileProcessor.ExtractCsv<List<FileReaderExtract>>(
-                    fileName,
-                    new Dictionary<string, string>
-                {
-                    {"PermitNumber", "PermitNumber"},
-                    {"DateOfIssue", "DateOfIssue"}
-                },
-                [
-                    "LicenceNumber",
-                    "FileName"
-                ]);
+                {"PermitNumber", ["PermitNumber"]},
+                {"DateOfIssue", ["DateOfIssue"]}
+            },
+            [
+                "LicenceNumber",
+                "FileName"
+            ]);
 
-                fileReaderResults.AddRange(records);
-            }
-            catch (Exception ex)
-            {
-                // Log warning but continue processing other files
-                Console.WriteLine($"Warning: Failed to read file reader extract '{fileName}': {ex.Message}");
-            }
+            fileReaderResults.AddRange(records);
         }
         
         fileReaderResults = fileReaderResults
@@ -486,26 +462,18 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
 
         foreach (var fileName in manualFixFiles)
         {
-            try
-            {
-                var records = _fileProcessor.ExtractExcel<List<DmsManualFixExtract>>(
-                    fileName,
-                    new Dictionary<string, string>
-                    {
-                        {"DMS Version Of Licence No.", "PermitNumber"},
-                        {"DMS Permit Folder No.", "PermitNumberFolder"},
-                    },
-                    ["NALDLicenceNo"]);
-                
-                foreach (var record in records)
+            var records = _fileProcessor.ExtractExcel<List<DmsManualFixExtract>>(
+                fileName,
+                new Dictionary<string, List<string>>
                 {
-                    allManualFixes.TryAdd(record.PermitNumberFolder, record);
-                }
-            }
-            catch (Exception ex)
+                    {"DMS Version Of Licence No.", ["PermitNumber"]},
+                    {"DMS Permit Folder No.", ["PermitNumberFolder"]},
+                },
+                ["NALDLicenceNo"]);
+            
+            foreach (var record in records)
             {
-                // Log warning but continue processing other files
-                Console.WriteLine($"WARNING - Failed to read Manual Fix file '{fileName}': {ex.Message}");
+                allManualFixes.TryAdd(record.PermitNumberFolder, record);
             }
         }
 
@@ -523,39 +491,32 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
 
         foreach (var fileName in fileIdentificationFiles)
         {
-            try
+            var records = _fileProcessor.ExtractCsv<List<FileIdentificationExtract>>(fileName,
+                new Dictionary<string, List<string>>
             {
-                var records = _fileProcessor.ExtractCsv<List<FileIdentificationExtract>>(fileName,
-                    new Dictionary<string, string>
-                {
-                    {"FilePath", "FilePath"},
-                    {"FileName", "FileName"},
-                    {"FileType", "FileType"},
-                    {"Confidence", "Confidence"},
-                    {"IdentifiedByRule", "IdentifiedByRule"},
-                    {"MatchedTerms", "MatchedTerms"},
-                    {"DateOfIssue", "DateOfIssue"},
-                    {"FileSize", "FileSize"},
-                    {"OriginalFileName", "OriginalFileName"}
-                },
-                [
-                    "Confidence",
-                    "LicenceNumber"
-                ]);
+                {"FilePath",["FilePath"]},
+                {"FileName",["FileName"]},
+                {"FileType", ["FileType"]},
+                {"Confidence", ["Confidence"]},
+                {"IdentifiedByRule", ["IdentifiedByRule"]},
+                {"MatchedTerms", ["MatchedTerms"]},
+                {"DateOfIssue", ["DateOfIssue"]},
+                {"FileSize", ["FileSize"]},
+                {"OriginalFileName", ["OriginalFileName"]}
+            },
+            [
+                "Confidence",
+                "LicenceNumber",
+                "LastModified" // In destination model - not in Excel
+            ]);
 
-                // Update DateOfIssue format for all records
-                foreach (var record in records)
-                {
-                    record.DateOfIssue = LicenseFileHelpers.ConvertDateToStandardFormat(record.DateOfIssue);
-                }
-
-                allFileIdentificationRecords.AddRange(records);
-            }
-            catch (Exception ex)
+            // Update DateOfIssue format for all records
+            foreach (var record in records)
             {
-                // Log warning but continue processing other files
-                Console.WriteLine($"Warning: Failed to read File Identification Extract '{fileName}': {ex.Message}");
+                record.DateOfIssue = LicenseFileHelpers.ConvertDateToStandardFormat(record.DateOfIssue);
             }
+
+            allFileIdentificationRecords.AddRange(records);
         }
         
         return allFileIdentificationRecords;
@@ -572,37 +533,29 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
 
         foreach (var fileName in templateFiles)
         {
-            try
-            {
-                var records = _fileProcessor.ExtractExcel<List<TemplateFinderResult>>(
-                    fileName,
-                    new Dictionary<string, string>
-                    {
-                        {"PermitNumber", "PermitNumber"},
-                        {"FileUrl", "FileUrl"},
-                        {"NaldIssueNumber", "NaldIssueNumber"},
-                        {"SignatureDate", "SignatureDate"},
-                        {"DateOfIssue", "DateOfIssue"},
-                        {"NumberOfPages", "NumberOfPages"},
-                        {"TemplateType", "PrimaryTemplateType"},
-                        {"Template", "SecondaryTemplateType"}
-                    },
-                    ["Header"]);
-
-                // Update DateOfIssue format for all records
-                foreach (var record in records)
+            var records = _fileProcessor.ExtractExcel<List<TemplateFinderResult>>(
+                fileName,
+                new Dictionary<string, List<string>>
                 {
-                    record.DateOfIssue = LicenseFileHelpers.ConvertDateToStandardFormat(record.DateOfIssue);
-                    record.FileName = RemovePermitNumberPrefixFromFilename(record.FileName);
-                }
+                    {"PermitNumber", ["PermitNumber"]},
+                    {"FileUrl", ["FileUrl"]},
+                    {"NaldIssueNumber", ["NaldIssueNumber"]},
+                    {"SignatureDate", ["SignatureDate"]},
+                    {"DateOfIssue", ["DateOfIssue"]},
+                    {"NumberOfPages", ["NumberOfPages"]},
+                    {"TemplateType", ["PrimaryTemplateType"]},
+                    {"Template", ["SecondaryTemplateType"]}
+                },
+                ["Header"]);
 
-                allTemplateFinderResults.AddRange(records);
-            }
-            catch (Exception ex)
+            // Update DateOfIssue format for all records
+            foreach (var record in records)
             {
-                // Log warning but continue processing other files
-                Console.WriteLine($"Warning: Failed to read File Identification Extract '{fileName}': {ex.Message}");
+                record.DateOfIssue = LicenseFileHelpers.ConvertDateToStandardFormat(record.DateOfIssue);
+                record.FileName = RemovePermitNumberPrefixFromFilename(record.FileName);
             }
+
+            allTemplateFinderResults.AddRange(records);
         }
         
         return allTemplateFinderResults;
@@ -619,31 +572,29 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
 
         foreach (var fileName in fileversionResults)
         {
-            try
+            var records = _fileProcessor.ExtractExcel<List<UnmatchedLicenceMatchResult>>(
+                fileName, 
+                new Dictionary<string, List<string>>
             {
-                var records = _fileProcessor.ExtractExcel<List<UnmatchedLicenceMatchResult>>(fileName, new Dictionary<string, string>
-                {
-                    {"Permit Number", "PermitNumber"},
-                    {"File URL", "FileUrl"},
-                    {"Signature Date Of File Evaluated", "SignatureDateOfFileEvaluated"},
-                    {"File Determined As Licence", "FileDeterminedAsLicence"},
-                    {"Date of Issue Of Evaluated File", "DateOfIssueOfEvaluatedFile"},
-                    {"NALD Issue No.", "NALDIssueNo"}
-                });
+                {"Permit Number", ["PermitNumber"]},
+                {"File URL", ["FileUrl"]},
+                {"Signature Date Of File Evaluated", ["SignatureDateOfFileEvaluated"]},
+                {"File Determined As Licence", ["FileDeterminedAsLicence"]},
+                {"Date of Issue Of Evaluated File", ["DateOfIssueOfEvaluatedFile"]},
+                {"NALD Issue No.", ["NALDIssueNo"]},
+                {"Is NALD Data Quality Issue", ["NALDDataQualityIssue"]}
+            }, [
+                "LicenceCount",
+                "FileId" // Not in the Excel file
+            ]);
 
-                // Update DateOfIssue format for all records
-                foreach (var record in records)
-                {
-                    record.DateOfIssueOfEvaluatedFile = LicenseFileHelpers.ConvertDateToStandardFormat(record.DateOfIssueOfEvaluatedFile);
-                }
-
-                allFileversionResults.AddRange(records);
-            }
-            catch (Exception ex)
+            // Update DateOfIssue format for all records
+            foreach (var record in records)
             {
-                // Log warning but continue processing other files
-                Console.WriteLine($"Warning: Failed to read File Identification Extract '{fileName}': {ex.Message}");
+                record.DateOfIssueOfEvaluatedFile = LicenseFileHelpers.ConvertDateToStandardFormat(record.DateOfIssueOfEvaluatedFile);
             }
+
+            allFileversionResults.AddRange(records);
         }
         
         return allFileversionResults;
@@ -660,22 +611,14 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
 
         foreach (var fileName in inventoryFiles)
         {
-            try
+            var records = _fileProcessor.ExtractCsv<List<FileInventory>>(
+                fileName,
+                new Dictionary<string, List<string>>
             {
-                var records = _fileProcessor.ExtractCsv<List<FileInventory>>(fileName, new Dictionary<string, string>
-                {
-                    {"PermitNumber", "PermitNumber"},
-                    {"FileName", "FileName"},
-                    {"ModifiedTime", "ModifiedTime"}
-                });
+                {"FileSizeBytes", ["FileSize"]}
+            },["FolderName"]);
 
-                allFileInventoryRecords.AddRange(records);
-            }
-            catch (Exception ex)
-            {
-                // Log warning but continue processing other files
-                Console.WriteLine($"Warning: Failed to read WaterPdfs Inventory file '{fileName}': {ex.Message}");
-            }
+            allFileInventoryRecords.AddRange(records);
         }
 
         return allFileInventoryRecords;
@@ -688,9 +631,19 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
     /// </summary>
     /// <param name="mapping">The original mapping</param>
     /// <returns>Reversed mapping</returns>
-    private static Dictionary<string, string> ReverseMapping(Dictionary<string, string> mapping)
+    private static Dictionary<string, List<string>> ReverseMapping(Dictionary<string, List<string>> mapping)
     {
-        return mapping.ToDictionary(kvp => kvp.Value, kvp => kvp.Key);
+        var returnDict = new Dictionary<string, List<string>>();
+
+        foreach (var line in mapping)
+        {
+            foreach (var lineValue in line.Value)
+            {
+                returnDict.Add(lineValue, [line.Key]);
+            }
+        }
+
+        return returnDict;
     }
 
     /// <summary>

@@ -24,6 +24,9 @@ using (var scope = host.Services.CreateScope())
     
     try
     {
+        // File version results (e.g. LicenceVersionResults.xlsx)
+        var fileVersionResults = readExtractService.ReadFileVersionResultsFile();
+        
         // DMS data file export (e.g. Site_N.xlsx)
         var dmsRecords = readExtractService.GetDmsExtractFiles(false);
 
@@ -63,9 +66,6 @@ using (var scope = host.Services.CreateScope())
         
         // All files inventory (e.g. WaterPdfs_Inventory.csv)
         var allFilesInventory = readExtractService.ReadWaterPdfsInventoryFiles();
-        
-        // File version results (e.g. LicenceVersionResults.xlsx)
-        var fileVersionResults = readExtractService.ReadFileVersionResultsFile();
         
         // FLOW - Licence file finder
         Console.WriteLine("Starting licence file processing...");

@@ -19,7 +19,7 @@ public interface ILicenceFileProcessor
     /// <exception cref="InvalidOperationException">Thrown when the Excel file is empty or has no worksheets</exception>
     T ExtractExcel<T>(
         string fileName,
-        Dictionary<string, string>? headerMapping = null,
+        Dictionary<string, List<string>>? headerMapping = null,
         List<string>? excludeFields = null);
 
     /// <summary>
@@ -36,7 +36,7 @@ public interface ILicenceFileProcessor
     /// <exception cref="InvalidOperationException">Thrown when the CSV file is empty</exception>
     T ExtractCsv<T>(
         string fileName,
-        Dictionary<string, string>? headerMapping = null,
+        Dictionary<string, List<string>>? headerMapping = null,
         List<string>? excludeFields = null);
 
     /// <summary>

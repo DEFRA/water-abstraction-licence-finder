@@ -15,7 +15,7 @@ public class LicenceFileProcessor : ILicenceFileProcessor
 {
     public T ExtractExcel<T>(
         string fileName,
-        Dictionary<string, string>? headerMapping = null,
+        Dictionary<string, List<string>>? headerMapping = null,
         List<string>? excludeFields = null)
     {
         if (string.IsNullOrWhiteSpace(fileName))
@@ -87,7 +87,7 @@ public class LicenceFileProcessor : ILicenceFileProcessor
     
     public T ExtractCsv<T>(
         string fileName,
-        Dictionary<string, string>? headerMapping = null,
+        Dictionary<string, List<string>>? headerMapping = null,
         List<string>? excludeFields = null)
     {
         if (string.IsNullOrWhiteSpace(fileName))
@@ -333,7 +333,7 @@ public class LicenceFileProcessor : ILicenceFileProcessor
     /// <returns>Dictionary mapping property names to column indexes</returns>
     private static Dictionary<string, int> CreateColumnMapping(
         IEnumerable<string> headers,
-        Dictionary<string, string>? headerMapping)
+        Dictionary<string, List<string>>? headerMapping)
     {
         var columnMapping = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var headerArray = headers.ToArray();
@@ -342,22 +342,36 @@ public class LicenceFileProcessor : ILicenceFileProcessor
         for (var i = 0; i < headerArray.Length; i++)
         {
             var columnName = headerArray[i];
+            
+            var mappingEntry = headerMapping?.FirstOrDefault(kvp =>
+                string.Equals(kvp.Key, columnName, StringComparison.OrdinalIgnoreCase));
 
-            // Check if there's a mapping for this header
-            if (headerMapping != null)
+            if (string.IsNullOrEmpty(mappingEntry?.Key))
             {
-                var mappingEntry = headerMapping.FirstOrDefault(kvp => 
-                    string.Equals(kvp.Key, columnName, StringComparison.OrdinalIgnoreCase));
+                columnMapping[columnName] = i;
+                continue;
+            }
 
-                if (!string.IsNullOrEmpty(mappingEntry.Value))
+            if (mappingEntry.Value.Value.Count > 1)
+            {
+            }
+
+            var found = false;
+            
+            foreach (var value in mappingEntry.Value.Value)
+            {
+                if (!string.IsNullOrEmpty(value))
                 {
-                    columnMapping[mappingEntry.Value] = i;
-                    continue;
+                    columnMapping[value] = i;
+                    found = true;
                 }
             }
 
-            // Use column name as property name if no mapping provided
-            columnMapping[columnName] = i;
+            if (!found)
+            {
+                // Use column name as property name if no mapping provided
+                columnMapping[columnName] = i;
+            }
         }
 
         return columnMapping;
@@ -385,6 +399,33 @@ public class LicenceFileProcessor : ILicenceFileProcessor
             .Where(p => p.CanWrite)
             .ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
 
+        foreach (var (destinationPropertyName, _) in properties)
+        {
+            var existsInColumnMapping = columnMapping.Any(x =>
+            {
+                var (columnMappingKey, _) = x;
+                var columnMappingPropertyName = columnMappingKey
+                    .Replace(" ", string.Empty)
+                    .Replace("/", string.Empty)
+                    .Replace(".", string.Empty);
+
+                return destinationPropertyName.Equals(
+                    columnMappingPropertyName,
+                    StringComparison.InvariantCultureIgnoreCase);
+            });
+
+            if (!existsInColumnMapping)
+            {
+                if (excludeFields?.Contains(destinationPropertyName) == true)
+                {
+                    continue;
+                }
+                
+                throw new Exception($"Destination model {targetType.Name} contains field {destinationPropertyName} that" +
+                    $" cannot be found in column mapping");
+            }
+        }
+        
         foreach (var (propertyNameLoop, columnIndex) in columnMapping)
         {
             var propertyName = propertyNameLoop
@@ -401,7 +442,7 @@ public class LicenceFileProcessor : ILicenceFileProcessor
                 
                 var modelFields = string.Join(", ", properties.Values.Select(v => v.Name));
                 
-                throw new Exception($"Excel contains field {propertyName} (spaces may have been removed) that" +
+                throw new Exception($"Excel contains field {propertyName} that" +
                     $" cannot be found in destination model ({modelFields})");
             }
             

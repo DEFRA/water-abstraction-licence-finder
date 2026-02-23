@@ -154,13 +154,13 @@ public class LicenceFileFinder : ILicenceFileFinder
             .Where(c => validPermitNumbers.Contains(c.PermitNumber))
             .ToList();
         
-        var y = filteredConsolidated.Where(c => c.FileId == "a2124fe0-77cb-463a-92bc-2eff4aee6e2e");
+        //var y = filteredConsolidated.Where(c => c.FileId == "a2124fe0-77cb-463a-92bc-2eff4aee6e2e");
 
         // Find files in consolidated that should be included
         var missingFiles = new List<DmsExtract>();
-        var x = prevMatches
+        /*var x = prevMatches
             .Where(pm => !string.IsNullOrEmpty(pm?.FileId) &&
-                         pm.FileId == "a2124fe0-77cb-463a-92bc-2eff4aee6e2e");
+                         pm.FileId == "a2124fe0-77cb-463a-92bc-2eff4aee6e2e");*/
 
         foreach (var consolidatedFile in filteredConsolidated)
         {
@@ -168,8 +168,7 @@ public class LicenceFileFinder : ILicenceFileFinder
             {
 
                 var matchedFileId = filteredPrevMatches.FirstOrDefault(pm =>
-                    pm?.FileId != null
-                    && pm.FileId.Equals(consolidatedFile.FileId, StringComparison.OrdinalIgnoreCase));
+                    pm.FileId.Equals(consolidatedFile.FileId, StringComparison.OrdinalIgnoreCase));
 
                 if (matchedFileId == null)
                 {

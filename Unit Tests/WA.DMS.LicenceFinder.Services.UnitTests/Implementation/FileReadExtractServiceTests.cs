@@ -40,7 +40,7 @@ public class FileReadExtractServiceTests
 
         _mockFileProcessor.Setup(p => p.FindFilesByPattern("Site"))
             .Returns(new List<string> { "Site_test.xlsx" });
-        _mockFileProcessor.Setup(p => p.ExtractExcel<List<DmsExtract>>("Site_test.xlsx", It.IsAny<Dictionary<string, string>>()))
+        _mockFileProcessor.Setup(p => p.ExtractExcel<List<DmsExtract>>("Site_test.xlsx", It.IsAny<Dictionary<string, List<string>>>(), It.IsAny<List<string>>()))
             .Returns(expectedRecords);
 
         // Act
@@ -49,7 +49,7 @@ public class FileReadExtractServiceTests
         // Assert
         result.Should().BeEquivalentTo(expectedRecords);
         _mockFileProcessor.Verify(p => p.FindFilesByPattern("Site"), Times.Once);
-        _mockFileProcessor.Verify(p => p.ExtractExcel<List<DmsExtract>>("Site_test.xlsx", It.IsAny<Dictionary<string, string>>()), Times.Once);
+        _mockFileProcessor.Verify(p => p.ExtractExcel<List<DmsExtract>>("Site_test.xlsx", It.IsAny<Dictionary<string, List<string>>>(), It.IsAny<List<string>>()), Times.Once);
     }
 
     [Fact]
@@ -63,7 +63,7 @@ public class FileReadExtractServiceTests
 
         _mockFileProcessor.Setup(p => p.FindFilesByPattern("NALD_Extract"))
             .Returns(new List<string> { "NALD_Extract_test.xlsx" });
-        _mockFileProcessor.Setup(p => p.ExtractExcel<List<NaldReportExtract>>("NALD_Extract_test.xlsx", It.IsAny<Dictionary<string, string>>()))
+        _mockFileProcessor.Setup(p => p.ExtractExcel<List<NaldReportExtract>>("NALD_Extract_test.xlsx", It.IsAny<Dictionary<string, List<string>>>(), It.IsAny<List<string>>()))
             .Returns(rawRecords);
 
         // Act
@@ -87,7 +87,7 @@ public class FileReadExtractServiceTests
 
         _mockFileProcessor.Setup(p => p.FindFilesByPattern("Change_Audit"))
             .Returns(new List<string> { "Change_Audit_test.xlsx" });
-        _mockFileProcessor.Setup(p => p.ExtractExcel<List<ChangeAudit>>("Change_Audit_test.xlsx", It.IsAny<Dictionary<string, string>>()))
+        _mockFileProcessor.Setup(p => p.ExtractExcel<List<ChangeAudit>>("Change_Audit_test.xlsx", It.IsAny<Dictionary<string, List<string>>>(), It.IsAny<List<string>>()))
             .Returns(expectedRecords);
 
         // Act
@@ -96,7 +96,7 @@ public class FileReadExtractServiceTests
         // Assert
         result.Should().BeEquivalentTo(expectedRecords);
         _mockFileProcessor.Verify(p => p.FindFilesByPattern("Change_Audit"), Times.Once);
-        _mockFileProcessor.Verify(p => p.ExtractExcel<List<ChangeAudit>>("Change_Audit_test.xlsx", It.IsAny<Dictionary<string, string>>()), Times.Once);
+        _mockFileProcessor.Verify(p => p.ExtractExcel<List<ChangeAudit>>("Change_Audit_test.xlsx", It.IsAny<Dictionary<string, List<string>>>(), It.IsAny<List<string>>()), Times.Once);
     }
 
     [Fact]
@@ -110,7 +110,7 @@ public class FileReadExtractServiceTests
 
         _mockFileProcessor.Setup(p => p.FindFilesByPattern("Manual_Fix_Extract"))
             .Returns(new List<string> { "Manual_Fix_Extract_test.xlsx" });
-        _mockFileProcessor.Setup(p => p.ExtractExcel<List<DmsManualFixExtract>>("Manual_Fix_Extract_test.xlsx", It.IsAny<Dictionary<string, string>>()))
+        _mockFileProcessor.Setup(p => p.ExtractExcel<List<DmsManualFixExtract>>("Manual_Fix_Extract_test.xlsx", It.IsAny<Dictionary<string, List<string>>>(), It.IsAny<List<string>>()))
             .Returns(expectedRecords);
 
         // Act
@@ -119,7 +119,7 @@ public class FileReadExtractServiceTests
         // Assert
         result.Should().BeEquivalentTo(expectedRecords);
         _mockFileProcessor.Verify(p => p.FindFilesByPattern("Manual_Fix_Extract"), Times.Once);
-        _mockFileProcessor.Verify(p => p.ExtractExcel<List<DmsManualFixExtract>>("Manual_Fix_Extract_test.xlsx", It.IsAny<Dictionary<string, string>>()), Times.Once);
+        _mockFileProcessor.Verify(p => p.ExtractExcel<List<DmsManualFixExtract>>("Manual_Fix_Extract_test.xlsx", It.IsAny<Dictionary<string, List<string>>>(), It.IsAny<List<string>>()), Times.Once);
     }
 
     [Fact]
@@ -133,7 +133,7 @@ public class FileReadExtractServiceTests
 
         _mockFileProcessor.Setup(p => p.FindFilesByPattern("File_Reader_Extract"))
             .Returns(new List<string> { "File_Reader_Extract_test.csv" });
-        _mockFileProcessor.Setup(p => p.ExtractCsv<List<FileReaderExtract>>("File_Reader_Extract_test.csv", It.IsAny<Dictionary<string, string>>()))
+        _mockFileProcessor.Setup(p => p.ExtractCsv<List<FileReaderExtract>>("File_Reader_Extract_test.csv", It.IsAny<Dictionary<string, List<string>>>(), It.IsAny<List<string>>()))
             .Returns(expectedRecords);
 
         // Act
@@ -142,7 +142,7 @@ public class FileReadExtractServiceTests
         // Assert
         result.Should().BeEquivalentTo(expectedRecords);
         _mockFileProcessor.Verify(p => p.FindFilesByPattern("File_Reader_Extract"), Times.Once);
-        _mockFileProcessor.Verify(p => p.ExtractCsv<List<FileReaderExtract>>("File_Reader_Extract_test.csv", It.IsAny<Dictionary<string, string>>()), Times.Once);
+        _mockFileProcessor.Verify(p => p.ExtractCsv<List<FileReaderExtract>>("File_Reader_Extract_test.csv", It.IsAny<Dictionary<string, List<string>>>(), It.IsAny<List<string>>()), Times.Once);
     }
 
     [Fact]
@@ -196,7 +196,7 @@ public class FileReadExtractServiceTests
 
         _mockFileProcessor.Setup(p => p.FindFilesByPattern("NALD_Extract"))
             .Returns(new List<string> { "NALD_Extract_test.xlsx" });
-        _mockFileProcessor.Setup(p => p.ExtractExcel<List<NaldReportExtract>>("NALD_Extract_test.xlsx", It.IsAny<Dictionary<string, string>>()))
+        _mockFileProcessor.Setup(p => p.ExtractExcel<List<NaldReportExtract>>("NALD_Extract_test.xlsx", It.IsAny<Dictionary<string, List<string>>>(), It.IsAny<List<string>>()))
             .Returns(rawRecords);
 
         // Act
@@ -221,10 +221,10 @@ public class FileReadExtractServiceTests
         _mockFileProcessor.Setup(p => p.FindFilesByPattern("Site"))
             .Returns(new List<string> { "Site_bad.xlsx", "Site_good.xlsx" });
 
-        _mockFileProcessor.Setup(p => p.ExtractExcel<List<DmsExtract>>("Site_bad.xlsx", It.IsAny<Dictionary<string, string>>()))
+        _mockFileProcessor.Setup(p => p.ExtractExcel<List<DmsExtract>>("Site_bad.xlsx", It.IsAny<Dictionary<string, List<string>>>(), It.IsAny<List<string>>()))
             .Throws(new Exception("File processing error"));
 
-        _mockFileProcessor.Setup(p => p.ExtractExcel<List<DmsExtract>>("Site_good.xlsx", It.IsAny<Dictionary<string, string>>()))
+        _mockFileProcessor.Setup(p => p.ExtractExcel<List<DmsExtract>>("Site_good.xlsx", It.IsAny<Dictionary<string, List<string>>>(), It.IsAny<List<string>>()))
             .Returns(validRecords);
 
         // Act
@@ -232,7 +232,7 @@ public class FileReadExtractServiceTests
 
         // Assert
         result.Should().BeEquivalentTo(validRecords);
-        _mockFileProcessor.Verify(p => p.ExtractExcel<List<DmsExtract>>("Site_bad.xlsx", It.IsAny<Dictionary<string, string>>()), Times.Once);
-        _mockFileProcessor.Verify(p => p.ExtractExcel<List<DmsExtract>>("Site_good.xlsx", It.IsAny<Dictionary<string, string>>()), Times.Once);
+        _mockFileProcessor.Verify(p => p.ExtractExcel<List<DmsExtract>>("Site_bad.xlsx", It.IsAny<Dictionary<string, List<string>>>(), It.IsAny<List<string>>()), Times.Once);
+        _mockFileProcessor.Verify(p => p.ExtractExcel<List<DmsExtract>>("Site_good.xlsx", It.IsAny<Dictionary<string, List<string>>>(), It.IsAny<List<string>>()), Times.Once);
     }
 }
