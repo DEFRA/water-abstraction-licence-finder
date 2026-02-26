@@ -400,6 +400,7 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
                     { "Permit Number", ["PermitNumber"]},
                     { "File URL", ["FileUrl"]},
                     { "NALD Issue_No", ["IssueNo"]},
+                    { "NALD Issue No.", ["IssueNo"]},
                     { "File ID", ["FileId"]}
                 });
 
@@ -429,7 +430,8 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
             },
             [
                 "LicenceNumber",
-                "FileName"
+                "FileName",
+                "ProcessingStatus"
             ]);
 
             fileReaderResults.AddRange(records);

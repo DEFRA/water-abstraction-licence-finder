@@ -20,7 +20,8 @@ public interface ILicenceFileFinder
         List<FileReaderExtract> wradiFileReaderExtracts,
         List<TemplateFinderResult> wradiTemplateFinderResults,
         List<FileIdentificationExtract> wradiFileIdentificationExtracts,
-        List<LicenceMatchResult> licenceFinderPreviousIterationMatches);
+        List<LicenceMatchResult> licenceFinderPreviousIterationMatches,
+        string? regionName);
     
     /// <summary>
     /// Finds all potential duplicates in DMS extract

@@ -96,7 +96,8 @@ public class LicenceFileFinder : ILicenceFileFinder
         List<FileReaderExtract> wradiFileReaderExtracts,
         List<TemplateFinderResult> wradiTemplateFinderResults,
         List<FileIdentificationExtract> wradiFileIdentificationExtracts,
-        List<LicenceMatchResult> licenceFinderPreviousIterationMatches)
+        List<LicenceMatchResult> licenceFinderPreviousIterationMatches,
+        string? regionName)
     {
         try
         {
@@ -112,7 +113,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                     wradiTemplateFinderResults,
                     wradiFileIdentificationExtracts,
                     licenceFinderPreviousIterationMatches);
-
+            
             // Generate output Excel file
             var worksheetData = new List<(string SheetName, Dictionary<string, string>? HeaderMapping, object Data)>
             {
@@ -121,7 +122,34 @@ public class LicenceFileFinder : ILicenceFileFinder
             };
             
             var outputFileName = $"LicenceMatchResults_{DateTime.Now:yyyyMMdd_HHmmss}";
-            return _fileProcessor.GenerateExcel(worksheetData, outputFileName);
+            var firstFile = _fileProcessor.GenerateExcel(worksheetData, outputFileName);
+
+            if (string.IsNullOrEmpty(regionName))
+            {
+                return firstFile;
+            }
+            
+            // OPTIONAL - Filter to only 1 region
+            licenceMatchResults = licenceMatchResults
+                .Where(lmr => lmr.Region == regionName)
+                .ToList();
+
+            unmatchedLicenceMatchResults = unmatchedLicenceMatchResults
+                .Where(lmr => lmr.Region == regionName)
+                .ToList();
+
+            // Generate output Excel file
+            worksheetData =
+            [
+                ("Match Results", LicenseMatchResultHeaderMapping, licenceMatchResults),
+                ("Version Results", UnmatchedLicenseMatchResultHeaderMapping, unmatchedLicenceMatchResults)
+            ];
+
+            outputFileName =
+                $"{regionName.Replace(" ", string.Empty)}Only_LicenceMatchResults_{DateTime.Now:yyyyMMdd_HHmmss}";
+            
+            _fileProcessor.GenerateExcel(worksheetData, outputFileName);
+            return firstFile;
         }
         catch (Exception ex)
         {

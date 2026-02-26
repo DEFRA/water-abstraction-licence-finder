@@ -20,13 +20,14 @@ using (var scope = host.Services.CreateScope())
 
     var changeAuditOverridesFilename = "Overrides";
     var licenceFinderLastIterationMatchesFilename = "ANGLIAN_LicenceMatchResults_20260118_221710.xlsx";
-    var optionalRegion = (string?)null;//"Anglian Region";
+    var optionalRegionFilter = (string?)null;//"Anglian Region";
+    var regionName = "Anglian Region";
     
     try
     {
         // File version results (e.g. LicenceVersionResults.xlsx)
         var fileVersionResults = readExtractService.ReadFileVersionResultsFile();
-        
+
         // DMS data file export (e.g. Site_N.xlsx)
         var dmsRecords = readExtractService.GetDmsExtractFiles(false);
 
@@ -58,11 +59,11 @@ using (var scope = host.Services.CreateScope())
         var licenceFinderLastIterationMatches =
             readExtractService.GetLicenceFinderPreviousIterationResults(
                 licenceFinderLastIterationMatchesFilename,
-                optionalRegion);
+                optionalRegionFilter);
         
         // Licence finder Current iteration matches (e.g. Current_Iteration_Matches.xlsx, from LicenceMatchResults_.xlsx)
         var licenceFinderCurrentIterationMatches =
-            readExtractService.GetLicenceFinderPreviousIterationResults("Current_Iteration_Matches", optionalRegion);
+            readExtractService.GetLicenceFinderPreviousIterationResults("Current_Iteration_Matches", optionalRegionFilter);
         
         // All files inventory (e.g. WaterPdfs_Inventory.csv)
         var allFilesInventory = readExtractService.ReadWaterPdfsInventoryFiles();
@@ -78,8 +79,8 @@ using (var scope = host.Services.CreateScope())
             wradiFileReaderScrapeResults,
             wradiTemplateFinderResults,
             wradiFileIdentificationExtract,
-            licenceFinderLastIterationMatches);
-        
+            licenceFinderLastIterationMatches,
+            regionName);
         Console.WriteLine($"Licence processing completed. Results saved to: {resultFilePath}");
         
         // FLOW - Build Version Download Info Excel

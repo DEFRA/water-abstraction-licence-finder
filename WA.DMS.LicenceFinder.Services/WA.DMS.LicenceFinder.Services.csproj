@@ -65,9 +65,6 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <None Remove="Resources\File_Reader_Extract_Anglian.csv" />
-    <Content Include="Resources\File_Reader_Extract_Anglian.csv">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <None Remove="Resources\File_Reader_Extract_NE.csv" />
     <Content Include="Resources\File_Reader_Extract_NE.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -124,6 +121,11 @@
     </Content>
     <None Remove="Resources\ANGLIAN_Overrides.xlsx" />
     <Content Include="Resources\ANGLIAN_Overrides.xlsx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <None Remove="Resources\Anglia_File_Reader_Extract-20260225.csv" />
+    <None Remove="Resources\Anglia_File_Reader_Extract-220260226.csv" />
+    <Content Include="Resources\Anglia_File_Reader_Extract-220260226.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
