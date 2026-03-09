@@ -83,9 +83,102 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
 
             foreach (var record in records)
             {
-                if (allDmsRecords.TryGetValue(record.PermitNumber, out var list))
+                const string sString = "S";
+                const string gString = "G";
+                const string iString = "I";
+                const string andString = "AND";
+                const string aAndBString = "AANDB";
+                
+                record.PermitNumber = record.PermitNumber
+                    .Replace("sandi", sString, StringComparison.InvariantCultureIgnoreCase)
+                    .Replace("sandg", sString, StringComparison.InvariantCultureIgnoreCase)
+                    .Replace("iands", sString, StringComparison.InvariantCultureIgnoreCase)
+                    .Replace("iandg", sString, StringComparison.InvariantCultureIgnoreCase);
+
+                if (record.PermitNumber.Contains(aAndBString, StringComparison.InvariantCultureIgnoreCase))
                 {
-                    list.Add(record);
+                    var parts = record.PermitNumber.ToUpper().Split(andString);
+                    record.PermitNumber = parts[0];
+                    
+                    if (allDmsRecords.TryGetValue(record.PermitNumber, out var listA))
+                    {
+                        listA.Add(record);
+                    }
+                    else
+                    {
+                        allDmsRecords.Add(record.PermitNumber, [record]);
+                    }
+
+                    record.PermitNumber = record.PermitNumber[..^1] + 'B';
+                    
+                    if (allDmsRecords.TryGetValue(record.PermitNumber, out var listB))
+                    {
+                        listB.Add(record);
+                    }
+                    else
+                    {
+                        allDmsRecords.Add(record.PermitNumber, [record]);
+                    }
+                    
+                    continue;
+                }
+                else if (record.PermitNumber.Contains(andString, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    var parts = record.PermitNumber.ToUpper().Split(andString);
+                    var firstPart  = parts[0];
+                    char splitChar;
+                    
+                    if (firstPart.Contains(gString, StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        splitChar = gString[0];
+                    }
+                    else if (firstPart.Contains(iString, StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        splitChar = iString[0];
+                    }
+                    else if (firstPart.Contains(sString, StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        splitChar = sString[0];
+                    }
+                    else
+                    {
+                        throw new NotImplementedException();
+                    }
+                    
+                    var beforeAndAfterLicenceChar = firstPart.Split(splitChar);
+                    var sharedPart = beforeAndAfterLicenceChar[0] + splitChar;
+
+                    var suffix1 = beforeAndAfterLicenceChar[1];
+                    record.PermitNumber = $"{sharedPart}{suffix1}";
+                    
+                    if (allDmsRecords.TryGetValue(record.PermitNumber, out var list0))
+                    {
+                        list0.Add(record);
+                    }
+                    else
+                    {
+                        allDmsRecords.Add(record.PermitNumber, [record]);
+                    }
+
+                    foreach (var suffix in parts.Skip(1))
+                    {
+                        record.PermitNumber = $"{sharedPart}{suffix}";
+                        
+                        if (allDmsRecords.TryGetValue(record.PermitNumber, out var list1))
+                        {
+                            list1.Add(record);
+                            continue;
+                        }
+                
+                        allDmsRecords.Add(record.PermitNumber, [record]);
+                    }
+                    
+                    continue;
+                }
+                
+                if (allDmsRecords.TryGetValue(record.PermitNumber, out var list2))
+                {
+                    list2.Add(record);
                     continue;
                 }
                 

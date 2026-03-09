@@ -25,11 +25,11 @@ using (var scope = host.Services.CreateScope())
     
     try
     {
-        // File version results (e.g. LicenceVersionResults.xlsx)
+        // File version results (e.g. LicenceVersionResults.xlsx) - Comes from JP
         var fileVersionResults = readExtractService.ReadFileVersionResultsFile();
 
-        // DMS data file export (e.g. Site_N.xlsx)
-        var dmsRecords = readExtractService.GetDmsExtractFiles(false);
+        // DMS data file export (e.g. Site_N.xlsx or Consolidated.xlsx - based on flag said - source is a report JP runs)
+        var dmsRecords = readExtractService.GetDmsExtractFiles(true);
 
         // DMS manual fixes by our team (e.g. Manual_Fix_Extract.xlsx)
         var dmsManualFixes = readExtractService.GetDmsManualFixes();
@@ -68,7 +68,7 @@ using (var scope = host.Services.CreateScope())
         // All files inventory (e.g. WaterPdfs_Inventory.csv)
         var allFilesInventory = readExtractService.ReadWaterPdfsInventoryFiles();
         
-        // FLOW - Licence file finder
+        // FLOW - Licence file finder (produces LicenceMatchResults_DATE.xlsx
         Console.WriteLine("Starting licence file processing...");
         var resultFilePath = licenceFileFinder.FindLicenceFiles(
             dmsRecords,

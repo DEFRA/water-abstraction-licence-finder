@@ -116,7 +116,8 @@ public class LicenceFileFinderTests
             [],
             [],
             [],
-            []);
+            [],
+            null);
 
         // Assert
         result.Should().Be("output.xlsx");
@@ -142,7 +143,8 @@ public class LicenceFileFinderTests
             [],
             [],
             [],
-            []);
+            [],
+            null);
         
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("Error occurred while finding licence files: Test exception");
@@ -184,7 +186,8 @@ public class LicenceFileFinderTests
             [],
             [],
             [],
-            []);
+            [],
+            null);
 
         // Assert
         result.Should().NotBeNull();
@@ -242,7 +245,8 @@ public class LicenceFileFinderTests
             [],
             [],
             [],
-            []);
+            [],
+            null);
 
         // Assert
         result.Should().NotBeNull();
