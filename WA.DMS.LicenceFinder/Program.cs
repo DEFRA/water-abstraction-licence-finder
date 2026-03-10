@@ -26,10 +26,10 @@ using (var scope = host.Services.CreateScope())
     try
     {
         // File version results (e.g. LicenceVersionResults.xlsx) - Comes from JP
-        var fileVersionResults = readExtractService.ReadFileVersionResultsFile();
+        var jpFileVersionResults = readExtractService.ReadFileVersionResultsFile();
 
         // DMS data file export (e.g. Site_N.xlsx or Consolidated.xlsx - based on flag said - source is a report JP runs)
-        var dmsRecords = readExtractService.GetDmsExtractFiles(true);
+        var dmsRecords = readExtractService.GetDmsExtracts(true);
 
         // DMS manual fixes by our team (e.g. Manual_Fix_Extract.xlsx)
         var dmsManualFixes = readExtractService.GetDmsManualFixes();
@@ -71,7 +71,7 @@ using (var scope = host.Services.CreateScope())
         
         // FLOW - Licence file finder (produces LicenceMatchResults_DATE.xlsx
         Console.WriteLine("Starting licence file processing...");
-        var resultFilePath = licenceFileFinder.FindLicenceFiles(
+        var licenceMatchResultsFilePath = licenceFileFinder.FindLicenceFiles(
             dmsRecords,
             dmsManualFixes,
             dmsChangeAuditOverrides,
@@ -82,7 +82,7 @@ using (var scope = host.Services.CreateScope())
             wradiFileTypeScrapeResults,
             licenceFinderLastIterationMatches,
             regionName);
-        Console.WriteLine($"Licence processing completed. Results saved to: {resultFilePath}");
+        Console.WriteLine($"Licence processing completed. Results saved to: {licenceMatchResultsFilePath}");
         
         // FLOW - Build Version Download Info Excel
         /*Console.WriteLine("Started building version download info excel...");
@@ -112,9 +112,9 @@ using (var scope = host.Services.CreateScope())
         // FLOW - Build file template identification extract
         /*Console.WriteLine("Started building file template identification extract...");
         var resultFilePath = licenceFileFinder.BuildFileTemplateIdentificationExtract(
-            previousIterationMatches,
-            changeAudits,
-            fileVersionResults);
+            licenceFinderLastIterationMatches,
+            dmsChangeAuditOverrides,
+            jpFileVersionResults);
         
         Console.WriteLine($"File saved to {resultFilePath}");*/
 

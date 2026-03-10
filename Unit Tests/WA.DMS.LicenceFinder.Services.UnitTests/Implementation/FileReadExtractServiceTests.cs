@@ -44,7 +44,7 @@ public class FileReadExtractServiceTests
             .Returns(expectedRecords);
 
         // Act
-        var result = _fileReadExtractService.GetDmsExtractFiles(false);
+        var result = _fileReadExtractService.GetDmsExtracts(false);
 
         // Assert
         result.Should().BeEquivalentTo(expectedRecords);
@@ -228,7 +228,7 @@ public class FileReadExtractServiceTests
             .Returns(validRecords);
 
         // Act
-        var result = _fileReadExtractService.GetDmsExtractFiles(false);
+        var result = _fileReadExtractService.GetDmsExtracts(false);
 
         // Assert
         result.Should().BeEquivalentTo(validRecords);

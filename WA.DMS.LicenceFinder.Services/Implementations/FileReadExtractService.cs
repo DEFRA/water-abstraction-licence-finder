@@ -50,7 +50,7 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
     /// Reads all files starting with 'Site' or 'Consolidated' from the resources folder
     /// </summary>
     /// <returns>Combined list of DMS extract records from all matching files</returns>
-    public Dictionary<string, List<DmsExtract>> GetDmsExtractFiles(bool consolidated)
+    public Dictionary<string, List<DmsExtract>> GetDmsExtracts(bool consolidated)
     {
         var allDmsRecords = new Dictionary<string, List<DmsExtract>>(StringComparer.OrdinalIgnoreCase);
         
@@ -83,96 +83,9 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
 
             foreach (var record in records)
             {
-                const string sString = "S";
-                const string gString = "G";
-                const string iString = "I";
-                const string andString = "AND";
-                const string aAndBString = "AANDB";
-                
-                record.PermitNumber = record.PermitNumber
-                    .Replace("sandi", sString, StringComparison.InvariantCultureIgnoreCase)
-                    .Replace("sandg", sString, StringComparison.InvariantCultureIgnoreCase)
-                    .Replace("iands", sString, StringComparison.InvariantCultureIgnoreCase)
-                    .Replace("iandg", sString, StringComparison.InvariantCultureIgnoreCase);
-
-                if (record.PermitNumber.Contains(aAndBString, StringComparison.InvariantCultureIgnoreCase))
+                var shouldContinue = AddToListFoldersWithWordAndIn(record, allDmsRecords);
+                if (shouldContinue)
                 {
-                    var parts = record.PermitNumber.ToUpper().Split(andString);
-                    record.PermitNumber = parts[0];
-                    
-                    if (allDmsRecords.TryGetValue(record.PermitNumber, out var listA))
-                    {
-                        listA.Add(record);
-                    }
-                    else
-                    {
-                        allDmsRecords.Add(record.PermitNumber, [record]);
-                    }
-
-                    record.PermitNumber = record.PermitNumber[..^1] + 'B';
-                    
-                    if (allDmsRecords.TryGetValue(record.PermitNumber, out var listB))
-                    {
-                        listB.Add(record);
-                    }
-                    else
-                    {
-                        allDmsRecords.Add(record.PermitNumber, [record]);
-                    }
-                    
-                    continue;
-                }
-                else if (record.PermitNumber.Contains(andString, StringComparison.InvariantCultureIgnoreCase))
-                {
-                    var parts = record.PermitNumber.ToUpper().Split(andString);
-                    var firstPart  = parts[0];
-                    char splitChar;
-                    
-                    if (firstPart.Contains(gString, StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        splitChar = gString[0];
-                    }
-                    else if (firstPart.Contains(iString, StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        splitChar = iString[0];
-                    }
-                    else if (firstPart.Contains(sString, StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        splitChar = sString[0];
-                    }
-                    else
-                    {
-                        throw new NotImplementedException();
-                    }
-                    
-                    var beforeAndAfterLicenceChar = firstPart.Split(splitChar);
-                    var sharedPart = beforeAndAfterLicenceChar[0] + splitChar;
-
-                    var suffix1 = beforeAndAfterLicenceChar[1];
-                    record.PermitNumber = $"{sharedPart}{suffix1}";
-                    
-                    if (allDmsRecords.TryGetValue(record.PermitNumber, out var list0))
-                    {
-                        list0.Add(record);
-                    }
-                    else
-                    {
-                        allDmsRecords.Add(record.PermitNumber, [record]);
-                    }
-
-                    foreach (var suffix in parts.Skip(1))
-                    {
-                        record.PermitNumber = $"{sharedPart}{suffix}";
-                        
-                        if (allDmsRecords.TryGetValue(record.PermitNumber, out var list1))
-                        {
-                            list1.Add(record);
-                            continue;
-                        }
-                
-                        allDmsRecords.Add(record.PermitNumber, [record]);
-                    }
-                    
                     continue;
                 }
                 
@@ -189,6 +102,122 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
         return allDmsRecords;
     }
 
+    private static bool AddToListFoldersWithWordAndIn(
+        DmsExtract dmsRecord,
+        Dictionary<string, List<DmsExtract>> allDmsRecords)
+    {
+        const string andString = "AND";
+        var dontWorkAroundCombinedDmsFolders = true;
+
+        if (dontWorkAroundCombinedDmsFolders)
+        {
+            if (dmsRecord.PermitNumber.Contains(andString, StringComparison.InvariantCultureIgnoreCase))
+            {
+                // Don't add anything
+                return true;
+            }
+
+            return false;
+        }
+
+        const string sString = "S";
+        const string gString = "G";
+        const string iString = "I";
+        const string aAndBString = "AANDB";
+        
+        dmsRecord.PermitNumber = dmsRecord.PermitNumber
+            .Replace("sandi", sString, StringComparison.InvariantCultureIgnoreCase)
+            .Replace("sandg", sString, StringComparison.InvariantCultureIgnoreCase)
+            .Replace("iands", sString, StringComparison.InvariantCultureIgnoreCase)
+            .Replace("iandg", sString, StringComparison.InvariantCultureIgnoreCase);
+
+        if (dmsRecord.PermitNumber.Contains(aAndBString, StringComparison.InvariantCultureIgnoreCase))
+        {
+            var parts = dmsRecord.PermitNumber.ToUpper().Split(andString);
+            dmsRecord.PermitNumber = parts[0];
+            
+            if (allDmsRecords.TryGetValue(dmsRecord.PermitNumber, out var listA))
+            {
+                listA.Add(dmsRecord);
+            }
+            else
+            {
+                allDmsRecords.Add(dmsRecord.PermitNumber, [dmsRecord]);
+            }
+
+            var clonedDmsRecord = dmsRecord.Clone();
+            clonedDmsRecord.PermitNumber = clonedDmsRecord.PermitNumber[..^1] + 'B';
+            
+            if (allDmsRecords.TryGetValue(clonedDmsRecord.PermitNumber, out var listB))
+            {
+                listB.Add(clonedDmsRecord);
+            }
+            else
+            {
+                allDmsRecords.Add(clonedDmsRecord.PermitNumber, [clonedDmsRecord]);
+            }
+            
+            return true;
+        }
+        
+        if (dmsRecord.PermitNumber.Contains(andString, StringComparison.InvariantCultureIgnoreCase))
+        {
+            var parts = dmsRecord.PermitNumber.ToUpper().Split(andString);
+            var firstPart  = parts[0];
+            char splitChar;
+            
+            if (firstPart.Contains(gString, StringComparison.InvariantCultureIgnoreCase))
+            {
+                splitChar = gString[0];
+            }
+            else if (firstPart.Contains(iString, StringComparison.InvariantCultureIgnoreCase))
+            {
+                splitChar = iString[0];
+            }
+            else if (firstPart.Contains(sString, StringComparison.InvariantCultureIgnoreCase))
+            {
+                splitChar = sString[0];
+            }
+            else
+            {
+                throw new NotImplementedException();
+            }
+            
+            var beforeAndAfterLicenceChar = firstPart.Split(splitChar);
+            var sharedPart = beforeAndAfterLicenceChar[0] + splitChar;
+
+            var suffix1 = beforeAndAfterLicenceChar[1];
+            dmsRecord.PermitNumber = $"{sharedPart}{suffix1}";
+            
+            if (allDmsRecords.TryGetValue(dmsRecord.PermitNumber, out var list0))
+            {
+                list0.Add(dmsRecord);
+            }
+            else
+            {
+                allDmsRecords.Add(dmsRecord.PermitNumber, [dmsRecord]);
+            }
+
+            foreach (var suffix in parts.Skip(1))
+            {
+                var clonedDmsRecord = dmsRecord.Clone();
+                clonedDmsRecord.PermitNumber = $"{sharedPart}{suffix}";
+                
+                if (allDmsRecords.TryGetValue(clonedDmsRecord.PermitNumber, out var list1))
+                {
+                    list1.Add(clonedDmsRecord);
+                    continue;
+                }
+        
+                allDmsRecords.Add(clonedDmsRecord.PermitNumber, [clonedDmsRecord]);
+            }
+            
+            return true;
+        }
+
+        return false;
+    }
+    
     /// <summary>
     /// Reads all files starting with 'NALD_Extract' from the resources folder
     /// </summary>

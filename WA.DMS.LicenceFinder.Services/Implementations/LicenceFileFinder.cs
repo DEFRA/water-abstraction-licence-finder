@@ -1146,7 +1146,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                 && !dmsDictionaries.ByManualFixPermitNumber.ContainsKey(licenceMatchResult.PermitNumber))
             {
                 ruleUsed = "Not Applicable";
-                licenceMatchResult.FileUrl = "No Folder Found";
+                licenceMatchResult.FileUrl = "No Folder Found"; //...in DMS extracts with exact name
             }
             else
             {

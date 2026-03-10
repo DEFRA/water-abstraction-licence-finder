@@ -119,4 +119,34 @@ public class DmsExtract
     /// File Id
     /// </summary>   
     public string FileId { get; set; } = string.Empty;
+
+    public DmsExtract Clone()
+    {
+        return new DmsExtract
+        {
+            ActivityClass = ActivityClass,
+            ActivitySubClass = ActivitySubClass,
+            Catchment = Catchment,
+            CustomerOperatorName = CustomerOperatorName,
+            DisclosureStatus = DisclosureStatus,
+            DocumentDate = DocumentDate,
+            FacilityName = FacilityName,
+            FacilityAddress = FacilityAddress,
+            FacilityAddressPostcode = FacilityAddressPostcode,
+            FileId = FileId,
+            FileName = FileName,
+            FileSize = FileSize,
+            FileType = FileType,
+            FileUrl = FileUrl,
+            LibraryName = LibraryName,
+            ModifiedDate = ModifiedDate,
+            NationalSecurity = NationalSecurity,
+            OtherReference = OtherReference,
+            PermitNumber = PermitNumber,
+            Regime = Regime,
+            SiteCollection = SiteCollection,
+            TypeOfPermit = TypeOfPermit,
+            UploadDate = UploadDate
+        };
+    }
 }

@@ -11,7 +11,7 @@ public interface IReadExtract
     /// Reads all files starting with 'Site' or 'Consolidated' from the resources folder
     /// </summary>
     /// <returns>Combined list of DMS extract records from all matching files</returns>
-    Dictionary<string, List<DmsExtract>> GetDmsExtractFiles(bool consolidated);
+    Dictionary<string, List<DmsExtract>> GetDmsExtracts(bool consolidated);
 
     /// <summary>
     /// Reads all files starting with 'NALD_Extract' from the resources folder
