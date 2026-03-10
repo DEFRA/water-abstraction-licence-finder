@@ -128,7 +128,7 @@ public class LicenceFileFinder : ILicenceFileFinder
             {
                 return firstFile;
             }
-            
+
             // OPTIONAL - Filter to only 1 region
             licenceMatchResults = licenceMatchResults
                 .Where(lmr => lmr.Region == regionName)
@@ -147,8 +147,9 @@ public class LicenceFileFinder : ILicenceFileFinder
 
             outputFileName =
                 $"{regionName.Replace(" ", string.Empty)}Only_LicenceMatchResults_{DateTime.Now:yyyyMMdd_HHmmss}";
-            
+
             _fileProcessor.GenerateExcel(worksheetData, outputFileName);
+            
             return firstFile;
         }
         catch (Exception ex)

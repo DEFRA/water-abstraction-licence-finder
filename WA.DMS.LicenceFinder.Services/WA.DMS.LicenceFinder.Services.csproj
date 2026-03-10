@@ -92,9 +92,6 @@
     </Content>
     <None Remove="Resources\WaterPdfs_Inventory_20260125.csv" />
     <None Remove="Resources\Consolidated.xlsx" />
-    <Content Include="Resources\Site_1.xlsx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <None Remove="Resources\Template_Results_NW.xlsx" />
     <Content Include="Resources\Template_Results_NW.xlsx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -128,6 +125,10 @@
     <Content Include="Resources\Anglia_File_Reader_Extract-220260226.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <None Remove="Resources\March_Consolidated.xlsx" />
+    <Content Include="Resources\March_Consolidated.xlsx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
@@ -138,12 +139,6 @@
 
   <ItemGroup>
     <Content Include="Resources\Change_Audit.xlsx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="Resources\Consolidated.xlsx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
