@@ -83,8 +83,8 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
 
             foreach (var record in records)
             {
-                var shouldContinue = AddToListFoldersWithWordAndIn(record, allDmsRecords);
-                if (shouldContinue)
+                var completed = AddToListFoldersWithWordAndIn(record, allDmsRecords);
+                if (completed)
                 {
                     continue;
                 }
