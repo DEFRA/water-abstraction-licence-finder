@@ -18,8 +18,8 @@ public interface ILicenceFileFinder
         List<NaldReportExtract> naldReportRecords,
         Dictionary<string, List<NALDMetadataExtract>> naldLicencesAndVersions,
         List<FileReaderExtract> wradiDoiScrapeResults,
-        List<TemplateFinderResult> wradiTemplateFinderResults,
-        List<FileIdentificationExtract> wradiFileIdentificationExtracts,
+        List<TemplateFinderResult> wradiTemplateScrapeResults,
+        List<FileIdentificationExtract> wradiFileTypeScrapeResults,
         List<LicenceMatchResult> licenceFinderPreviousIterationMatches,
         string? regionName);
     

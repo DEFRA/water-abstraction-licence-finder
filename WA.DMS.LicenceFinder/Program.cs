@@ -50,11 +50,11 @@ using (var scope = host.Services.CreateScope())
         // etc.. fields - Only used for DOI
         var wradiDoiScrapeResults = readExtractService.GetWradiDoiScrapeResults();
         
-        // WRADI tool template results (e.g. Template_Results.xlsx) - Has Template info etc...
-        var wradiTemplateFinderResults = readExtractService.GetWradiTemplateFinderScrapeResults();
+        // WRADI tool template results (e.g. Template_Results.xlsx) - Has Template info (Template, TemplateType) etc...
+        var wradiTemplateScrapeResults = readExtractService.GetWradiTemplateFinderScrapeResults();
 
-        // WRADI tool file identification extracts (e.g. File_Identification_Extract.csv) - Says whether addendum etc...
-        var wradiFileIdentificationExtract = readExtractService.GetWradiFileTypeScrapeResults();
+        // WRADI tool file type identification extracts (e.g. File_Identification_Extract.csv) - Says whether addendum (FileType) etc...
+        var wradiFileTypeScrapeResults = readExtractService.GetWradiFileTypeScrapeResults();
         
         // Licence finder previous iteration matches (e.g. Previous_Iteration_Matches.xlsx, from LicenceMatchResults_.xlsx)
         var licenceFinderLastIterationMatches =
@@ -78,8 +78,8 @@ using (var scope = host.Services.CreateScope())
             naldReportRecords,
             naldAbsLicencesAndVersions,
             wradiDoiScrapeResults,
-            wradiTemplateFinderResults,
-            wradiFileIdentificationExtract,
+            wradiTemplateScrapeResults,
+            wradiFileTypeScrapeResults,
             licenceFinderLastIterationMatches,
             regionName);
         Console.WriteLine($"Licence processing completed. Results saved to: {resultFilePath}");
