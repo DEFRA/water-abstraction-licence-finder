@@ -93,7 +93,7 @@ public class LicenceFileFinder : ILicenceFileFinder
         List<Override> dmsChangeAuditOverrides,
         List<NaldReportExtract> naldReportRecords,
         Dictionary<string, List<NALDMetadataExtract>> naldLicencesAndVersions,
-        List<FileReaderExtract> wradiFileReaderExtracts,
+        List<FileReaderExtract> wradiDoiScrapeResults,
         List<TemplateFinderResult> wradiTemplateFinderResults,
         List<FileIdentificationExtract> wradiFileIdentificationExtracts,
         List<LicenceMatchResult> licenceFinderPreviousIterationMatches,
@@ -109,7 +109,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                     dmsChangeAuditOverrides,
                     naldReportRecords,
                     naldLicencesAndVersions,
-                    wradiFileReaderExtracts,
+                    wradiDoiScrapeResults,
                     wradiTemplateFinderResults,
                     wradiFileIdentificationExtracts,
                     licenceFinderPreviousIterationMatches);
@@ -1039,7 +1039,7 @@ public class LicenceFileFinder : ILicenceFileFinder
     /// <param name="naldLicencesAndVersions"></param>
     /// <param name="licenceFinderPreviousIterationMatches"></param>
     /// <param name="dmsChangeAuditOverrides"></param>
-    /// <param name="wradiFileReaderExtracts"></param>
+    /// <param name="wradiDoiScrapeResults"></param>
     /// <param name="wradiTemplateFinderResults"></param>
     /// <param name="wradiFileIdentificationExtracts"></param>
     /// <returns>List of license matching results</returns>
@@ -1051,7 +1051,7 @@ public class LicenceFileFinder : ILicenceFileFinder
             List<Override> dmsChangeAuditOverrides,
             List<NaldReportExtract> naldReportRecords,
             Dictionary<string, List<NALDMetadataExtract>> naldLicencesAndVersions,
-            List<FileReaderExtract> wradiFileReaderExtracts,
+            List<FileReaderExtract> wradiDoiScrapeResults,
             List<TemplateFinderResult> wradiTemplateFinderResults,
             List<FileIdentificationExtract> wradiFileIdentificationExtracts,
             List<LicenceMatchResult> licenceFinderPreviousIterationMatches)
@@ -1072,7 +1072,7 @@ public class LicenceFileFinder : ILicenceFileFinder
        
         Console.WriteLine($"Processing {naldReportRecords.Count} NALD records...");
         var results = new List<LicenceMatchResult>();
-        
+
         // Process each record sequentially
         foreach (var naldReportRecord in naldReportRecords)
         {
@@ -1182,12 +1182,17 @@ public class LicenceFileFinder : ILicenceFileFinder
                     result.FileUrl = "No Match Found";
                 }
             }
+
+            var matchingDoiScrapeResult = wradiDoiScrapeResults.FirstOrDefault(r =>
+                r.PermitNumber.Equals(result.PermitNumber, StringComparison.OrdinalIgnoreCase));
+
+            var doi = matchingDoiScrapeResult != null
+                ? LicenseFileHelpers.ConvertDateToStandardFormat(matchingDoiScrapeResult.DateOfIssue)
+                : "Scrape Not Attempted";
             
             result.RuleUsed = ruleUsed;
             result.Region = naldReportRecord.Region;
-            result.DateOfIssue = LicenseFileHelpers.ConvertDateToStandardFormat(
-                wradiFileReaderExtracts.FirstOrDefault(r =>
-                    r.PermitNumber.Equals(result.PermitNumber, StringComparison.OrdinalIgnoreCase))?.DateOfIssue);
+            result.DateOfIssue = doi;
             result.PreviousIterationRuleUsed = licenceFinderPreviousIterationMatches?
                 .FirstOrDefault(m => m.PermitNumber == result.PermitNumber)?.RuleUsed;   
             result.PreviousIterationFileUrl = licenceFinderPreviousIterationMatches?

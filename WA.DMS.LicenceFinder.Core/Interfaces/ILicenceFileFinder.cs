@@ -17,7 +17,7 @@ public interface ILicenceFileFinder
         List<Override> dmsChangeAuditOverrides,
         List<NaldReportExtract> naldReportRecords,
         Dictionary<string, List<NALDMetadataExtract>> naldLicencesAndVersions,
-        List<FileReaderExtract> wradiFileReaderExtracts,
+        List<FileReaderExtract> wradiDoiScrapeResults,
         List<TemplateFinderResult> wradiTemplateFinderResults,
         List<FileIdentificationExtract> wradiFileIdentificationExtracts,
         List<LicenceMatchResult> licenceFinderPreviousIterationMatches,

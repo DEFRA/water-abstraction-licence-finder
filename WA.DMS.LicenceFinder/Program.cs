@@ -46,8 +46,9 @@ using (var scope = host.Services.CreateScope())
         var naldAbsLicencesAndVersions =
             readExtractService.GetNaldAbsLicencesAndVersions(true);
         
-        // WRADI tool file reader extracts (e.g. File_Reader_Extract.xlsx) - Has date of issue etc.. fields
-        var wradiFileReaderScrapeResults = readExtractService.GetWradiFileReaderScrapeResults();
+        // WRADI tool file reader (DOI scraping) extracts (e.g. File_Reader_Extract.xlsx) - Has date of issue
+        // etc.. fields - Only used for DOI
+        var wradiDoiScrapeResults = readExtractService.GetWradiDoiScrapeResults();
         
         // WRADI tool template results (e.g. Template_Results.xlsx) - Has Template info etc...
         var wradiTemplateFinderResults = readExtractService.GetWradiTemplateFinderScrapeResults();
@@ -76,7 +77,7 @@ using (var scope = host.Services.CreateScope())
             dmsChangeAuditOverrides,
             naldReportRecords,
             naldAbsLicencesAndVersions,
-            wradiFileReaderScrapeResults,
+            wradiDoiScrapeResults,
             wradiTemplateFinderResults,
             wradiFileIdentificationExtract,
             licenceFinderLastIterationMatches,

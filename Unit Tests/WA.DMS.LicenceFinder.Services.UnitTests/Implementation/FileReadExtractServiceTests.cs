@@ -137,7 +137,7 @@ public class FileReadExtractServiceTests
             .Returns(expectedRecords);
 
         // Act
-        var result = _fileReadExtractService.GetWradiFileReaderScrapeResults();
+        var result = _fileReadExtractService.GetWradiDoiScrapeResults();
 
         // Assert
         result.Should().BeEquivalentTo(expectedRecords);

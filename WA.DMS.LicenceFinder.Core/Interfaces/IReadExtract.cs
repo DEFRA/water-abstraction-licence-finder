@@ -53,7 +53,7 @@ public interface IReadExtract
     /// Reads File_Reader_Extract.xlsx file from the resources folder
     /// </summary>
     /// <returns>List of file reader records</returns>
-    List<FileReaderExtract> GetWradiFileReaderScrapeResults();
+    List<FileReaderExtract> GetWradiDoiScrapeResults();
 
     /// <summary>
     /// Reads all files starting with 'Manual_Fix_Extract' from the resources folder

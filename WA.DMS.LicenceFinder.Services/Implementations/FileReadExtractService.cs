@@ -507,7 +507,7 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
     /// Reads File_Reader_Extract.xlsx file from the resources folder
     /// </summary>
     /// <returns>List of file reader records</returns>
-    public List<FileReaderExtract> GetWradiFileReaderScrapeResults()
+    public List<FileReaderExtract> GetWradiDoiScrapeResults()
     {
         var fileReaderResults = new List<FileReaderExtract>();
         var fileReaderRecords = _fileProcessor.FindFilesByPattern("File_Reader_Extract");
