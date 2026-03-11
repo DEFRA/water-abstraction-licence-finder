@@ -3,7 +3,7 @@ namespace WA.DMS.LicenceFinder.Core.Models;
 /// <summary>
 /// Represents NALD (National Abstraction Licensing Database) metadata extract data that can be extracted from CSV files.
 /// </summary>
-public class NALDMetadataExtract
+public class NaldMetadataExtract
 {
     /// <summary>
     /// License number(AABL_ID)

@@ -29,7 +29,7 @@ public interface IReadExtract
     /// Reads NALD Metadata from the resources folder
     /// </summary>
     /// <returns>NALD Metadata results grouped by LicNo with maximum SignatureDate</returns>
-    public Dictionary<string, List<NALDMetadataExtract>> GetNaldAbsLicencesAndVersions(bool getLatest);
+    public Dictionary<string, List<NaldMetadataExtract>> GetNaldAbsLicencesAndVersions(bool getLatest);
 
     /// <summary>
     /// Reads File_Identification_Extract.csv file from the resources folder

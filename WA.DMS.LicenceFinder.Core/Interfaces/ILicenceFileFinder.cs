@@ -16,7 +16,7 @@ public interface ILicenceFileFinder
         Dictionary<string, DmsManualFixExtract> dmsManualFixes,
         List<Override> dmsChangeAuditOverrides,
         List<NaldReportExtract> naldReportRecords,
-        Dictionary<string, List<NALDMetadataExtract>> naldLicencesAndVersions,
+        Dictionary<string, List<NaldMetadataExtract>> naldLicencesAndVersions,
         List<FileReaderExtract> wradiDoiScrapeResults,
         List<TemplateFinderResult> wradiTemplateScrapeResults,
         List<FileIdentificationExtract> wradiFileTypeScrapeResults,

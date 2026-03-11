@@ -1,7 +1,11 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using WA.DMS.LicenceFinder.Core.Interfaces;
+using WA.DMS.LicenceFinder.Core.Models;
 using WA.DMS.LicenceFinder.Services;
+using WA.DMS.LicenceFinder.Services.Helpers;
+using WA.DMS.LicenceFinder.Services.Implementations;
+using WA.DMS.LicenceFinder.Services.Models;
 
 // Create a host builder with dependency injection
 var host = Host.CreateDefaultBuilder(args)
@@ -22,12 +26,13 @@ using (var scope = host.Services.CreateScope())
     var licenceFinderLastIterationMatchesFilename = "ANGLIAN_LicenceMatchResults_20260118_221710.xlsx";
     var optionalRegionFilter = (string?)null;//"Anglian Region";
     var regionName = "Anglian Region";
+    var apiBaseUrl = "http://localhost:8080";
     
     try
     {
-        // File version results (e.g. LicenceVersionResults.xlsx) - Comes from JP
-        var jpFileVersionResults = readExtractService.ReadFileVersionResultsFile();
-
+        // NALD data from the API - started early as async so we can run in parallel
+        var naldDataTask = GetNaldDataAsync(apiBaseUrl);
+        
         // DMS data file export (e.g. Site_N.xlsx or Consolidated.xlsx - based on flag said - source is a report JP runs)
         var dmsRecords = readExtractService.GetDmsExtracts(true);
 
@@ -37,14 +42,6 @@ using (var scope = host.Services.CreateScope())
         // DMS change audit overrides by our team (e.g. Overrides.xlsx)
         var dmsChangeAuditOverrides = readExtractService.GetDmsChangeAuditOverrides(
             changeAuditOverridesFilename);
-        
-        // NALD records report export (e.g NALD_Extract.xlsx)
-        var naldReportRecords = readExtractService.GetNaldReportRecords();
-        
-        // NALD licences and versions from the raw tables (e.g. NALD_Metadata.xlsx [NALD_ABS_LIC_VERSIONS]
-        // AND NALD_Metadata_Reference.xlsx [NALD_ABS_LICENCES])
-        var naldAbsLicencesAndVersions =
-            readExtractService.GetNaldAbsLicencesAndVersions(true);
         
         // WRADI tool file reader (DOI scraping) extracts (e.g. File_Reader_Extract.xlsx) - Has date of issue
         // etc.. fields - Only used for DOI
@@ -69,13 +66,19 @@ using (var scope = host.Services.CreateScope())
         // All files inventory (e.g. WaterPdfs_Inventory.csv)
         var allFilesInventory = readExtractService.ReadWaterPdfsInventoryFiles();
         
+        // File version results (e.g. LicenceVersionResults.xlsx) - Comes from JP
+        var jpFileVersionResults = readExtractService.ReadFileVersionResultsFile();
+        
+        // NALD data from the API
+        var (naldRecords, naldAbsLicencesAndVersions) = await naldDataTask;
+        
         // FLOW - Licence file finder (produces LicenceMatchResults_DATE.xlsx
         Console.WriteLine("Starting licence file processing...");
         var licenceMatchResultsFilePath = licenceFileFinder.FindLicenceFiles(
             dmsRecords,
             dmsManualFixes,
             dmsChangeAuditOverrides,
-            naldReportRecords,
+            naldRecords,
             naldAbsLicencesAndVersions,
             wradiDoiScrapeResults,
             wradiTemplateScrapeResults,
@@ -129,3 +132,101 @@ using (var scope = host.Services.CreateScope())
 }
 
 await host.StopAsync();
+return;
+
+static async Task<(List<NaldReportExtract> NaldRecords, Dictionary<string, List<NaldMetadataExtract>> NaldData)>
+    GetNaldDataAsync(string apiBaseUrl)
+{
+    var naldApiClient = new NaldApiClient(apiBaseUrl);
+        
+    var naldApiStatusDataTask = naldApiClient.GetNaldLicenceStatusDataAsync(null);
+
+    var naldApiData = await naldApiClient.GetNaldDataAsync(null);
+    var naldApiStatusData = await naldApiStatusDataTask;
+    
+    var naldRecords = new List<NaldReportExtract>();
+    var naldData = new Dictionary<string, List<NaldMetadataExtract>>();
+    var naldVersionsDict = new Dictionary<string, List<NaldLicenceVersionDataLine>>();
+
+    // NOTE - LicenceVersions is only pulling back newest currently, so this is overkill
+    foreach (var licenceVersion in naldApiData.LicenceVersions!)
+    {
+        if (!naldVersionsDict.ContainsKey(licenceVersion.LookupKey))
+        {
+            naldVersionsDict.Add(licenceVersion.LookupKey, []);
+        }
+        
+        naldVersionsDict[licenceVersion.LookupKey].Add(licenceVersion);
+    }
+    
+    foreach (var licence in naldApiData.Licences!)
+    {
+        var licenceNumberWithoutSeperators = licence.LicenceNo!
+            .Replace("/", string.Empty)
+            .Replace(" ", string.Empty)
+            .Replace(".", string.Empty)
+            .Replace("*", string.Empty);                
+
+        if (!naldData.ContainsKey(licenceNumberWithoutSeperators))
+        {
+            naldData.Add(licenceNumberWithoutSeperators, []);
+        }
+
+        var strippedNumber = FormattingHelper.StripForComparison(
+            licence.LicenceNo!,
+            licence.FgacRegionCode)!;
+
+        var lookupKey = $"{licence.FgacRegionCode}|{licence.Id}";
+
+        if (naldVersionsDict.TryGetValue(lookupKey, out var licenceVersions))
+        {
+            foreach (var version in licenceVersions)
+            {
+                naldData[licenceNumberWithoutSeperators].Add(
+                    new NaldMetadataExtract
+                    {
+                        AablId = version.AablId!.Value.ToString(),
+                        AabvType = version.AabvType!,
+                        IssueNo = version.IssueNo.ToString(),
+                        LicNo = licenceNumberWithoutSeperators,
+                        Region = licence.FgacRegionCode.ToString(),
+                        SignatureDate = version.LicSigDate!
+                    });
+            }
+        }
+
+        var isLive = naldApiStatusData.LiveLicences.Contains(strippedNumber);
+
+        if (!isLive)
+        {
+            continue;
+        }
+        
+        var naldReportExtract = new NaldReportExtract
+        {
+            LicNo = licence.LicenceNo!,
+            PermitNo = licenceNumberWithoutSeperators,
+            Region = GetRegionName(licence.FgacRegionCode)
+        };
+        
+        naldRecords.Add(naldReportExtract);
+    }
+    
+    return (naldRecords, naldData);
+}
+
+static string GetRegionName(int regionCode)
+{
+    return regionCode switch
+    {
+        1 => "Anglian",
+        2 => "Midlands",
+        3 => "North East",
+        4 => "North West",
+        5 => "South West",
+        6 => "Southern",
+        7 => "Thames",
+        8 => "Wales",
+        _ => throw new ArgumentOutOfRangeException(nameof(regionCode), $"We've not yet mapped  region code {regionCode}")
+    };
+}

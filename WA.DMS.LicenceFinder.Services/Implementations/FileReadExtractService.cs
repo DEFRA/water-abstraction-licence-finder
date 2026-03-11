@@ -301,7 +301,11 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
                 "NALDIssue_No",
                 "SignaturedateDQissuefoundinVersionMatchprocess",
                 "NaldIssue", // This isn't in the Excel - it gets set later on,
-                "FileId" // This isn't in the Excel - it gets set later on
+                "FileId", // This isn't in the Excel - it gets set later on
+                "PreviousIterationRuleUsed",
+                "DifferenceInRuleusedInIterations",
+                "PreviousIterationFileUrl",
+                "DifferenceInFileUrlInIterations"
             ]);
         
         allPreviousIterationResults.AddRange(records);
@@ -320,9 +324,9 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
     /// Reads NALD Metadata from the resources folder
     /// </summary>
     /// <returns>NALD Metadata results grouped by LicNo with maximum SignatureDate</returns>
-    public Dictionary<string, List<NALDMetadataExtract>> GetNaldAbsLicencesAndVersions(bool getLatest)
+    public Dictionary<string, List<NaldMetadataExtract>> GetNaldAbsLicencesAndVersions(bool getLatest)
     {
-        var naldMetadataResults = new List<NALDMetadataExtract>();
+        var naldMetadataResults = new List<NaldMetadataExtract>();
         var naldMetadataReferenceResults = new List<NaldMetadataReferenceExtract>();
         
         var naldMetadata = _fileProcessor
@@ -331,7 +335,7 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
 
         if (naldMetadata != null)
         {
-            var records = _fileProcessor.ExtractCsv<List<NALDMetadataExtract>>(
+            var records = _fileProcessor.ExtractCsv<List<NaldMetadataExtract>>(
                 naldMetadata,
                 new Dictionary<string, List<string>>
                 {
@@ -433,7 +437,7 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
             .GroupBy(r => r.LicNo)
             .ToList();
 
-        var returnDict = new Dictionary<string, List<NALDMetadataExtract>>(StringComparer.OrdinalIgnoreCase);
+        var returnDict = new Dictionary<string, List<NaldMetadataExtract>>(StringComparer.OrdinalIgnoreCase);
         
         if (getLatest)
         {
