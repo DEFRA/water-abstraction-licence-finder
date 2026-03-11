@@ -13,7 +13,7 @@ public class NaldMetadataExtract
     /// <summary>
     /// NALD Identifier(AABL_ID)
     /// </summary>
-    public string AablId { get; set; } = string.Empty;
+    public string? AablId { get; set; } = string.Empty;
     
     /// <summary>
     /// NALD Issue Number(Issue_No)
@@ -23,12 +23,12 @@ public class NaldMetadataExtract
     /// <summary>
     /// Abbreviation Type(AABV_TYPE)
     /// </summary>
-    public string AabvType { get; set; } = string.Empty;
+    public string? AabvType { get; set; } = string.Empty;
 
     /// <summary>
     /// Signature Date(LIC_SIG_DATE)
     /// </summary>
-    public string SignatureDate { get; set; } = string.Empty;
+    public string? SignatureDate { get; set; } = string.Empty;
     
     /// <summary>
     /// Region

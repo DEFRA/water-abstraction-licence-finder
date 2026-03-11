@@ -549,8 +549,9 @@ public class LicenceFileFinder : ILicenceFileFinder
                 
                 foreach (var licence in wradiLicenceFiles)
                 {
-                    var matchedNaldRecords = naldRecordsForPermit.FirstOrDefault(d =>
-                        d.SignatureDate.Equals(licence.DateOfIssue, StringComparison.OrdinalIgnoreCase));
+                    var matchedNaldRecords = naldRecordsForPermit
+                        .FirstOrDefault(d =>
+                            d.SignatureDate?.Equals(licence.DateOfIssue, StringComparison.OrdinalIgnoreCase) == true);
 
                     // Check for NALD data issues
                     var naldIssueResult = CheckForNaldDataIssue(
@@ -599,7 +600,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                 foreach (var addendum in wradiAddendumFiles)
                 {
                     var matchedNaldRecords = naldRecordsForPermit.FirstOrDefault(d =>
-                        d.SignatureDate.Equals(addendum.DateOfIssue, StringComparison.OrdinalIgnoreCase));
+                        d.SignatureDate?.Equals(addendum.DateOfIssue, StringComparison.OrdinalIgnoreCase) == true);
                     
                     unmatchedList.Add(new UnmatchedLicenceMatchResult
                     {
@@ -635,7 +636,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                     if (correspondingLicence != null)
                     {
                         var matchedNaldRecords = naldRecordsForPermit.FirstOrDefault(d =>
-                        d.SignatureDate.Equals(correspondingLicence.DateOfIssue, StringComparison.OrdinalIgnoreCase));
+                            d.SignatureDate?.Equals(correspondingLicence.DateOfIssue, StringComparison.OrdinalIgnoreCase) == true);
 
                         // Check for NALD data issues
                         var naldIssueResult = CheckForNaldDataIssue(
@@ -661,7 +662,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                                 .FirstOrDefault(d => d.FileName.Equals(correspondingLicence.FileName, StringComparison.OrdinalIgnoreCase))?.FileUrl ?? string.Empty,
                             LicenseNumber = recordWithDifferentDate.LicenseNumber,
                             SignatureDateOfFileEvaluated = naldRecordsForPermit
-                                .FirstOrDefault(d => d.SignatureDate.Equals(correspondingLicence.DateOfIssue, StringComparison.OrdinalIgnoreCase))?.SignatureDate ?? string.Empty,
+                                .FirstOrDefault(d => d.SignatureDate?.Equals(correspondingLicence.DateOfIssue, StringComparison.OrdinalIgnoreCase) == true)?.SignatureDate ?? string.Empty,
                             Region = recordWithDifferentDate.Region,
                             FileEvaluated = correspondingLicence.FileName,
                             FileTypeEvaluated = correspondingLicence.FileType,
@@ -1287,7 +1288,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                     DateOfIssueOfEvaluatedFile = fileIdentification.DateOfIssue,
                     NALDDataQualityIssue = true,
                     OriginalFileUrlIdentifiedAsLicence = record.FileUrl,
-                    NALDID = int.Parse(matchedNaldRecord.AablId),
+                    NALDID = int.Parse(matchedNaldRecord.AablId ?? "0"),
                     NALDIssueNo = int.Parse(matchedNaldRecord.IssueNo)
                 };
             }

@@ -421,7 +421,7 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
         // Update LicNo in metadata results by looking up AablId in reference data
         foreach (var metadataRecord in naldMetadataResults)
         {
-            var licNos = aablIdToLicNoLookup[(metadataRecord.AablId, metadataRecord.Region)];
+            var licNos = aablIdToLicNoLookup[(metadataRecord.AablId ?? "0", metadataRecord.Region)];
             var licNo = licNos.FirstOrDefault();
             
             if (!string.IsNullOrEmpty(licNo))
@@ -432,7 +432,7 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
 
         // Filter by AabvType = "Issue" first, then group by LicNo
         var groupedRecords = naldMetadataResults
-            .Where(r => r.AabvType.Equals("Issue", StringComparison.OrdinalIgnoreCase)
+            .Where(r => r.AabvType?.Equals("Issue", StringComparison.OrdinalIgnoreCase) == true
                 && !string.IsNullOrWhiteSpace(r.LicNo))
             .GroupBy(r => r.LicNo)
             .ToList();
@@ -788,13 +788,17 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
     /// </summary>
     /// <param name="dateString">The date string to convert</param>
     /// <returns>Parsed DateTime or DateTime.MinValue if parsing fails</returns>
-    private static DateTime SafeParseDateTime(string dateString)
+    private static DateTime SafeParseDateTime(string? dateString)
     {
         if (string.IsNullOrWhiteSpace(dateString))
+        {
             return DateTime.MinValue;
+        }
 
         if (DateTime.TryParse(dateString, out DateTime result))
+        {
             return result;
+        }
 
         return DateTime.MinValue;
     }

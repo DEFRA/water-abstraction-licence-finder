@@ -185,12 +185,12 @@ static async Task<(List<NaldReportExtract> NaldRecords, Dictionary<string, List<
                 naldData[licenceNumberWithoutSeperators].Add(
                     new NaldMetadataExtract
                     {
-                        AablId = version.AablId!.Value.ToString(),
-                        AabvType = version.AabvType!,
+                        AablId = version.AablId?.ToString(),
+                        AabvType = version.AabvType,
                         IssueNo = version.IssueNo.ToString(),
                         LicNo = licenceNumberWithoutSeperators,
                         Region = licence.FgacRegionCode.ToString(),
-                        SignatureDate = version.LicSigDate!
+                        SignatureDate = version.LicSigDate
                     });
             }
         }
@@ -227,6 +227,6 @@ static string GetRegionName(int regionCode)
         6 => "Southern",
         7 => "Thames",
         8 => "Wales",
-        _ => throw new ArgumentOutOfRangeException(nameof(regionCode), $"We've not yet mapped  region code {regionCode}")
+        _ => throw new ArgumentOutOfRangeException(nameof(regionCode), $"We've not yet mapped region code {regionCode}")
     };
 }
