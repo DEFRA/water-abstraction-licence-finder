@@ -77,7 +77,7 @@ public class LicenceFileFinderTests
     }
 
     [Fact]
-    public void FindLicenseFile_WithValidData_ShouldReturnExcelFilePath()
+    public async Task FindLicenseFile_WithValidData_ShouldReturnExcelFilePath()
     {
         // Arrange
         var dmsRecords = new Dictionary<string, List<DmsExtract>>
@@ -107,10 +107,12 @@ public class LicenceFileFinderTests
         var finder = new LicenceFileFinder(_mockFileProcessor.Object, _matchingRules);
 
         // Act
-        var result = finder.FindLicenceFiles(
+        var result = await finder.FindLicenceFilesAsync(
             [],
             [],
             [],
+            [],
+            new DmsApiClient(""),
             [],
             [],
             [],
@@ -125,7 +127,7 @@ public class LicenceFileFinderTests
     }
 
     [Fact]
-    public void FindLicenseFile_WhenExceptionOccurs_ShouldThrowInvalidOperationException()
+    public async Task FindLicenseFile_WhenExceptionOccurs_ShouldThrowInvalidOperationException()
     {
         // Arrange
         _mockReadExtract.Setup(r => r.GetDmsExtracts(It.IsAny<bool>()))
@@ -134,11 +136,13 @@ public class LicenceFileFinderTests
         var finder = new LicenceFileFinder(_mockFileProcessor.Object, _matchingRules);
 
         // Act & Assert
-        var act = () => finder.FindLicenceFiles(
+        var act = () => finder.FindLicenceFilesAsync(
             [],
             [],
             [],
             [],
+            new DmsApiClient(""),
+            [],            
             [],
             [],
             [],
@@ -146,12 +150,12 @@ public class LicenceFileFinderTests
             [],
             null);
         
-        act.Should().Throw<InvalidOperationException>()
+        await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("Error occurred while finding licence files: Test exception");
     }
 
     [Fact]
-    public void FindLicenseFile_WithNoMatches_ShouldCreateNoMatchResult()
+    public async Task FindLicenseFile_WithNoMatches_ShouldCreateNoMatchResult()
     {
         // Arrange
         var dmsRecords = new Dictionary<string, List<DmsExtract>>
@@ -177,11 +181,13 @@ public class LicenceFileFinderTests
         var finder = new LicenceFileFinder(_mockFileProcessor.Object, _matchingRules);
 
         // Act
-        var result = finder.FindLicenceFiles(
+        var result = await finder.FindLicenceFilesAsync(
             [],
             [],
             [],
             [],
+            new DmsApiClient(""),
+            [],            
             [],
             [],
             [],
@@ -201,7 +207,7 @@ public class LicenceFileFinderTests
     }
 
     [Fact]
-    public void FindLicenseFile_WithSuccessfulMatch_ShouldCreateMatchResult()
+    public async Task FindLicenseFile_WithSuccessfulMatch_ShouldCreateMatchResult()
     {
         // Arrange
         var dmsRecord = new DmsExtract
@@ -236,11 +242,13 @@ public class LicenceFileFinderTests
         var finder = new LicenceFileFinder(_mockFileProcessor.Object, _matchingRules);
 
         // Act
-        var result = finder.FindLicenceFiles(
+        var result = await finder.FindLicenceFilesAsync(
             [],
             [],
             [],
             [],
+            new DmsApiClient(""),
+            [],            
             [],
             [],
             [],

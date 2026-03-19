@@ -305,7 +305,9 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
                 "PreviousIterationRuleUsed",
                 "DifferenceInRuleusedInIterations",
                 "PreviousIterationFileUrl",
-                "DifferenceInFileUrlInIterations"
+                "DifferenceInFileUrlInIterations",
+                "FileIdStatus", // TODO remove this when we have a new file that contains it - 2025-03-19
+                "FileIdStatusChangeDate" // TODO remove this when we have a new file that contains it - 2025-03-19
             ]);
         
         allPreviousIterationResults.AddRange(records);

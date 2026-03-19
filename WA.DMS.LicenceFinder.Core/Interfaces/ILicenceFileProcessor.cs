@@ -12,7 +12,7 @@ public interface ILicenceFileProcessor
     /// <typeparam name="T">The target type to deserialize the Excel data into. Can be a single object or List&lt;T&gt; for multiple records.</typeparam>
     /// <param name="fileName">The name of the Excel file to read from (searches in resources folders)</param>
     /// <param name="headerMapping">Optional dictionary mapping Excel column headers to object property names. Key: Excel header, Value: Property name.</param>
-    /// <param name="excludeFields"></param>
+    /// <param name="dontErrorIfMissingFields"></param>
     /// <returns>An instance of type T populated with data from the Excel file</returns>
     /// <exception cref="ArgumentException">Thrown when fileName is null or empty</exception>
     /// <exception cref="FileNotFoundException">Thrown when the Excel file is not found in any resources folder</exception>
@@ -20,7 +20,7 @@ public interface ILicenceFileProcessor
     T ExtractExcel<T>(
         string fileName,
         Dictionary<string, List<string>>? headerMapping = null,
-        List<string>? excludeFields = null);
+        List<string>? dontErrorIfMissingFields = null);
 
     /// <summary>
     /// Extracts data from a CSV file and maps it to the specified generic type.

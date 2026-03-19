@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using WA.DMS.LicenceFinder.Core.Models;
 
 namespace WA.DMS.LicenceFinder.Core.Interfaces;
@@ -11,10 +12,12 @@ public interface ILicenceFileFinder
     /// Finds and matches license files, generating an Excel report with results
     /// </summary>
     /// <returns>The path to the generated Excel results file</returns>
-    string FindLicenceFiles(
+    Task<string> FindLicenceFilesAsync(
         Dictionary<string, List<DmsExtract>> dmsRecords,
         Dictionary<string, DmsManualFixExtract> dmsManualFixes,
         List<Override> dmsChangeAuditOverrides,
+        ConcurrentDictionary<Guid, List<DmsFileIdInformation>> dmsFileIdInformation,
+        IDmsApiClient dmsApiClient,
         List<NaldReportExtract> naldReportRecords,
         Dictionary<string, List<NaldMetadataExtract>> naldLicencesAndVersions,
         List<FileReaderExtract> wradiDoiScrapeResults,

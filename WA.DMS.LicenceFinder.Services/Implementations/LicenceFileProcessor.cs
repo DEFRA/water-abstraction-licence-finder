@@ -16,7 +16,7 @@ public class LicenceFileProcessor : ILicenceFileProcessor
     public T ExtractExcel<T>(
         string fileName,
         Dictionary<string, List<string>>? headerMapping = null,
-        List<string>? excludeFields = null)
+        List<string>? dontErrorIfMissingFields = null)
     {
         if (string.IsNullOrWhiteSpace(fileName))
         {
@@ -66,7 +66,7 @@ public class LicenceFileProcessor : ILicenceFileProcessor
             
             foreach (DataRow row in dataTable.Rows)
             {
-                var item = MapRowToObject(row, targetType, columnMapping, excludeFields);
+                var item = MapRowToObject(row, targetType, columnMapping, dontErrorIfMissingFields);
                 items.Add(item);
             }
 
@@ -387,13 +387,13 @@ public class LicenceFileProcessor : ILicenceFileProcessor
     /// <param name="rowData">The row data (DataRow for Excel, string[] for CSV)</param>
     /// <param name="targetType">The target object type to create</param>
     /// <param name="columnMapping">Dictionary mapping property names to column indexes</param>
-    /// <param name="excludeFields"></param>
+    /// <param name="dontErrorIfMissingFields"></param>
     /// <returns>An instance of the target type with populated properties</returns>
     private static object MapRowToObject(
         object rowData,
         Type targetType,
         Dictionary<string, int> columnMapping,
-        List<string>? excludeFields)
+        List<string>? dontErrorIfMissingFields)
     {
         var item = Activator.CreateInstance(targetType)!;
         
@@ -419,7 +419,7 @@ public class LicenceFileProcessor : ILicenceFileProcessor
 
             if (!existsInColumnMapping)
             {
-                if (excludeFields?.Contains(destinationPropertyName) == true)
+                if (dontErrorIfMissingFields?.Contains(destinationPropertyName) == true)
                 {
                     continue;
                 }
@@ -438,7 +438,7 @@ public class LicenceFileProcessor : ILicenceFileProcessor
             
             if (!properties.TryGetValue(propertyName, out var property))
             {
-                if (propertyName.StartsWith("Column") || excludeFields?.Contains(propertyName) == true)
+                if (propertyName.StartsWith("Column") || dontErrorIfMissingFields?.Contains(propertyName) == true)
                 {
                     continue;
                 }

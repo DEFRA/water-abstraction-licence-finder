@@ -124,5 +124,15 @@ public class LicenceMatchResult
     /// <summary>
     /// File Id
     /// </summary>   
-    public string FileId { get; set; } = string.Empty;
+    public string? FileId { get; set; }
+    
+    /// <summary>
+    /// File Id status
+    /// </summary>   
+    public string? FileIdStatus { get; set; }
+
+    /// <summary>
+    /// File Id status change date
+    /// </summary>
+    public string? FileIdStatusChangeDate { get; set; }
 }

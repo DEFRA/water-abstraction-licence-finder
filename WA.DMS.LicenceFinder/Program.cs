@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using System.Collections.Concurrent;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using WA.DMS.LicenceFinder.Core.Interfaces;
 using WA.DMS.LicenceFinder.Core.Models;
@@ -32,11 +33,14 @@ using (var scope = host.Services.CreateScope())
     {
         // NALD data from the API - started early as async so we can run in parallel
         var naldDataTask = GetNaldDataAsync(apiBaseUrl);
+
+        var dmsApiClient = new DmsApiClient(apiBaseUrl);
+        var dmsFileIdInformationTask = GetDmsFileIdInformationAsync(dmsApiClient);
         
         // DMS data file export (e.g. Site_N.xlsx or Consolidated.xlsx - based on flag said - source is a report JP runs)
         var dmsRecords = readExtractService.GetDmsExtracts(true);
 
-        // DMS manual fixes by our team (e.g. Manual_Fix_Extract.xlsx)
+        // DMS manual fixes by our team/SamD (e.g. Manual_Fix_Extract.xlsx) - The 'Sam D' file
         var dmsManualFixes = readExtractService.GetDmsManualFixes();
         
         // DMS change audit overrides by our team (e.g. Overrides.xlsx)
@@ -53,7 +57,7 @@ using (var scope = host.Services.CreateScope())
         // WRADI tool file type identification extracts (e.g. File_Identification_Extract.csv) - Says whether addendum (FileType) etc...
         var wradiFileTypeScrapeResults = readExtractService.GetWradiFileTypeScrapeResults();
         
-        // Licence finder previous iteration matches (e.g. Previous_Iteration_Matches.xlsx, from LicenceMatchResults_.xlsx)
+        // Licence finder previous iteration matches (e.g. Previous_Iteration_Matches.xlsx (renamed from LicenceMatchResults_.xlsx))
         var licenceFinderLastIterationMatches =
             readExtractService.GetLicenceFinderPreviousIterationResults(
                 licenceFinderLastIterationMatchesFilename,
@@ -72,12 +76,17 @@ using (var scope = host.Services.CreateScope())
         // NALD data from the API
         var (naldRecords, naldAbsLicencesAndVersions) = await naldDataTask;
         
+        // DMS file id data from the API
+        var dmsFileIdInformation = await dmsFileIdInformationTask;
+        
         // FLOW - Licence file finder (produces LicenceMatchResults_DATE.xlsx
         Console.WriteLine("Starting licence file processing...");
-        var licenceMatchResultsFilePath = licenceFileFinder.FindLicenceFiles(
+        var licenceMatchResultsFilePath = await licenceFileFinder.FindLicenceFilesAsync(
             dmsRecords,
             dmsManualFixes,
             dmsChangeAuditOverrides,
+            dmsFileIdInformation,
+            dmsApiClient,
             naldRecords,
             naldAbsLicencesAndVersions,
             wradiDoiScrapeResults,
@@ -127,12 +136,32 @@ using (var scope = host.Services.CreateScope())
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"ERROR - Error processing licence files: {ex.Message}");
+        Console.WriteLine($"ERROR - Error processing licence files: {ex}");
     }
 }
 
 await host.StopAsync();
 return;
+
+static async Task<ConcurrentDictionary<Guid, List<DmsFileIdInformation>>>
+    GetDmsFileIdInformationAsync(DmsApiClient dmsApiClient)
+{
+    var dmsFileIdInformationList = await dmsApiClient.GetDmsFileIdInformationAsync();
+    var dmsFileIdInformationDict = new ConcurrentDictionary<Guid, List<DmsFileIdInformation>>();
+    
+    foreach (var dmsFileIdInformation in dmsFileIdInformationList)
+    {
+        if (!dmsFileIdInformationDict.TryGetValue(dmsFileIdInformation.FileId, out var changeList))
+        {
+            changeList = [];
+            dmsFileIdInformationDict.TryAdd(dmsFileIdInformation.FileId, changeList);
+        }
+
+        changeList.Add(dmsFileIdInformation);
+    }
+    
+    return dmsFileIdInformationDict;
+}
 
 static async Task<(List<NaldReportExtract> NaldRecords, Dictionary<string, List<NaldMetadataExtract>> NaldData)>
     GetNaldDataAsync(string apiBaseUrl)
@@ -148,8 +177,13 @@ static async Task<(List<NaldReportExtract> NaldRecords, Dictionary<string, List<
     var naldData = new Dictionary<string, List<NaldMetadataExtract>>();
     var naldVersionsDict = new Dictionary<string, List<NaldLicenceVersionDataLine>>();
 
+    if (naldApiData.AbstractionLicenceVersions == null || naldApiData.AbstractionLicenceVersions.Count == 0)
+    {
+        throw new Exception("Nald Api licence versions came back empty");
+    }
+    
     // NOTE - LicenceVersions is only pulling back newest currently, so this is overkill
-    foreach (var licenceVersion in naldApiData.LicenceVersions!)
+    foreach (var licenceVersion in naldApiData.AbstractionLicenceVersions)
     {
         if (!naldVersionsDict.ContainsKey(licenceVersion.LookupKey))
         {
@@ -159,7 +193,7 @@ static async Task<(List<NaldReportExtract> NaldRecords, Dictionary<string, List<
         naldVersionsDict[licenceVersion.LookupKey].Add(licenceVersion);
     }
     
-    foreach (var licence in naldApiData.Licences!)
+    foreach (var licence in naldApiData.AbstractionLicences!)
     {
         var licenceNumberWithoutSeperators = licence.LicenceNo!
             .Replace("/", string.Empty)

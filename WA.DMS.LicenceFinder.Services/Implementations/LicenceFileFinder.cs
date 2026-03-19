@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using WA.DMS.LicenceFinder.Core.Interfaces;
 using WA.DMS.LicenceFinder.Core.Models;
 using WA.DMS.LicenceFinder.Services.Helpers;
@@ -43,7 +44,9 @@ public class LicenceFileFinder : ILicenceFileFinder
         { "DifferenceInRuleusedInIterations", "Difference In Rule Used In Iterations" },
         { "PreviousIterationFileUrl", "Previous Iteration File URL" },
         { "DifferenceInFileUrlInIterations", "Difference In File URL In Iterations" },
-        { "FileId", "File ID" }
+        { "FileId", "File ID" },
+        { "FileIdStatus", "File ID Status" },
+        { "FileIdStatusChangeDate", "File ID Status Change Date" }
     };
     
     /// <summary>
@@ -65,7 +68,9 @@ public class LicenceFileFinder : ILicenceFileFinder
         { "NALDIssueNo", "NALD Issue No." },
         { "DateOfIssueOfEvaluatedFile", "Date of Issue Of Evaluated File" },
         { "OriginalFileUrlIdentifiedAsLicence", "Original File URL Identified As Licence"},
-        { "FileId", "File ID" }
+        { "FileId", "File ID" },
+        { "FileIdStatus", "File ID Status" },
+        { "FileIdStatusChangeDate", "File ID Status Change Date" }
     };
 
     public LicenceFileFinder(
@@ -87,10 +92,12 @@ public class LicenceFileFinder : ILicenceFileFinder
         }
     }
 
-    public string FindLicenceFiles(
+    public async Task<string> FindLicenceFilesAsync(
         Dictionary<string, List<DmsExtract>> dmsRecords,
         Dictionary<string, DmsManualFixExtract> dmsManualFixes,
         List<Override> dmsChangeAuditOverrides,
+        ConcurrentDictionary<Guid, List<DmsFileIdInformation>> dmsFileIdInformation,
+        IDmsApiClient dmsApiClient,
         List<NaldReportExtract> naldReportRecords,
         Dictionary<string, List<NaldMetadataExtract>> naldLicencesAndVersions,
         List<FileReaderExtract> wradiDoiScrapeResults,
@@ -103,10 +110,12 @@ public class LicenceFileFinder : ILicenceFileFinder
         {
             // Process each NALD record and find matches using rules
             var (licenceMatchResults, unmatchedLicenceMatchResults)
-                = ProcessLicenceMatching(
+                = await ProcessLicenceMatchingAsync(
                     dmsRecords,
                     dmsManualFixes,
                     dmsChangeAuditOverrides,
+                    dmsFileIdInformation,
+                    dmsApiClient,
                     naldReportRecords,
                     naldLicencesAndVersions,
                     wradiDoiScrapeResults,
@@ -149,7 +158,6 @@ public class LicenceFileFinder : ILicenceFileFinder
                 $"{regionName.Replace(" ", string.Empty)}Only_LicenceMatchResults_{DateTime.Now:yyyyMMdd_HHmmss}";
 
             _fileProcessor.GenerateExcel(worksheetData, outputFileName);
-            
             return firstFile;
         }
         catch (Exception ex)
@@ -190,17 +198,18 @@ public class LicenceFileFinder : ILicenceFileFinder
         {
             try
             {
-
                 var matchedFileId = filteredPrevMatches.FirstOrDefault(pm =>
-                    pm.FileId.Equals(consolidatedFile.FileId, StringComparison.OrdinalIgnoreCase));
+                    pm.FileId?.Equals(consolidatedFile.FileId, StringComparison.OrdinalIgnoreCase) == true);
 
-                if (matchedFileId == null)
+                if (matchedFileId != null)
                 {
-                    var missingFile = consolidated.First(c => c.FileId == consolidatedFile.FileId);
-
-                    // No matching permit number + filename in inventory, include this file
-                    missingFiles.Add(missingFile);
+                    continue;
                 }
+                
+                var missingFile = consolidated.First(c => c.FileId == consolidatedFile.FileId);
+
+                // No matching permit number + filename in inventory, include this file
+                missingFiles.Add(missingFile);
             }
             catch (Exception ex)
             {
@@ -1031,6 +1040,8 @@ public class LicenceFileFinder : ILicenceFileFinder
     /// <param name="dmsRecords">DMS extract records to search in</param>
     /// <param name="dmsManualFixes"></param>
     /// <param name="dmsChangeAuditOverrides"></param>
+    /// <param name="dmsFileIdInformation"></param>
+    /// <param name="dmsApiClient"></param>
     /// <param name="naldReportRecords">NALD extract records to process</param>
     /// <param name="naldLicencesAndVersions"></param>
     /// <param name="wradiDoiScrapeResults"></param>
@@ -1038,12 +1049,14 @@ public class LicenceFileFinder : ILicenceFileFinder
     /// <param name="wradiFileTypeScrapeResults"></param>
     /// /// <param name="licenceFinderPreviousIterationMatches"></param>
     /// <returns>List of license matching results</returns>
-    private (List<LicenceMatchResult> LicenceMatchResults,
-        List<UnmatchedLicenceMatchResult> UnmatchedLicenseMatchResults)
-        ProcessLicenceMatching(
+    private async Task<(List<LicenceMatchResult> LicenceMatchResults,
+        List<UnmatchedLicenceMatchResult> UnmatchedLicenseMatchResults)>
+        ProcessLicenceMatchingAsync(
             Dictionary<string, List<DmsExtract>> dmsRecords,
             Dictionary<string, DmsManualFixExtract> dmsManualFixes,
             List<Override> dmsChangeAuditOverrides,
+            ConcurrentDictionary<Guid, List<DmsFileIdInformation>> dmsFileIdInformation,
+            IDmsApiClient dmsApiClient,
             List<NaldReportExtract> naldReportRecords,
             Dictionary<string, List<NaldMetadataExtract>> naldLicencesAndVersions,
             List<FileReaderExtract> wradiDoiScrapeResults,
@@ -1124,6 +1137,14 @@ public class LicenceFileFinder : ILicenceFileFinder
                     : -1;
                 
                 licenceMatchResult.FileId = dmsOverrideRecord.FileId;
+                var fileIdInfo = await RecordFileIdAsync(
+                    dmsOverrideRecord.FileId,
+                    dmsOverrideRecord.FileUrl,
+                    dmsFileIdInformation,
+                    dmsApiClient);
+                    
+                licenceMatchResult.FileIdStatus = fileIdInfo?.Status;
+                licenceMatchResult.FileIdStatusChangeDate = fileIdInfo?.StatusDateUtc.ToString("dd/MM/yyyy");
                 
                 processedRecordCount++;
                 continue;
@@ -1169,6 +1190,15 @@ public class LicenceFileFinder : ILicenceFileFinder
                     licenceMatchResult.DisclosureStatus = matchedDmsRecord.DisclosureStatus;
                     licenceMatchResult.DocumentDate = matchedDmsRecord.DocumentDate;
                     licenceMatchResult.FileId = matchedDmsRecord.FileId;
+
+                    var fileIdInfo = await RecordFileIdAsync(
+                        matchedDmsRecord.FileId,
+                        matchedDmsRecord.FileUrl,
+                        dmsFileIdInformation,
+                        dmsApiClient);
+                    
+                    licenceMatchResult.FileIdStatus = fileIdInfo?.Status;
+                    licenceMatchResult.FileIdStatusChangeDate = fileIdInfo?.StatusDateUtc.ToString("dd/MM/yyyy");
                 }
                 else
                 {
@@ -1226,6 +1256,75 @@ public class LicenceFileFinder : ILicenceFileFinder
         return (returnList, unmatchedVersionResults);;
     }
 
+    private static async Task<DmsFileIdInformation?> RecordFileIdAsync(
+        string? fileId,
+        string? fileUrl,
+        ConcurrentDictionary<Guid, List<DmsFileIdInformation>> dmsFileIdInformation,
+        IDmsApiClient dmsApiClient)
+    {
+        if (string.IsNullOrEmpty(fileId))
+        {
+            return null;
+        }
+
+        if (string.IsNullOrEmpty(fileUrl))
+        {
+            throw new Exception("DMS file path is null - shouldn't happen");
+        }
+
+        if (!Guid.TryParse(fileId, out var fileIdGuid))
+        {
+            // File id is not a guid
+            return new DmsFileIdInformation
+            {
+                Status = "ERROR - File id is not a valid guid",
+                StatusDateUtc = DateTime.UtcNow
+            };
+        }
+        
+        var beforeRecordList = dmsFileIdInformation.GetValueOrDefault(fileIdGuid);
+
+        var outputDmsFileIdInformation = new DmsFileIdInformation
+        {
+            FileId = fileIdGuid,
+            DmsFilePath = fileUrl,
+            ProcessRunId = -1,
+            StatusDateUtc = DateTime.UtcNow
+        };
+
+        if (beforeRecordList == null)
+        {
+            outputDmsFileIdInformation.Status = "FirstSeen";
+            
+            await dmsApiClient.AddDmsFileIdInformationAsync(outputDmsFileIdInformation);
+            dmsFileIdInformation.TryAdd(outputDmsFileIdInformation.FileId, [outputDmsFileIdInformation]);
+        }
+        else
+        {
+            var lastRecord = beforeRecordList
+                .OrderByDescending(r => r.StatusDateUtc)
+                .First();
+
+            var noChange = lastRecord.DmsFilePath == fileUrl;
+
+            if (noChange)
+            {
+                return lastRecord;
+            }
+            
+            var lastRecordFilenameOnly = lastRecord.DmsFilePath![(lastRecord.DmsFilePath!.LastIndexOf('/') + 1)..];
+            var filenameOnly = fileUrl[(fileUrl.LastIndexOf('/') + 1)..];
+            
+            var isFilenameSame = lastRecordFilenameOnly == filenameOnly;
+            outputDmsFileIdInformation.Status = isFilenameSame ? "Moved" : "Renamed";
+
+            await dmsApiClient.AddDmsFileIdInformationAsync(outputDmsFileIdInformation);
+            dmsFileIdInformation[outputDmsFileIdInformation.FileId].Add(outputDmsFileIdInformation);
+        }
+
+        return outputDmsFileIdInformation;
+    }
+    
     /// <summary>
     /// Checks for NALD data issues and creates appropriate result record if issues are found
     /// </summary>
