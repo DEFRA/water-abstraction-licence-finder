@@ -29,7 +29,7 @@ public class LicenceFileFinder : ILicenceFileFinder
         { "SignatureDate", "Latest issued signature date" },
         { "NaldId", "NALD AABL_ID" },
         { "NaldIssueNo", "NALD Issue_No" },
-        { "NaldIncrementNo", "NALD Issue_No" },        
+        { "NaldIncrementNo", "NALD Increment_No" },        
         { "DateOfIssue", "Scrapped Date of Issue" },
         { "DOISignatureDateMatch", "Latest issued signature date = Scraped Date of Issue" },
         { "IncludedInVersionMatch", "Included in VersionMatch process" },
