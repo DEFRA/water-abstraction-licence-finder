@@ -871,8 +871,8 @@ public class LicenceFileProcessor : ILicenceFileProcessor
                 };
 
                 // Special handling for PermitNumber column - format as number if it's numeric
-                if ((headerName.Equals("NALDID", StringComparison.OrdinalIgnoreCase)
-                    || headerName.Equals("NALDIssueNo", StringComparison.OrdinalIgnoreCase)) && 
+                if ((headerName.Equals("NaldId", StringComparison.OrdinalIgnoreCase)
+                    || headerName.Equals("NaldIssueNo", StringComparison.OrdinalIgnoreCase)) && 
                     long.TryParse(cellValue, out long numericValue))
                 {
                     cell.DataType = CellValues.Number;

@@ -56,14 +56,14 @@ public class FileReadExtractServiceTests
     public void ReadNALDExtractFiles_WithValidData_ShouldReturnNALDRecordsWithCleanedPermitNumbers()
     {
         // Arrange
-        var rawRecords = new List<NaldReportExtract>
+        var rawRecords = new List<NaldSimpleRecord>
         {
             new() { LicNo = "1/23/45", Region = "Test Region" }
         };
 
         _mockFileProcessor.Setup(p => p.FindFilesByPattern("NALD_Extract"))
             .Returns(new List<string> { "NALD_Extract_test.xlsx" });
-        _mockFileProcessor.Setup(p => p.ExtractExcel<List<NaldReportExtract>>("NALD_Extract_test.xlsx", It.IsAny<Dictionary<string, List<string>>>(), It.IsAny<List<string>>()))
+        _mockFileProcessor.Setup(p => p.ExtractExcel<List<NaldSimpleRecord>>("NALD_Extract_test.xlsx", It.IsAny<Dictionary<string, List<string>>>(), It.IsAny<List<string>>()))
             .Returns(rawRecords);
 
         // Act
@@ -160,24 +160,6 @@ public class FileReadExtractServiceTests
         _mockFileProcessor.Verify(p => p.FindFilesByPattern("Previous_Iteration_Matches"), Times.Once);
     }
 
-    [Fact]
-    public void ReadNALDMetadataFile_WithNoFiles_ShouldReturnEmptyList()
-    {
-        // Arrange
-        _mockFileProcessor.Setup(p => p.FindFilesByPattern("NALD_Metadata"))
-            .Returns(new List<string>());
-        _mockFileProcessor.Setup(p => p.FindFilesByPattern("NALD_Metadata_Reference"))
-            .Returns(new List<string>());
-
-        // Act
-        var result = _fileReadExtractService.GetNaldAbsLicencesAndVersions(true);
-
-        // Assert
-        result.Should().BeEmpty();
-        _mockFileProcessor.Verify(p => p.FindFilesByPattern("NALD_Metadata"), Times.Once);
-        _mockFileProcessor.Verify(p => p.FindFilesByPattern("NALD_Metadata_Reference"), Times.Once);
-    }
-
     [Theory]
     [InlineData("6/33/03/*G/0038", "633303G0038")]
     [InlineData("1/23/45", "12345")]
@@ -189,14 +171,14 @@ public class FileReadExtractServiceTests
     {
         // This test verifies the behavior through ReadNALDExtractFiles since CleanPermitNumber is private
         // Arrange
-        var rawRecords = new List<NaldReportExtract>
+        var rawRecords = new List<NaldSimpleRecord>
         {
             new() { LicNo = input, Region = "Test Region" }
         };
 
         _mockFileProcessor.Setup(p => p.FindFilesByPattern("NALD_Extract"))
             .Returns(new List<string> { "NALD_Extract_test.xlsx" });
-        _mockFileProcessor.Setup(p => p.ExtractExcel<List<NaldReportExtract>>("NALD_Extract_test.xlsx", It.IsAny<Dictionary<string, List<string>>>(), It.IsAny<List<string>>()))
+        _mockFileProcessor.Setup(p => p.ExtractExcel<List<NaldSimpleRecord>>("NALD_Extract_test.xlsx", It.IsAny<Dictionary<string, List<string>>>(), It.IsAny<List<string>>()))
             .Returns(rawRecords);
 
         // Act

@@ -3,7 +3,7 @@ namespace WA.DMS.LicenceFinder.Core.Models;
 /// <summary>
 /// Represents NALD (National Abstraction Licensing Database) extract data that can be extracted from CSV files.
 /// </summary>
-public class NaldReportExtract
+public class NaldSimpleRecord
 {
     /// <summary>
     /// License number

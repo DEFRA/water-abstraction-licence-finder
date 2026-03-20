@@ -14,9 +14,9 @@ public class FileNamePatternMatchRule : BaseRuleWithPriorityMatching
 
     protected override string GetRuleBaseName() => "Found In Non-Primary Folder";
 
-    protected override IEnumerable<DmsExtract> GetMatchingRecords(NaldReportExtract naldReportRecord, DmsLookupIndexes dmsLookups)
+    protected override IEnumerable<DmsExtract> GetMatchingRecords(NaldSimpleRecord naldSimpleReportRecord, DmsLookupIndexes dmsLookups)
     {
-        var permitNo = naldReportRecord.PermitNo;
+        var permitNo = naldSimpleReportRecord.PermitNo;
         
         if (dmsLookups.ByPermitNumber.TryGetValue(permitNo, out var matches))
         {

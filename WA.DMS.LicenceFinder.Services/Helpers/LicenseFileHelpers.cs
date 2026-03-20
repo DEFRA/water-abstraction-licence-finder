@@ -68,6 +68,53 @@ public static class LicenseFileHelpers
         return string.Empty;
     }
     
+    /// <summary>
+    /// Converts date strings in formats like "27Dec2017" or "27 December2017" to "dd/mm/yyyy" format.
+    /// If conversion fails, returns the original string unchanged.
+    /// </summary>
+    /// <param name="inputDateString">The date string to convert</param>
+    /// <returns>Formatted date string in "dd/mm/yyyy" format or original string if conversion fails</returns>
+    public static DateTime? ConvertDateToStandardFormatReturnDate(string? inputDateString)
+    {
+        if (string.IsNullOrWhiteSpace(inputDateString))
+        {
+            return null;
+        }
+
+        var dateString = DateFormatConsistent(inputDateString);
+        
+        // Try to parse various date formats
+        string[] formats = {
+            "ddMMMyyyy",        // 27Dec2017
+            "dd MMM yyyy",      // 27 Dec 2017
+            "dd MMMM yyyy",     // 27 December 2017
+            "ddMMMMyyyy",       // 27December2017
+            "dd/MM/yyyy",       // Already in target format
+            "MM/dd/yyyy",       // US format
+            "yyyy-MM-dd",       // ISO format
+            "dd-MM-yyyy"        // Alternative format
+        };
+        
+        foreach (var format in formats)
+        {
+            if (DateTime.TryParseExact(dateString!.Trim(), format, 
+                    System.Globalization.CultureInfo.InvariantCulture, 
+                    System.Globalization.DateTimeStyles.None, out DateTime result))
+            {
+                return result;
+            }
+        }
+        
+        // If none of the specific formats work, try general parsing
+        if (DateTime.TryParse(dateString, out DateTime generalResult))
+        {
+            return generalResult;
+        }
+        
+        // If all parsing attempts fail, return the original string
+        return null;
+    }
+    
     private static void ReplaceIfContains(string input, string match, string replaceWith, out string output)
     {
         output = input;

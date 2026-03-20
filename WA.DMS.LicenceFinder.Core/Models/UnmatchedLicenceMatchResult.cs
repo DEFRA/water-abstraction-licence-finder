@@ -53,18 +53,22 @@ public class UnmatchedLicenceMatchResult
     /// <summary>
     /// NALD ID
     /// </summary>
-    public int NALDID { get; set; }
+    public int NaldId { get; set; }
     
-
     /// <summary>
     /// NALD Issue No
     /// </summary>
-    public int NALDIssueNo { get; set; }
+    public int NaldIssueNo { get; set; }
+    
+    /// <summary>
+    /// NALD Incrment No
+    /// </summary>
+    public int? NaldIncrementNo { get; set; }
 
     /// <summary>
     /// File identified as a licence
     /// </summary>
-    public bool NALDDataQualityIssue { get; set; }
+    public bool NaldDataQualityIssue { get; set; }
 
     /// <summary>
     /// Number of licences identified for permit number
@@ -80,4 +84,19 @@ public class UnmatchedLicenceMatchResult
     /// File Id
     /// </summary>   
     public string FileId { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// File Id status
+    /// </summary>   
+    public string? FileIdStatus { get; set; }
+
+    /// <summary>
+    /// File Id status change date
+    /// </summary>
+    public string? FileIdStatusChangeDate { get; set; }
+    
+    /// <summary>
+    /// Is water company
+    /// </summary>
+    public bool? IsWaterCompany { get; set; }
 }

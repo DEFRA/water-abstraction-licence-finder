@@ -1,14 +1,14 @@
 namespace WA.DMS.LicenceFinder.Core.Models;
 
 /// <summary>
-/// Represents NALD (National Abstraction Licensing Database) metadata extract data that can be extracted from CSV files.
+/// Represents NALD (National Abstraction Licensing Database) metadata extract data that can be pulled from API.
 /// </summary>
-public class NaldMetadataExtract
+public class NaldLicenceVersion
 {
     /// <summary>
     /// License number(AABL_ID)
     /// </summary>
-    public string LicNo { get; set; } = string.Empty;
+    public string LicenceNumber { get; set; } = string.Empty;
     
     /// <summary>
     /// NALD Identifier(AABL_ID)
@@ -21,6 +21,11 @@ public class NaldMetadataExtract
     public string IssueNo { get; set; } = string.Empty;
     
     /// <summary>
+    /// NALD Issue Number(Issue_No)
+    /// </summary>
+    public int? IncrementNo { get; set; }
+    
+    /// <summary>
     /// Abbreviation Type(AABV_TYPE)
     /// </summary>
     public string? AabvType { get; set; } = string.Empty;
@@ -28,10 +33,15 @@ public class NaldMetadataExtract
     /// <summary>
     /// Signature Date(LIC_SIG_DATE)
     /// </summary>
-    public string? SignatureDate { get; set; } = string.Empty;
+    public DateTime? SignatureDate { get; set; }
     
     /// <summary>
     /// Region
     /// </summary>
     public string Region { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// 
+    /// </summary>
+    public string? ArepEiucCode { get; set; }
 }

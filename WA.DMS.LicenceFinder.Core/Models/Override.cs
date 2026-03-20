@@ -19,5 +19,14 @@ public class Override
     /// NALD Issue Number
     /// </summary>
     public string IssueNo { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// NALD Increment Number
+    /// </summary>
+    public int? IncrementNo { get; set; }
+    
+    /// <summary>
+    /// 
+    /// </summary>
     public string FileId { get; set; } = string.Empty;
 }

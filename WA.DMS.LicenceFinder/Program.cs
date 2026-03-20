@@ -74,7 +74,7 @@ using (var scope = host.Services.CreateScope())
         var jpFileVersionResults = readExtractService.ReadFileVersionResultsFile();
         
         // NALD data from the API
-        var (naldRecords, naldAbsLicencesAndVersions) = await naldDataTask;
+        var (naldRecordsToProcess, naldAbsLicencesAndVersions) = await naldDataTask;
         
         // DMS file id data from the API
         var dmsFileIdInformation = await dmsFileIdInformationTask;
@@ -87,7 +87,7 @@ using (var scope = host.Services.CreateScope())
             dmsChangeAuditOverrides,
             dmsFileIdInformation,
             dmsApiClient,
-            naldRecords,
+            naldRecordsToProcess,
             naldAbsLicencesAndVersions,
             wradiDoiScrapeResults,
             wradiTemplateScrapeResults,
@@ -163,7 +163,7 @@ static async Task<ConcurrentDictionary<Guid, List<DmsFileIdInformation>>>
     return dmsFileIdInformationDict;
 }
 
-static async Task<(List<NaldReportExtract> NaldRecords, Dictionary<string, List<NaldMetadataExtract>> NaldData)>
+static async Task<(List<NaldSimpleRecord> NaldSimpleRecords, Dictionary<string, List<NaldLicenceVersion>> NaldData)>
     GetNaldDataAsync(string apiBaseUrl)
 {
     var naldApiClient = new NaldApiClient(apiBaseUrl);
@@ -173,8 +173,8 @@ static async Task<(List<NaldReportExtract> NaldRecords, Dictionary<string, List<
     var naldApiData = await naldApiClient.GetNaldDataAsync(null);
     var naldApiStatusData = await naldApiStatusDataTask;
     
-    var naldRecords = new List<NaldReportExtract>();
-    var naldData = new Dictionary<string, List<NaldMetadataExtract>>();
+    var naldSimpleRecords = new List<NaldSimpleRecord>();
+    var naldData = new Dictionary<string, List<NaldLicenceVersion>>();
     var naldVersionsDict = new Dictionary<string, List<NaldLicenceVersionDataLine>>();
 
     if (naldApiData.AbstractionLicenceVersions == null || naldApiData.AbstractionLicenceVersions.Count == 0)
@@ -217,14 +217,16 @@ static async Task<(List<NaldReportExtract> NaldRecords, Dictionary<string, List<
             foreach (var version in licenceVersions)
             {
                 naldData[licenceNumberWithoutSeperators].Add(
-                    new NaldMetadataExtract
+                    new NaldLicenceVersion
                     {
                         AablId = version.AablId?.ToString(),
                         AabvType = version.AabvType,
                         IssueNo = version.IssueNo.ToString(),
-                        LicNo = licenceNumberWithoutSeperators,
+                        IncrementNo = version.IncrNo,
+                        LicenceNumber = licence.LicenceNo,
                         Region = licence.FgacRegionCode.ToString(),
-                        SignatureDate = version.LicSigDate
+                        SignatureDate = version.LicSigDate,
+                        ArepEiucCode = licence.ArepEiucCode
                     });
             }
         }
@@ -236,17 +238,17 @@ static async Task<(List<NaldReportExtract> NaldRecords, Dictionary<string, List<
             continue;
         }
         
-        var naldReportExtract = new NaldReportExtract
+        var naldSimpleRecord = new NaldSimpleRecord
         {
             LicNo = licence.LicenceNo!,
             PermitNo = licenceNumberWithoutSeperators,
             Region = GetRegionName(licence.FgacRegionCode)
         };
         
-        naldRecords.Add(naldReportExtract);
+        naldSimpleRecords.Add(naldSimpleRecord);
     }
     
-    return (naldRecords, naldData);
+    return (naldSimpleRecords, naldData);
 }
 
 static string GetRegionName(int regionCode)

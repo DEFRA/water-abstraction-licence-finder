@@ -68,13 +68,17 @@ public class LicenceMatchResult
     /// <summary>
     /// NALD ID
     /// </summary>
-    public int NALDID { get; set; }
+    public int NaldId { get; set; }
     
-
     /// <summary>
     /// NALD Issue No
     /// </summary>
-    public int NALDIssueNo { get; set; }
+    public int NaldIssueNo { get; set; }
+    
+    /// <summary>
+    /// NALD Increment No
+    /// </summary>
+    public int? NaldIncrementNo { get; set; }
     
     /// <summary>
     /// Primary Template
@@ -94,7 +98,7 @@ public class LicenceMatchResult
     /// <summary>
     /// If DOI matches signature date
     /// </summary>
-    public bool DOISignatureDateMatch{ get; set; }
+    public bool DoiSignatureDateMatch{ get; set; }
     
     /// <summary>
     /// If licence is handled in version match
@@ -135,4 +139,9 @@ public class LicenceMatchResult
     /// File Id status change date
     /// </summary>
     public string? FileIdStatusChangeDate { get; set; }
+    
+    /// <summary>
+    /// Is water company
+    /// </summary>
+    public bool? IsWaterCompany { get; set; }
 }

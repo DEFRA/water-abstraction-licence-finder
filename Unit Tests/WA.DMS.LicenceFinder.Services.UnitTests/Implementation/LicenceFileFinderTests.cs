@@ -88,7 +88,7 @@ public class LicenceFileFinderTests
             }
         };
 
-        var naldRecords = new List<NaldReportExtract>
+        var naldRecords = new List<NaldSimpleRecord>
         {
             new() { LicNo = "1/23/45", Region = "Test Region" }
         };
@@ -97,7 +97,7 @@ public class LicenceFileFinderTests
         _mockReadExtract.Setup(r => r.GetNaldReportRecords()).Returns(naldRecords);
         _mockReadExtract.Setup(r => r.ReadChangeAuditFiles()).Returns(new List<ChangeAudit>());
         _mockReadExtract.Setup(r => r.GetLicenceFinderPreviousIterationResults(It.IsAny<string>(), It.IsAny<string?>())).Returns(new List<LicenceMatchResult>());
-        _mockReadExtract.Setup(r => r.GetNaldAbsLicencesAndVersions(It.IsAny<bool>())).Returns(new Dictionary<string, List<NaldMetadataExtract>>());
+        //_mockReadExtract.Setup(r => r.GetNaldAbsLicencesAndVersions(It.IsAny<bool>())).Returns(new Dictionary<string, List<NaldLicenceVersion>>());
         _mockReadExtract.Setup(r => r.GetWradiDoiScrapeResults()).Returns(new List<FileReaderExtract>());
         _mockReadExtract.Setup(r => r.GetDmsManualFixes()).Returns(new Dictionary<string, DmsManualFixExtract>());
         
@@ -166,16 +166,16 @@ public class LicenceFileFinderTests
             }
         };
 
-        var naldRecords = new List<NaldReportExtract>
+        var naldRecords = new List<NaldSimpleRecord>
         {
             new() { LicNo = "1/23/45", Region = "Test Region" }
         };
 
         SetupMocksForBasicTest(dmsRecords, naldRecords);
 
-        _mockRule1.Setup(r => r.FindMatch(It.IsAny<NaldReportExtract>(), It.IsAny<DmsLookupIndexes>()))
+        _mockRule1.Setup(r => r.FindMatch(It.IsAny<NaldSimpleRecord>(), It.IsAny<DmsLookupIndexes>()))
             .Returns((DmsExtract?)null);
-        _mockRule2.Setup(r => r.FindMatch(It.IsAny<NaldReportExtract>(), It.IsAny<DmsLookupIndexes>()))
+        _mockRule2.Setup(r => r.FindMatch(It.IsAny<NaldSimpleRecord>(), It.IsAny<DmsLookupIndexes>()))
             .Returns((DmsExtract?)null);
 
         var finder = new LicenceFileFinder(_mockFileProcessor.Object, _matchingRules);
@@ -228,14 +228,14 @@ public class LicenceFileFinderTests
             }
         };
         
-        var naldRecords = new List<NaldReportExtract>
+        var naldRecords = new List<NaldSimpleRecord>
         {
             new() { LicNo = "1/23/45", Region = "Test Region" }
         };
 
         SetupMocksForBasicTest(dmsRecords, naldRecords);
 
-        _mockRule1.Setup(r => r.FindMatch(It.IsAny<NaldReportExtract>(), It.IsAny<DmsLookupIndexes>()))
+        _mockRule1.Setup(r => r.FindMatch(It.IsAny<NaldSimpleRecord>(), It.IsAny<DmsLookupIndexes>()))
             .Returns(dmsRecord);
         _mockRule1.Setup(r => r.HasDuplicates).Returns(false);
 
@@ -268,13 +268,13 @@ public class LicenceFileFinderTests
             It.IsAny<Dictionary<string, string>>()), Times.Once);
     }
 
-    private void SetupMocksForBasicTest(Dictionary<string, List<DmsExtract>> dmsRecords, List<NaldReportExtract> naldRecords)
+    private void SetupMocksForBasicTest(Dictionary<string, List<DmsExtract>> dmsRecords, List<NaldSimpleRecord> naldRecords)
     {
         _mockReadExtract.Setup(r => r.GetDmsExtracts(It.IsAny<bool>())).Returns(dmsRecords);
         _mockReadExtract.Setup(r => r.GetNaldReportRecords()).Returns(naldRecords);
         _mockReadExtract.Setup(r => r.ReadChangeAuditFiles()).Returns(new List<ChangeAudit>());
         _mockReadExtract.Setup(r => r.GetLicenceFinderPreviousIterationResults(It.IsAny<string>(), It.IsAny<string?>())).Returns(new List<LicenceMatchResult>());
-        _mockReadExtract.Setup(r => r.GetNaldAbsLicencesAndVersions(It.IsAny<bool>())).Returns(new Dictionary<string, List<NaldMetadataExtract>>());
+        //_mockReadExtract.Setup(r => r.GetNaldAbsLicencesAndVersions(It.IsAny<bool>())).Returns(new Dictionary<string, List<NaldLicenceVersion>>());
         _mockReadExtract.Setup(r => r.GetWradiDoiScrapeResults()).Returns(new List<FileReaderExtract>());
         _mockReadExtract.Setup(r => r.GetDmsManualFixes()).Returns(new Dictionary<string, DmsManualFixExtract>());
 

@@ -23,8 +23,9 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
         { "LicenseNumber", ["License Number" ]},
         { "DocumentDate", ["Document Date" ]},
         { "SignatureDate", ["Latest issued signature date" ]},
-        { "NALDID", ["NALD AABL_ID" ]},
-        { "NALDIssueNo", ["NALD Issue No.", "NALD Issue_No" ]},
+        { "NaldID", ["NALD AABL_ID" ]},
+        { "NaldIssueNo", ["NALD Issue No.", "NALD Issue_No" ]},
+        { "NaldIncrementNo", ["NALD Increment No.", "NALD Increment_No" ]},
         { "DateOfIssue", ["Scrapped Date of Issue" ]},
         { "MatchFound", ["Match Found" ]},
         { "FoundMultipleMatches", ["Found Multiple Matches" ]},
@@ -222,14 +223,14 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
     /// Reads all files starting with 'NALD_Extract' from the resources folder
     /// </summary>
     /// <returns>Combined list of NALD extract records from all matching files</returns>
-    public List<NaldReportExtract> GetNaldReportRecords()
+    public List<NaldSimpleRecord> GetNaldReportRecords()
     {
-        var allNaldRecords = new List<NaldReportExtract>();
+        var allNaldRecords = new List<NaldSimpleRecord>();
         var naldFiles = _fileProcessor.FindFilesByPattern("NALD_Extract");
 
         foreach (var fileName in naldFiles)
         {
-            var records = _fileProcessor.ExtractExcel<List<NaldReportExtract>>(
+            var records = _fileProcessor.ExtractExcel<List<NaldSimpleRecord>>(
                 fileName,
                 new Dictionary<string, List<string>>
                 {
@@ -301,13 +302,15 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
                 "NALDIssue_No",
                 "SignaturedateDQissuefoundinVersionMatchprocess",
                 "NaldIssue", // This isn't in the Excel - it gets set later on,
+                "NaldIncrementNo", // This isn't in the Excel - it gets set later on
                 "FileId", // This isn't in the Excel - it gets set later on
                 "PreviousIterationRuleUsed",
                 "DifferenceInRuleusedInIterations",
                 "PreviousIterationFileUrl",
                 "DifferenceInFileUrlInIterations",
                 "FileIdStatus", // TODO remove this when we have a new file that contains it - 2025-03-19
-                "FileIdStatusChangeDate" // TODO remove this when we have a new file that contains it - 2025-03-19
+                "FileIdStatusChangeDate", // TODO remove this when we have a new file that contains it - 2025-03-19
+                "IsWaterCompany" // TODO remove this when we have a new file that contains it - 2025-03-20
             ]);
         
         allPreviousIterationResults.AddRange(records);
@@ -320,162 +323,6 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
         return allPreviousIterationResults
             .Where(r => r.Region == region)
             .ToList();
-    }
-
-    /// <summary>
-    /// Reads NALD Metadata from the resources folder
-    /// </summary>
-    /// <returns>NALD Metadata results grouped by LicNo with maximum SignatureDate</returns>
-    public Dictionary<string, List<NaldMetadataExtract>> GetNaldAbsLicencesAndVersions(bool getLatest)
-    {
-        var naldMetadataResults = new List<NaldMetadataExtract>();
-        var naldMetadataReferenceResults = new List<NaldMetadataReferenceExtract>();
-        
-        var naldMetadata = _fileProcessor
-            .FindFilesByPattern("NALD_Metadata.")
-            .FirstOrDefault();
-
-        if (naldMetadata != null)
-        {
-            var records = _fileProcessor.ExtractCsv<List<NaldMetadataExtract>>(
-                naldMetadata,
-                new Dictionary<string, List<string>>
-                {
-                    {"AABL_ID", ["AablId"]},
-                    {"AABV_TYPE", ["AabvType"]},
-                    {"ISSUE_NO", ["IssueNo"]},
-                    {"LIC_SIG_DATE", ["SignatureDate"]},
-                    {"FGAC_REGION_CODE", ["Region"]}
-                },
-                [
-                    "INCR_NO",
-                    "EFF_ST_DATE",
-                    "STATUS",
-                    "RETURNS_REQ",
-                    "CHARGEABLE",
-                    "ASRC_CODE",
-                    "ACON_APAR_ID",
-                    "ACON_AADD_ID",
-                    "ALTY_CODE",
-                    "ACCL_CODE",
-                    "MULTIPLE_LH",
-                    "APP_NO",
-                    "LIC_DOC_FLAG",
-                    "EFF_END_DATE",
-                    "EXPIRY_DATE1",
-                    "WA_ALTY_CODE",
-                    "VOL_CONV",
-                    "WRT_CODE",
-                    "DEREG_CODE",
-                    "SOURCE_CODE",
-                    "BATCH_RUN_DATE",
-                    "LicNo" // In destination model - not in Excel
-                ]);
-            
-            naldMetadataResults.AddRange(records);
-        }
-
-        var naldMetadataReference = _fileProcessor
-            .FindFilesByPattern("NALD_Metadata_Reference")
-            .FirstOrDefault();
-        
-        if (naldMetadataReference != null)
-        {
-            var records = _fileProcessor.ExtractCsv<List<NaldMetadataReferenceExtract>>(
-                naldMetadataReference,
-                new Dictionary<string, List<string>>
-                {
-                    {"ID", ["AablId"]},
-                    {"LIC_NO", ["LicNo"]},
-                    {"FGAC_REGION_CODE", ["Region"]}
-                },
-                [
-                    "AREP_SUC_CODE",
-                    "AREP_AREA_CODE",
-                    "SUSP_FROM_BILLING",
-                    "AREP_LEAP_CODE",
-                    "EXPIRY_DATE",
-                    "ORIG_EFF_DATE",
-                    "ORIG_SIG_DATE",
-                    "ORIG_APP_NO",
-                    "ORIG_LIC_NO",
-                    "NOTES",
-                    "REV_DATE",
-                    "LAPSED_DATE",
-                    "SUSP_FROM_RETURNS",
-                    "AREP_CAMS_CODE",
-                    "X_REG_IND",
-                    "PREV_LIC_NO",
-                    "FOLL_LIC_NO",
-                    "AREP_EIUC_CODE",
-                    "FGAC_REGION_CODE",
-                    "SOURCE_CODE",
-                    "BATCH_RUN_DATE"
-                ]);
-            
-            naldMetadataReferenceResults.AddRange(records);
-        }
-
-        // Create lookup from AablId to LicNo (allowing multiple AablId values for same license)
-        var aablIdToLicNoLookup = naldMetadataReferenceResults
-            .ToLookup(r => (r.AablId, r.Region), r => r.LicNo);
-
-        // Update LicNo in metadata results by looking up AablId in reference data
-        foreach (var metadataRecord in naldMetadataResults)
-        {
-            var licNos = aablIdToLicNoLookup[(metadataRecord.AablId ?? "0", metadataRecord.Region)];
-            var licNo = licNos.FirstOrDefault();
-            
-            if (!string.IsNullOrEmpty(licNo))
-            {
-                metadataRecord.LicNo = CleanPermitNumber(licNo);
-            }
-        }
-
-        // Filter by AabvType = "Issue" first, then group by LicNo
-        var groupedRecords = naldMetadataResults
-            .Where(r => r.AabvType?.Equals("Issue", StringComparison.OrdinalIgnoreCase) == true
-                && !string.IsNullOrWhiteSpace(r.LicNo))
-            .GroupBy(r => r.LicNo)
-            .ToList();
-
-        var returnDict = new Dictionary<string, List<NaldMetadataExtract>>(StringComparer.OrdinalIgnoreCase);
-        
-        if (getLatest)
-        {
-            // Select record with maximum SignatureDate from each group
-            var filteredRecords = groupedRecords
-                .Select(group => group
-                    .OrderByDescending(r => SafeParseDateTime(r.SignatureDate))
-                    .First())
-                .ToList();
-
-            foreach (var record in filteredRecords)
-            {
-                returnDict.Add(record.LicNo, [record]);
-            }
-            
-            return returnDict;
-        }
-
-        // Return all records from all groups, ordered by SignatureDate within each group
-        var allRecords = groupedRecords
-            .SelectMany(group =>
-                group.OrderByDescending(r => SafeParseDateTime(r.SignatureDate)))
-            .ToList();
-        
-        foreach (var record in allRecords)
-        {
-            if (!returnDict.TryGetValue(record.LicNo, out var list))
-            {
-                list = [];
-                returnDict.Add(record.LicNo, list);
-            }
-
-            list.Add(record);
-        }
-        
-        return returnDict;
     }
 
     /// <summary>
@@ -529,8 +376,13 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
                     { "File URL", ["FileUrl"]},
                     { "NALD Issue_No", ["IssueNo"]},
                     { "NALD Issue No.", ["IssueNo"]},
+                    { "NALD Increment_No", ["IncrementNo"]},
+                    { "NALD Increment No.", ["IncrementNo"]},
                     { "File ID", ["FileId"]}
-                });
+                },
+                [
+                    "IncrementNo"
+                ]);
 
             allOverrides.AddRange(records);
         }
@@ -630,13 +482,16 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
             [
                 "Confidence",
                 "LicenceNumber",
-                "LastModified" // In destination model - not in Excel
+                "LastModified", // In destination model - not in Excel,
+                "DateOfIssueDate" // Internal only field
             ]);
 
             // Update DateOfIssue format for all records
             foreach (var record in records)
             {
-                record.DateOfIssue = LicenseFileHelpers.ConvertDateToStandardFormat(record.DateOfIssue);
+                #pragma warning disable CS0612 // Type or member is obsolete
+                record.DateOfIssueDate = LicenseFileHelpers.ConvertDateToStandardFormatReturnDate(record.DateOfIssue);
+                #pragma warning restore CS0612 // Type or member is obsolete
             }
 
             allFileIdentificationRecords.AddRange(records);
@@ -663,13 +518,17 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
                     {"PermitNumber", ["PermitNumber"]},
                     {"FileUrl", ["FileUrl"]},
                     {"NaldIssueNumber", ["NaldIssueNumber"]},
+                    {"NaldIncrementNumber", ["NaldIncrementNumber"]},
                     {"SignatureDate", ["SignatureDate"]},
                     {"DateOfIssue", ["DateOfIssue"]},
                     {"NumberOfPages", ["NumberOfPages"]},
                     {"TemplateType", ["PrimaryTemplateType"]},
                     {"Template", ["SecondaryTemplateType"]}
                 },
-                ["Header"]);
+                [
+                    "Header",
+                    "NaldIncrementNumber"
+                ]);
 
             // Update DateOfIssue format for all records
             foreach (var record in records)
@@ -698,18 +557,24 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
             var records = _fileProcessor.ExtractExcel<List<UnmatchedLicenceMatchResult>>(
                 fileName, 
                 new Dictionary<string, List<string>>
-            {
-                {"Permit Number", ["PermitNumber"]},
-                {"File URL", ["FileUrl"]},
-                {"Signature Date Of File Evaluated", ["SignatureDateOfFileEvaluated"]},
-                {"File Determined As Licence", ["FileDeterminedAsLicence"]},
-                {"Date of Issue Of Evaluated File", ["DateOfIssueOfEvaluatedFile"]},
-                {"NALD Issue No.", ["NALDIssueNo"]},
-                {"Is NALD Data Quality Issue", ["NALDDataQualityIssue"]}
-            }, [
-                "LicenceCount",
-                "FileId" // Not in the Excel file
-            ]);
+                {
+                    {"Permit Number", ["PermitNumber"]},
+                    {"File URL", ["FileUrl"]},
+                    {"Signature Date Of File Evaluated", ["SignatureDateOfFileEvaluated"]},
+                    {"File Determined As Licence", ["FileDeterminedAsLicence"]},
+                    {"Date of Issue Of Evaluated File", ["DateOfIssueOfEvaluatedFile"]},
+                    {"NALD Issue No.", ["NALDIssueNo"]},
+                    {"NALD Increment No.", ["NALDIncrementNo"]},
+                    {"Is NALD Data Quality Issue", ["NALDDataQualityIssue"]}
+                }, 
+                [
+                    "LicenceCount",
+                    "FileId", // Not in the Excel file
+                    "FileIdStatus", // TODO remove this when we have a new file that contains it - 2025-03-19
+                    "FileIdStatusChangeDate", // TODO remove this when we have a new file that contains it - 2025-03-19
+                    "IsWaterCompany", // TODO remove this when we have a new file that contains it - 2025-03-20
+                    "NaldIncrementNo" // TODO remove this when we have a new file that contains it - 2025-03-20
+                ]);
 
             // Update DateOfIssue format for all records
             foreach (var record in records)
@@ -783,26 +648,6 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
 
         // Remove forward slashes and asterisks
         return licNo.Replace("/", "").Replace("*", "");
-    }
-
-    /// <summary>
-    /// Safely converts a string to DateTime, returning DateTime.MinValue if conversion fails
-    /// </summary>
-    /// <param name="dateString">The date string to convert</param>
-    /// <returns>Parsed DateTime or DateTime.MinValue if parsing fails</returns>
-    private static DateTime SafeParseDateTime(string? dateString)
-    {
-        if (string.IsNullOrWhiteSpace(dateString))
-        {
-            return DateTime.MinValue;
-        }
-
-        if (DateTime.TryParse(dateString, out DateTime result))
-        {
-            return result;
-        }
-
-        return DateTime.MinValue;
     }
 
     /// <summary>

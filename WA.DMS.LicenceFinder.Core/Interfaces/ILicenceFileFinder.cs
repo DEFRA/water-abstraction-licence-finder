@@ -18,8 +18,8 @@ public interface ILicenceFileFinder
         List<Override> dmsChangeAuditOverrides,
         ConcurrentDictionary<Guid, List<DmsFileIdInformation>> dmsFileIdInformation,
         IDmsApiClient dmsApiClient,
-        List<NaldReportExtract> naldReportRecords,
-        Dictionary<string, List<NaldMetadataExtract>> naldLicencesAndVersions,
+        List<NaldSimpleRecord> naldRecordsToProcess,
+        Dictionary<string, List<NaldLicenceVersion>> naldData,
         List<FileReaderExtract> wradiDoiScrapeResults,
         List<TemplateFinderResult> wradiTemplateScrapeResults,
         List<FileIdentificationExtract> wradiFileTypeScrapeResults,
@@ -30,7 +30,7 @@ public interface ILicenceFileFinder
     /// Finds all potential duplicates in DMS extract
     /// </summary>
     /// <returns>The path to the generated Excel results file</returns>
-    string FindDuplicateLicenseFiles(List<DmsExtract> dmsRecords, List<NaldReportExtract> naldRecords);
+    string FindDuplicateLicenseFiles(List<DmsExtract> dmsRecords, List<NaldSimpleRecord> naldRecords);
 
     string BuildFileTemplateIdentificationExtract(
         List<LicenceMatchResult> previousIterationMatches,

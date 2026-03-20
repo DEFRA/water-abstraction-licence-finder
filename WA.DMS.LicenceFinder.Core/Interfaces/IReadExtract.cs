@@ -17,19 +17,13 @@ public interface IReadExtract
     /// Reads all files starting with 'NALD_Extract' from the resources folder
     /// </summary>
     /// <returns>Combined list of NALD extract records from all matching files</returns>
-    List<NaldReportExtract> GetNaldReportRecords();
+    List<NaldSimpleRecord> GetNaldReportRecords();
 
     /// <summary>
     /// Reads Previous Iteration Matches from the resources folder
     /// </summary>
     /// <returns>Previous iteration match results</returns>
     List<LicenceMatchResult> GetLicenceFinderPreviousIterationResults(string filename, string? region);
-
-    /// <summary>
-    /// Reads NALD Metadata from the resources folder
-    /// </summary>
-    /// <returns>NALD Metadata results grouped by LicNo with maximum SignatureDate</returns>
-    public Dictionary<string, List<NaldMetadataExtract>> GetNaldAbsLicencesAndVersions(bool getLatest);
 
     /// <summary>
     /// Reads File_Identification_Extract.csv file from the resources folder
