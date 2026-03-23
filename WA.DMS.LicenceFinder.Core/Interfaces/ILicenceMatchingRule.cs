@@ -25,8 +25,8 @@ public interface ILicenceMatchingRule
     /// <summary>
     /// Finds a matching DMS record using optimized lookup dictionaries
     /// </summary>
-    /// <param name="naldSimpleReportRecord">NALD record to find match for</param>
+    /// <param name="permitNumber"></param>
     /// <param name="dmsLookups">Pre-built lookup dictionaries for fast searching</param>
     /// <returns>Matching DMS record or null if no match found</returns>
-    DmsExtract? FindMatch(NaldSimpleRecord naldSimpleReportRecord, DmsLookupIndexes dmsLookups);
+    DmsExtract? FindMatch(string permitNumber, DmsLookupIndexes dmsLookups);
 }

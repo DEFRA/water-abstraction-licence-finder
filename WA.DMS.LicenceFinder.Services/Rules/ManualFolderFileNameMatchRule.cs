@@ -15,11 +15,11 @@ public class ManualFolderFileNameMatchRule : BaseRuleWithPriorityMatching
 
     protected override string GetRuleBaseName() => "Manual Folder Match Fix- In Non-Primary Folder";
 
-    protected override IEnumerable<DmsExtract> GetMatchingRecords(NaldSimpleRecord naldSimpleReportRecord, DmsLookupIndexes dmsLookups)
+    protected override List<DmsExtract> GetMatchingRecords(
+        string permitNumber,
+        DmsLookupIndexes dmsLookups)
     {
-        var permitNo = naldSimpleReportRecord.PermitNo;
-        
-        if (dmsLookups.ByManualFixPermitNumber.TryGetValue(permitNo, out var matches))
+        if (dmsLookups.ByManualFixPermitNumber.TryGetValue(permitNumber, out var matches))
         {
             return matches;
         }

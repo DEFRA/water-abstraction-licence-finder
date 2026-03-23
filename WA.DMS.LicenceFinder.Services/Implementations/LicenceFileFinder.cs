@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using DocumentFormat.OpenXml.Office2010.ExcelAc;
 using WA.DMS.LicenceFinder.Core.Interfaces;
 using WA.DMS.LicenceFinder.Core.Models;
 using WA.DMS.LicenceFinder.Services.Helpers;
@@ -10,7 +11,7 @@ namespace WA.DMS.LicenceFinder.Services.Implementations;
 public class LicenceFileFinder : ILicenceFileFinder
 {
     private readonly ILicenceFileProcessor _fileProcessor;
-    private readonly List<ILicenceMatchingRule> _matchingRules;
+    private readonly List<ILicenceMatchingRule> _rulesToMatch;
 
     /// <summary>
     /// Common header mapping for LicenseMatchResult - maps property names to Excel header names
@@ -47,7 +48,9 @@ public class LicenceFileFinder : ILicenceFileFinder
         { "DifferenceInFileUrlInIterations", "Difference In File URL In Iterations" },
         { "FileId", "File ID" },
         { "FileIdStatus", "File ID Status" },
-        { "FileIdStatusChangeDate", "File ID Status Change Date" }
+        { "FileIdStatusChangeDate", "File ID Status Change Date" },
+        { "IsWaterCompany", "Is Water Company" },
+        { "FolderNameAutoCorrect", "Folder Name Auto Correct" }
     };
     
     /// <summary>
@@ -77,20 +80,20 @@ public class LicenceFileFinder : ILicenceFileFinder
 
     public LicenceFileFinder(
         ILicenceFileProcessor fileProcessor,
-        IEnumerable<ILicenceMatchingRule> matchingRules)
+        IEnumerable<ILicenceMatchingRule> rulesToMatch)
     {
         _fileProcessor = fileProcessor ?? throw new ArgumentNullException(nameof(fileProcessor));
 
-        ArgumentNullException.ThrowIfNull(matchingRules);
+        ArgumentNullException.ThrowIfNull(rulesToMatch);
 
         // Sort by priority to ensure correct rule execution order
-        _matchingRules = matchingRules
+        _rulesToMatch = rulesToMatch
             .OrderBy(r => r.Priority)
             .ToList();
 
-        if (_matchingRules.Count == 0)
+        if (_rulesToMatch.Count == 0)
         {
-            throw new ArgumentException("At least one matching rule must be provided", nameof(matchingRules));
+            throw new ArgumentException("At least one rule must be provided", nameof(rulesToMatch));
         }
     }
 
@@ -708,9 +711,9 @@ public class LicenceFileFinder : ILicenceFileFinder
                 
                 var correspondingLicence = wradiMatchingLicenceOrAddendumFiles
                     .Where(f => f.FileType.Equals("Licence", StringComparison.OrdinalIgnoreCase) &&
-                                f.DateOfIssueDate != null &&
-                                DateTime.TryParse(recordWithDifferentDate.SignatureDate, out var signatureDate) &&
-                                f.DateOfIssueDate <= signatureDate)
+                        f.DateOfIssueDate != null &&
+                        DateTime.TryParse(recordWithDifferentDate.SignatureDate, out var signatureDate) &&
+                        f.DateOfIssueDate <= signatureDate)
                     .OrderByDescending(f => f.DateOfIssueDate!)
                     .FirstOrDefault();
 
@@ -1203,30 +1206,27 @@ public class LicenceFileFinder : ILicenceFileFinder
                 : null;
             
             // Check if permit number exists in overrides first
-            var dmsOverrideRecord = dmsChangeAuditOverrides.FirstOrDefault(ca => 
+            var overrideRecord = dmsChangeAuditOverrides.FirstOrDefault(ca => 
                 ca.PermitNumber.Equals(licenceMatchResult.PermitNumber, StringComparison.OrdinalIgnoreCase));
             
-            var dmsOverrideIssueNo = !string.IsNullOrWhiteSpace(dmsOverrideRecord?.IssueNo)
-                ? int.Parse(dmsOverrideRecord.IssueNo)
-                : 0;
-            
             var naldVersionIssueNo = int.Parse(naldLicenceVersionData?.IssueNo ?? "0");
-            
-            // Might not need these increment numbers here for overrides
-            /*var dmsOverrideIncrementNo = !string.IsNullOrWhiteSpace(dmsOverrideRecord?.IncrementNo)
-                ? int.Parse(dmsOverrideRecord.IncrementNo)
+            var overrideIssueNo = !string.IsNullOrWhiteSpace(overrideRecord?.IssueNo)
+                ? int.Parse(overrideRecord.IssueNo)
                 : 0;
             
-            var naldVersionIncrementNo = int.Parse(naldLicenceVersionData?.IncrementNo ?? "0");*/
+            var naldVersionIncrementNo = naldLicenceVersionData?.IncrementNo ?? 0;
+            var overrideIncrementNo = overrideRecord?.IncrementNo ?? 0;
             
-            if (dmsOverrideRecord != null && dmsOverrideIssueNo >= naldVersionIssueNo)
+            if (overrideRecord != null
+                && overrideIssueNo >= naldVersionIssueNo
+                && overrideIncrementNo > naldVersionIncrementNo)
             {
                 licenceMatchResult.ChangeAuditAction = "Override";
-                licenceMatchResult.FileUrl = dmsOverrideRecord.FileUrl;
-                licenceMatchResult.NaldIssueNo = string.IsNullOrWhiteSpace(dmsOverrideRecord.IssueNo)
+                licenceMatchResult.FileUrl = overrideRecord.FileUrl;
+                licenceMatchResult.NaldIssueNo = string.IsNullOrWhiteSpace(overrideRecord.IssueNo)
                     ? 0
-                    : int.Parse(dmsOverrideRecord.IssueNo);
-                licenceMatchResult.NaldIncrementNo = dmsOverrideRecord.IncrementNo;
+                    : int.Parse(overrideRecord.IssueNo);
+                licenceMatchResult.NaldIncrementNo = overrideRecord.IncrementNo;
             
                 licenceMatchResult.RuleUsed = "Override";
                 licenceMatchResult.Region = naldReportRecord.Region;
@@ -1250,10 +1250,10 @@ public class LicenceFileFinder : ILicenceFileFinder
                     ? templateResultOverride.NumberOfPages
                     : -1;
                 
-                licenceMatchResult.FileId = dmsOverrideRecord.FileId;
+                licenceMatchResult.FileId = overrideRecord.FileId;
                 var fileIdInfo = await RecordFileIdAsync(
-                    dmsOverrideRecord.FileId,
-                    dmsOverrideRecord.FileUrl,
+                    overrideRecord.FileId,
+                    overrideRecord.FileUrl,
                     dmsFileIdInformation,
                     dmsApiClient);
                     
@@ -1264,34 +1264,71 @@ public class LicenceFileFinder : ILicenceFileFinder
                 continue;
             }
 
-            if (dmsOverrideRecord != null)
+            if (overrideRecord != null)
             {
-                licenceMatchResult.ChangeAuditAction = "Override cancelled";
+                var becauseOfIncrement = true;
+                var reason = becauseOfIncrement ? "increment no increased" : "issue no increased";
+                
+                licenceMatchResult.ChangeAuditAction = $"Override cancelled ({reason})";
+            }
+
+            var permitNumberFormats = new List<(string PermitNumber, bool FolderNameAutoCorrect)>
+            {
+                (licenceMatchResult.PermitNumber, false)
+            };
+
+            var permitNumberToUseForDms = permitNumberFormats[0].PermitNumber;
+            
+            var isMidlands = naldReportRecord.Region == "Midlands";
+            var shouldDropTheInitialZero = permitNumberToUseForDms.StartsWith("032");
+
+            if (isMidlands && shouldDropTheInitialZero)
+            {
+                permitNumberFormats.Add((permitNumberToUseForDms[1..], true));
+            }
+
+            var folderFound = false;
+
+            foreach (var (permitNumber, folderNameAutoCorrected) in permitNumberFormats)
+            {
+                licenceMatchResult.FolderNameAutoCorrect = folderNameAutoCorrected;
+                
+                if (!dmsDictionaries.ByPermitNumber.ContainsKey(permitNumber)
+                    && !dmsDictionaries.ByManualFixPermitNumber.ContainsKey(permitNumber))
+                {
+                    continue;
+                }
+                
+                folderFound = true;
+                permitNumberToUseForDms = permitNumber;
+                
+                break;
             }
 
             var ruleUsed = "No Match";
-            
-            if (!dmsDictionaries.ByPermitNumber.ContainsKey(licenceMatchResult.PermitNumber) 
-                && !dmsDictionaries.ByManualFixPermitNumber.ContainsKey(licenceMatchResult.PermitNumber))
+
+            if (!folderFound)
             {
                 ruleUsed = "Not Applicable";
-                licenceMatchResult.FileUrl = "No Folder Found"; //...in DMS extracts with exact name
+                licenceMatchResult.FileUrl = "No Folder Found";
             }
             else
             {
                 DmsExtract? matchedDmsRecord = null;
                 
                 // Try each rule in priority order until a match is found
-                foreach (var matchingRule in _matchingRules)
+                foreach (var ruleToMatch in _rulesToMatch)
                 {
-                    matchedDmsRecord = matchingRule.FindMatch(naldReportRecord, dmsDictionaries);
+                    matchedDmsRecord = ruleToMatch.FindMatch(
+                        permitNumberToUseForDms,
+                        dmsDictionaries);
 
                     if (matchedDmsRecord == null)
                     {
                         continue;
                     }
                     
-                    ruleUsed = matchingRule.RuleName;
+                    ruleUsed = ruleToMatch.RuleName;
                     break;
                 }
 
@@ -1321,7 +1358,7 @@ public class LicenceFileFinder : ILicenceFileFinder
             }
 
             var matchingDoiScrapeResult = wradiDoiScrapeResults.FirstOrDefault(r =>
-                r.PermitNumber.Equals(licenceMatchResult.PermitNumber, StringComparison.OrdinalIgnoreCase));
+                r.PermitNumber.Equals(permitNumberToUseForDms, StringComparison.OrdinalIgnoreCase));
 
             var dateOfIssue = matchingDoiScrapeResult != null
                 ? LicenseFileHelpers.ConvertDateToStandardFormat(matchingDoiScrapeResult.DateOfIssue)
@@ -1337,7 +1374,7 @@ public class LicenceFileFinder : ILicenceFileFinder
             licenceMatchResult.DoiSignatureDateMatch = licenceMatchResult.SignatureDate == licenceMatchResult.DateOfIssue;
 
             var versionMatch = unmatchedVersionResults.FirstOrDefault(uvr =>
-                uvr.PermitNumber.Equals(licenceMatchResult.PermitNumber, StringComparison.OrdinalIgnoreCase));
+                uvr.PermitNumber.Equals(permitNumberToUseForDms, StringComparison.OrdinalIgnoreCase));
             
             licenceMatchResult.IncludedInVersionMatch = versionMatch != null;
             licenceMatchResult.SingleLicenceInVersionMatch = versionMatch?.FileDeterminedAsLicence;
@@ -1346,7 +1383,7 @@ public class LicenceFileFinder : ILicenceFileFinder
             licenceMatchResult.NaldIssue = versionMatch?.NaldDataQualityIssue;
             
             var wradiTemplateScrapeResult = wradiTemplateScrapeResults.FirstOrDefault(t => 
-                t.PermitNumber.Contains(licenceMatchResult.PermitNumber, StringComparison.OrdinalIgnoreCase) &&
+                t.PermitNumber.Contains(permitNumberToUseForDms, StringComparison.OrdinalIgnoreCase) &&
                 licenceMatchResult.FileUrl.Contains(t.FileName!, StringComparison.OrdinalIgnoreCase));
             
             licenceMatchResult.PrimaryTemplate = wradiTemplateScrapeResult != null

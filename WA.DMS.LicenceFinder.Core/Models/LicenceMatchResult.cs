@@ -144,4 +144,9 @@ public class LicenceMatchResult
     /// Is water company
     /// </summary>
     public bool? IsWaterCompany { get; set; }
+    
+    /// <summary>
+    /// Has folder name been autocorrected
+    /// </summary>
+    public bool? FolderNameAutoCorrect { get; set; }
 }

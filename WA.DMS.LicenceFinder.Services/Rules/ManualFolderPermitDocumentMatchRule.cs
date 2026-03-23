@@ -16,13 +16,15 @@ public class ManualFolderPermitDocumentMatchRule : BaseRuleWithPriorityMatching
 
     protected override string GetRuleBaseName() => "Manual Folder Match Fix - In Permit Documents Folder";
 
-    protected override IEnumerable<DmsExtract> GetMatchingRecords(NaldSimpleRecord naldSimpleReportRecord, DmsLookupIndexes dmsLookups)
+    protected override List<DmsExtract> GetMatchingRecords(
+        string permitNumber,
+        DmsLookupIndexes dmsLookups)
     {
-        var permitNo = naldSimpleReportRecord.PermitNo;
-        
-        if (dmsLookups.ByManualFixPermitNumber.TryGetValue(permitNo, out var matches))
+        if (dmsLookups.ByManualFixPermitNumber.TryGetValue(permitNumber, out var matches))
         {
-            return matches.Where(dms => RuleHelpers.IsInPermitDocumentsFolder(dms.FileUrl));
+            return matches
+                .Where(dms => RuleHelpers.IsInPermitDocumentsFolder(dms.FileUrl))
+                .ToList();
         }
         
         return [];

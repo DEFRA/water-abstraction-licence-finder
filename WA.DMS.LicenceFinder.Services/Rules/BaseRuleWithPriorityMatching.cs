@@ -26,23 +26,25 @@ public abstract class BaseRuleWithPriorityMatching : ILicenceMatchingRule
     /// <summary>
     /// Finds a matching DMS record based on priority matching logic
     /// </summary>
-    /// <param name="naldSimpleReportRecord">NALD record to find match for</param>
+    /// <param name="permitNumber"></param>
     /// <param name="dmsLookups">Pre-built lookup dictionaries for fast searching</param>
     /// <returns>Matching DMS record or null if no match found</returns>
-    public DmsExtract? FindMatch(NaldSimpleRecord naldSimpleReportRecord, DmsLookupIndexes dmsLookups)
+    public DmsExtract? FindMatch(
+        string? permitNumber,
+        DmsLookupIndexes dmsLookups)
     {
         // Reset state for new search
         _dynamicRuleName = null;
         _hasDuplicates = false;
 
         // Input validation
-        if (string.IsNullOrWhiteSpace(naldSimpleReportRecord.LicNo) || string.IsNullOrWhiteSpace(naldSimpleReportRecord.PermitNo))
+        if (string.IsNullOrWhiteSpace(permitNumber))
         {
             return null;
         }
 
         // Get matching records using the specific rule's logic
-        var matchingRecords = GetMatchingRecords(naldSimpleReportRecord, dmsLookups).ToList();
+        var matchingRecords = GetMatchingRecords(permitNumber, dmsLookups);
 
         if (!matchingRecords.Any())
         {
@@ -69,8 +71,10 @@ public abstract class BaseRuleWithPriorityMatching : ILicenceMatchingRule
     /// Gets the matching DMS records based on the specific rule's logic
     /// Each derived class implements its own matching strategy
     /// </summary>
-    /// <param name="naldSimpleReportRecord">NALD record to find matches for</param>
+    /// <param name="permitNumber"></param>
     /// <param name="dmsLookups">Pre-built lookup dictionaries for fast searching</param>
     /// <returns>Collection of matching DMS records</returns>
-    protected abstract IEnumerable<DmsExtract> GetMatchingRecords(NaldSimpleRecord naldSimpleReportRecord, DmsLookupIndexes dmsLookups);
+    protected abstract List<DmsExtract> GetMatchingRecords(
+        string permitNumber,
+        DmsLookupIndexes dmsLookups);
 }

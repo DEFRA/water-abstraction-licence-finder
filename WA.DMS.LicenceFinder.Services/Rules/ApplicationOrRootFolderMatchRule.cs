@@ -15,13 +15,15 @@ public class ApplicationOrRootFolderMatchRule : BaseRuleWithPriorityMatching
 
     protected override string GetRuleBaseName() => "Found In Application Or Root Folder";
 
-    protected override IEnumerable<DmsExtract> GetMatchingRecords(NaldSimpleRecord naldSimpleReportRecord, DmsLookupIndexes dmsLookups)
+    protected override List<DmsExtract> GetMatchingRecords(
+        string permitNumber,
+        DmsLookupIndexes dmsLookups)
     {
-        var permitNo = naldSimpleReportRecord.PermitNo;
-        
-        if (dmsLookups.ByPermitNumber.TryGetValue(permitNo, out var matches))
+        if (dmsLookups.ByPermitNumber.TryGetValue(permitNumber, out var matches))
         {
-            return matches.Where(dms => RuleHelpers.IsInApplicationAssociatedDocsFolder(dms.FileUrl));
+            return matches
+                .Where(dms => RuleHelpers.IsInApplicationAssociatedDocsFolder(dms.FileUrl))
+                .ToList();
         }
         
         return [];

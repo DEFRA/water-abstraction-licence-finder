@@ -310,7 +310,8 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
                 "DifferenceInFileUrlInIterations",
                 "FileIdStatus", // TODO remove this when we have a new file that contains it - 2025-03-19
                 "FileIdStatusChangeDate", // TODO remove this when we have a new file that contains it - 2025-03-19
-                "IsWaterCompany" // TODO remove this when we have a new file that contains it - 2025-03-20
+                "IsWaterCompany", // TODO remove this when we have a new file that contains it - 2025-03-20
+                "FolderNameAutoCorrect" // TODO remove this when we have a new file that contains it - 2025-03-23
             ]);
         
         allPreviousIterationResults.AddRange(records);

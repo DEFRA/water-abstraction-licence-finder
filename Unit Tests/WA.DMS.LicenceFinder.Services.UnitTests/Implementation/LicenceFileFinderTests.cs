@@ -173,9 +173,14 @@ public class LicenceFileFinderTests
 
         SetupMocksForBasicTest(dmsRecords, naldRecords);
 
-        _mockRule1.Setup(r => r.FindMatch(It.IsAny<NaldSimpleRecord>(), It.IsAny<DmsLookupIndexes>()))
+        _mockRule1.Setup(r => r.FindMatch(
+                It.IsAny<string>(),
+                It.IsAny<DmsLookupIndexes>()))
             .Returns((DmsExtract?)null);
-        _mockRule2.Setup(r => r.FindMatch(It.IsAny<NaldSimpleRecord>(), It.IsAny<DmsLookupIndexes>()))
+        
+        _mockRule2.Setup(r => r.FindMatch(
+                It.IsAny<string>(),
+                It.IsAny<DmsLookupIndexes>()))
             .Returns((DmsExtract?)null);
 
         var finder = new LicenceFileFinder(_mockFileProcessor.Object, _matchingRules);
@@ -235,8 +240,11 @@ public class LicenceFileFinderTests
 
         SetupMocksForBasicTest(dmsRecords, naldRecords);
 
-        _mockRule1.Setup(r => r.FindMatch(It.IsAny<NaldSimpleRecord>(), It.IsAny<DmsLookupIndexes>()))
+        _mockRule1.Setup(r => r.FindMatch(
+                It.IsAny<string>(),
+                It.IsAny<DmsLookupIndexes>()))
             .Returns(dmsRecord);
+        
         _mockRule1.Setup(r => r.HasDuplicates).Returns(false);
 
         var finder = new LicenceFileFinder(_mockFileProcessor.Object, _matchingRules);
