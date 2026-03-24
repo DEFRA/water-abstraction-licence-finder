@@ -57,9 +57,6 @@
     <None Remove="Resources\File_Reader_Extract.csv" />
     <None Remove="Resources\File_Identification_Extract.csv" />
     <None Remove="Resources\Overrides.xlsx" />
-    <Content Include="Resources\Overrides.xlsx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <None Remove="Resources\LicenceVersionResults.xlsx" />
     <Content Include="Resources\LicenceVersionResults.xlsx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -117,9 +114,6 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <None Remove="Resources\ANGLIAN_Overrides.xlsx" />
-    <Content Include="Resources\ANGLIAN_Overrides.xlsx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <None Remove="Resources\Anglia_File_Reader_Extract-20260225.csv" />
     <None Remove="Resources\Anglia_File_Reader_Extract-220260226.csv" />
     <Content Include="Resources\Anglia_File_Reader_Extract-220260226.csv">
@@ -127,6 +121,14 @@
     </Content>
     <None Remove="Resources\March_Consolidated.xlsx" />
     <Content Include="Resources\March_Consolidated.xlsx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <None Remove="Resources\Overrides_20260324.xlsx" />
+    <Content Include="Resources\Overrides_20260324.xlsx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <None Remove="Resources\ANGLIAN_Overrides_20260324.xlsx" />
+    <Content Include="Resources\ANGLIAN_Overrides_20260324.xlsx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

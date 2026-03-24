@@ -1219,7 +1219,7 @@ public class LicenceFileFinder : ILicenceFileFinder
             
             if (overrideRecord != null
                 && overrideIssueNo >= naldVersionIssueNo
-                && overrideIncrementNo > naldVersionIncrementNo)
+                && overrideIncrementNo >= naldVersionIncrementNo)
             {
                 licenceMatchResult.ChangeAuditAction = "Override";
                 licenceMatchResult.FileUrl = overrideRecord.FileUrl;
@@ -1264,10 +1264,11 @@ public class LicenceFileFinder : ILicenceFileFinder
                 continue;
             }
 
+            // Override record exists but was cancelled
             if (overrideRecord != null)
             {
-                var becauseOfIncrement = true;
-                var reason = becauseOfIncrement ? "increment no increased" : "issue no increased";
+                var becauseOfIncrement = overrideIssueNo >= naldVersionIssueNo;
+                var reason = becauseOfIncrement ? "Increment No increased" : "Issue No increased";
                 
                 licenceMatchResult.ChangeAuditAction = $"Override cancelled ({reason})";
             }
