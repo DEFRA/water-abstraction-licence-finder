@@ -1,9 +1,9 @@
 namespace WA.DMS.LicenceFinder.Services.Helpers;
 
 /// <summary>
-/// Helper class containing utility methods for license file processing
+/// Helper class containing utility methods for licence file processing
 /// </summary>
-public static class LicenseFileHelpers
+public static class LicenceFileHelpers
 {
     /// <summary>
     /// Cleans a license number by removing forward slashes and asterisks
@@ -18,7 +18,7 @@ public static class LicenseFileHelpers
         }
 
         // Remove forward slashes and asterisks
-        return licNo.Replace("/", "").Replace("*", "");
+        return licNo.Replace("/", string.Empty).Replace("*", string.Empty);
     }
 
     /// <summary>

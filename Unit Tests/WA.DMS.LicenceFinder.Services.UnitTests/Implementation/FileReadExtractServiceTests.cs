@@ -72,7 +72,7 @@ public class FileReadExtractServiceTests
         // Assert
         result.Should().HaveCount(1);
         result[0].LicNo.Should().Be("1/23/45");
-        result[0].PermitNo.Should().Be("12345"); // Cleaned version without slashes
+        result[0].DmsPermitNo.Should().Be("12345"); // Cleaned version without slashes
         _mockFileProcessor.Verify(p => p.FindFilesByPattern("NALD_Extract"), Times.Once);
     }
 
@@ -187,7 +187,7 @@ public class FileReadExtractServiceTests
         // Assert
         if (result.Any())
         {
-            result[0].PermitNo.Should().Be(expected);
+            result[0].DmsPermitNo.Should().Be(expected);
         }
     }
 

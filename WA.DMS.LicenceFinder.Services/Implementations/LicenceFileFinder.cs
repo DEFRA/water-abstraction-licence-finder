@@ -1000,7 +1000,7 @@ public class LicenceFileFinder : ILicenceFileFinder
             SignatureDate = p.SignatureDate,
             NaldIssueNumber = p.NaldIssueNo.ToString(),
             NaldIncrementNumber = p.NaldIncrementNo,
-            FileName = LicenseFileHelpers.ExtractFilenameFromUrl(p.FileUrl),
+            FileName = LicenceFileHelpers.ExtractFilenameFromUrl(p.FileUrl),
         }));
         
         results.AddRange(previousFileVersionMatches.Select(p => new TemplateFinderResult
@@ -1011,7 +1011,7 @@ public class LicenceFileFinder : ILicenceFileFinder
             SignatureDate = p.SignatureDateOfFileEvaluated,
             NaldIssueNumber = p.NaldIssueNo.ToString(),
             NaldIncrementNumber = p.NaldIncrementNo,
-            FileName = LicenseFileHelpers.ExtractFilenameFromUrl(p.FileUrl),
+            FileName = LicenceFileHelpers.ExtractFilenameFromUrl(p.FileUrl),
         }));
         
         results.AddRange(overrides.Select(p => new TemplateFinderResult
@@ -1020,7 +1020,7 @@ public class LicenceFileFinder : ILicenceFileFinder
             FileUrl = p.FileUrl,
             NaldIssueNumber = p.IssueNo,
             NaldIncrementNumber = p.IncrementNo,
-            FileName = LicenseFileHelpers.ExtractFilenameFromUrl(p.FileUrl),
+            FileName = LicenceFileHelpers.ExtractFilenameFromUrl(p.FileUrl),
         }));
         
         // Generate output Excel file with appropriate header mapping for TemplateFinderResult
@@ -1061,7 +1061,7 @@ public class LicenceFileFinder : ILicenceFileFinder
 
         // Read NALD records to get region information
         var regionLookup = naldRecords.ToDictionary(
-            n => n.PermitNo,
+            n => n.DmsPermitNo,
             n => n.Region,
             StringComparer.OrdinalIgnoreCase);
 
@@ -1191,7 +1191,7 @@ public class LicenceFileFinder : ILicenceFileFinder
             var licenceMatchResult = new LicenceMatchResult
             {
                 LicenseNumber = naldReportRecord.LicNo,
-                PermitNumber = LicenseFileHelpers.CleanPermitNumber(naldReportRecord.LicNo)
+                PermitNumber = LicenceFileHelpers.CleanPermitNumber(naldReportRecord.LicNo)
             };
             
             var naldLicenceVersionData = naldData.TryGetValue(
@@ -1362,7 +1362,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                 r.PermitNumber.Equals(permitNumberToUseForDms, StringComparison.OrdinalIgnoreCase));
 
             var dateOfIssue = matchingDoiScrapeResult != null
-                ? LicenseFileHelpers.ConvertDateToStandardFormat(matchingDoiScrapeResult.DateOfIssue)
+                ? LicenceFileHelpers.ConvertDateToStandardFormat(matchingDoiScrapeResult.DateOfIssue)
                 : "Scrape Not Attempted";
             
             licenceMatchResult.RuleUsed = ruleUsed;

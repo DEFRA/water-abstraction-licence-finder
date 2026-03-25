@@ -195,12 +195,8 @@ static async Task<(List<NaldSimpleRecord> NaldSimpleRecords, Dictionary<string, 
     
     foreach (var licence in naldApiData.AbstractionLicences!)
     {
-        var licenceNumberWithoutSeperators = licence.LicenceNo!
-            .Replace("/", string.Empty)
-            .Replace(" ", string.Empty)
-            .Replace(".", string.Empty)
-            .Replace("*", string.Empty);                
-
+        var licenceNumberWithoutSeperators = LicenceFileHelpers.CleanPermitNumber(licence.LicenceNo!);
+        
         if (!naldData.ContainsKey(licenceNumberWithoutSeperators))
         {
             naldData.Add(licenceNumberWithoutSeperators, []);
@@ -223,7 +219,7 @@ static async Task<(List<NaldSimpleRecord> NaldSimpleRecords, Dictionary<string, 
                         AabvType = version.AabvType,
                         IssueNo = version.IssueNo.ToString(),
                         IncrementNo = version.IncrNo,
-                        LicenceNumber = licence.LicenceNo,
+                        LicenceNumber = licence.LicenceNo!,
                         Region = licence.FgacRegionCode.ToString(),
                         SignatureDate = version.LicSigDate,
                         ArepEiucCode = licence.ArepEiucCode
@@ -241,7 +237,7 @@ static async Task<(List<NaldSimpleRecord> NaldSimpleRecords, Dictionary<string, 
         var naldSimpleRecord = new NaldSimpleRecord
         {
             LicNo = licence.LicenceNo!,
-            PermitNo = licenceNumberWithoutSeperators,
+            DmsPermitNo = licenceNumberWithoutSeperators,
             Region = GetRegionName(licence.FgacRegionCode)
         };
         

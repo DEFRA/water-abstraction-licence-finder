@@ -264,7 +264,7 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
             // Enrich records with cleaned permit numbers
             foreach (var record in records)
             {
-                record.PermitNo = CleanPermitNumber(record.LicNo);
+                record.DmsPermitNo = CleanPermitNumber(record.LicNo);
             }
 
             allNaldRecords.AddRange(records);
@@ -491,7 +491,7 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
             foreach (var record in records)
             {
                 #pragma warning disable CS0612 // Type or member is obsolete
-                record.DateOfIssueDate = LicenseFileHelpers.ConvertDateToStandardFormatReturnDate(record.DateOfIssue);
+                record.DateOfIssueDate = LicenceFileHelpers.ConvertDateToStandardFormatReturnDate(record.DateOfIssue);
                 #pragma warning restore CS0612 // Type or member is obsolete
             }
 
@@ -534,7 +534,7 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
             // Update DateOfIssue format for all records
             foreach (var record in records)
             {
-                record.DateOfIssue = LicenseFileHelpers.ConvertDateToStandardFormat(record.DateOfIssue);
+                record.DateOfIssue = LicenceFileHelpers.ConvertDateToStandardFormat(record.DateOfIssue);
                 record.FileName = RemovePermitNumberPrefixFromFilename(record.FileName);
             }
 
@@ -580,7 +580,7 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
             // Update DateOfIssue format for all records
             foreach (var record in records)
             {
-                record.DateOfIssueOfEvaluatedFile = LicenseFileHelpers.ConvertDateToStandardFormat(record.DateOfIssueOfEvaluatedFile);
+                record.DateOfIssueOfEvaluatedFile = LicenceFileHelpers.ConvertDateToStandardFormat(record.DateOfIssueOfEvaluatedFile);
             }
 
             allFileversionResults.AddRange(records);

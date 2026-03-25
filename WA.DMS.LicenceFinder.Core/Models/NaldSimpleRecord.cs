@@ -13,7 +13,7 @@ public class NaldSimpleRecord
     /// <summary>
     /// Permit number
     /// </summary>
-    public string PermitNo { get; set; } = string.Empty;
+    public string DmsPermitNo { get; set; } = string.Empty;
 
     /// <summary>
     /// Cross registration indicator
