@@ -136,10 +136,8 @@
     <Content Include="Resources\Consolidated_2026_04_13.xlsx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="Resources\Previous_Iteration_Matches.xlsx">
+    <None Remove="Resources\Previous_Iteration_Matches_20260325_122219.xlsx" />
+    <Content Include="Resources\Previous_Iteration_Matches_20260325_122219.xlsx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
