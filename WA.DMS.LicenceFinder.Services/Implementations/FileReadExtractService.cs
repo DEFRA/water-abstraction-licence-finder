@@ -375,6 +375,7 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
                 {
                     { "Permit Number", ["PermitNumber"]},
                     { "File URL", ["FileUrl"]},
+                    { "DefinitiveURL", ["FileUrl"]},
                     { "NALD Issue_No", ["IssueNo"]},
                     { "NALD Issue No.", ["IssueNo"]},
                     { "NALD Increment_No", ["IncrementNo"]},
