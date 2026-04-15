@@ -11,4 +11,8 @@ public class DownloadInfo
     public string LibraryAndFilePath { get; set; } = string.Empty;
     public string OriginalFileName { get; set; } = string.Empty;
     public string DestinationFileName__1 { get; set; } = string.Empty;
+    
+    public string? FileId { get; set; } = string.Empty;
+    
+    public string? Reason { get; set; } = string.Empty;
 }

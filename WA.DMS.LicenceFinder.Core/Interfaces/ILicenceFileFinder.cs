@@ -30,23 +30,28 @@ public interface ILicenceFileFinder
     /// Finds all potential duplicates in DMS extract
     /// </summary>
     /// <returns>The path to the generated Excel results file</returns>
-    string FindDuplicateLicenseFiles(List<DmsExtract> dmsRecords, List<NaldSimpleRecord> naldRecords);
+    string FindDuplicateLicenceFiles(List<DmsExtract> dmsRecords, List<NaldSimpleRecord> naldRecords);
 
     string BuildFileTemplateIdentificationExtract(
         List<LicenceMatchResult> previousIterationMatches,
         List<Override> overrides,
         List<UnmatchedLicenceMatchResult> fileVersionResults);
 
-    string BuildDownloadInfoExcel(
+    string FindLicenceFilesToDownload_SpreadsheetCompareOnly(
         List<DmsExtract> dmsRecords,
-        List<FileInventory> allFilesInventory,
         List<LicenceMatchResult> previousIterationMatches,
         List<LicenceMatchResult> currentIterationMatches,
-        string region = "");
+        string? region = null);
 
-    string BuildVersionDownloadInfoExcel(
+    string FindAllFilesToDownload(
         List<DmsExtract> dmsRecords,
         List<LicenceMatchResult> currentIterationMatches,
-        List<FileInventory> allFilesInventory,
-        string filterRegion = "");
+        List<FileInventory> wradiAllLocalFilesInventory,
+        string? filterRegion = null);
+    
+    string FindLicenceFilesToDownload(
+        List<DmsExtract> dmsRecords,
+        List<LicenceMatchResult> currentIterationMatches,
+        List<FileInventory> wradiAllLocalFilesInventory,
+        string? filterRegion = null);
 }

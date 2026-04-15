@@ -48,15 +48,13 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
     };
 
     /// <summary>
-    /// Reads all files starting with 'Site' or 'Consolidated' from the resources folder
+    /// Reads all files starting with 'Consolidated' from the resources folder
     /// </summary>
     /// <returns>Combined list of DMS extract records from all matching files</returns>
-    public Dictionary<string, List<DmsExtract>> GetDmsExtracts(bool consolidated)
+    public Dictionary<string, List<DmsExtract>> GetDmsExtracts()
     {
         var allDmsRecords = new Dictionary<string, List<DmsExtract>>(StringComparer.OrdinalIgnoreCase);
-        
-        var filenames = consolidated ? _fileProcessor.FindFilesByPattern("Consolidated")
-            : _fileProcessor.FindFilesByPattern("Site");
+        var filenames = _fileProcessor.FindFilesByPattern("Consolidated");
 
         foreach (var filename in filenames)
         {
@@ -594,7 +592,7 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
     /// Reads all files starting with 'WaterPdfs_Inventory' from the resources folder
     /// </summary>
     /// <returns>Combined list of file inventory records from all matching files</returns>
-    public List<FileInventory> ReadWaterPdfsInventoryFiles()
+    public List<FileInventory> GetWradiPdfsInventoryFiles()
     {
         var allFileInventoryRecords = new List<FileInventory>();
         var inventoryFiles = _fileProcessor.FindFilesByPattern("WaterPdfs_Inventory");
@@ -604,13 +602,27 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
             var records = _fileProcessor.ExtractCsv<List<FileInventory>>(
                 fileName,
                 new Dictionary<string, List<string>>
-            {
-                {"FileSizeBytes", ["FileSize"]}
-            },["FolderName"]);
+                {
+                    {"FileSizeBytes", ["FileSize"]}
+                },
+                ["FolderName"]);
 
             allFileInventoryRecords.AddRange(records);
         }
 
+        foreach (var record in allFileInventoryRecords)
+        {
+            if (record.PermitNumber == string.Empty)
+            {
+                record.PermitNumber = null;
+            }
+            
+            if (record.FileId == string.Empty)
+            {
+                record.FileId = null;
+            }
+        }
+        
         return allFileInventoryRecords;
     }
 

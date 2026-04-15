@@ -27,6 +27,7 @@ using (var scope = host.Services.CreateScope())
     var licenceFinderLastIterationMatchesFilename = "Previous_Iteration_Matches_20260325_122219.xlsx";
     var optionalRegionFilter = (string?)null;//"Anglian Region";
     var regionName = "Anglian Region";
+    string? restrictToRegionName = "North East";
     var apiBaseUrl = "http://localhost:8080";
     
     try
@@ -37,8 +38,8 @@ using (var scope = host.Services.CreateScope())
         var dmsApiClient = new DmsApiClient(apiBaseUrl);
         var dmsFileIdInformationTask = GetDmsFileIdInformationAsync(dmsApiClient);
         
-        // DMS data file export (e.g. Site_N.xlsx or Consolidated.xlsx - based on flag said - source is a report JP runs)
-        var dmsRecords = readExtractService.GetDmsExtracts(true);
+        // DMS data file export ~240k records (e.g. Consolidated.xlsx - based on flag said - source is a report JP runs)
+        var dmsRecords = readExtractService.GetDmsExtracts();
 
         // DMS manual fixes by our team/SamD (e.g. Manual_Fix_Extract.xlsx) - The 'Sam D' file
         var dmsManualFixes = readExtractService.GetDmsManualFixes();
@@ -67,8 +68,8 @@ using (var scope = host.Services.CreateScope())
         var licenceFinderCurrentIterationMatches =
             readExtractService.GetLicenceFinderPreviousIterationResults("Current_Iteration_Matches", optionalRegionFilter);
         
-        // All files inventory (e.g. WaterPdfs_Inventory.csv)
-        var allFilesInventory = readExtractService.ReadWaterPdfsInventoryFiles();
+        // WRADI tool all local files inventory (e.g. WaterPdfs_Inventory.csv)
+        var wradiAllLocalFilesInventory = readExtractService.GetWradiPdfsInventoryFiles();
         
         // File version results (e.g. LicenceVersionResults.xlsx) - Comes from JP
         var jpFileVersionResults = readExtractService.ReadFileVersionResultsFile();
@@ -78,61 +79,90 @@ using (var scope = host.Services.CreateScope())
         
         // DMS file id data from the API
         var dmsFileIdInformation = await dmsFileIdInformationTask;
-        
-        // FLOW - Licence file finder (produces LicenceMatchResults_DATE.xlsx
-        Console.WriteLine("Starting licence file processing...");
-        var licenceMatchResultsFilePath = await licenceFileFinder.FindLicenceFilesAsync(
-            dmsRecords,
-            dmsManualFixes,
-            dmsChangeAuditOverrides,
-            dmsFileIdInformation,
-            dmsApiClient,
-            naldRecordsToProcess,
-            naldAbsLicencesAndVersions,
-            wradiDoiScrapeResults,
-            wradiTemplateScrapeResults,
-            wradiFileTypeScrapeResults,
-            licenceFinderLastIterationMatches,
-            regionName);
-        Console.WriteLine($"Licence processing completed. Results saved to: {licenceMatchResultsFilePath}");
-        
-        // FLOW - Build Version Download Info Excel
-        /*Console.WriteLine("Started building version download info excel...");
-        
-        var regionName = "North West Region";
-        var result = licenceFileFinder.BuildVersionDownloadInfoExcel(
-            dmsRecords,
-            currentIterationMatches,
-            allFilesInventory,
-            regionName);
-        
-        Console.WriteLine($"File saved to {result}");*/
 
-        // FLOW - Build Download Info Excel
-        /*Console.WriteLine("Started building download info excel...");
+        //var flowToRun = "FindLicenceFilesAsync";
+        //var flowToRun = "FindAllFilesToDownload";
+        var flowToRun = "FindLicenceFilesToDownload";
         
-        var regionName = "North West Region";
-        var fileName = licenceFileFinder.BuildDownloadInfoExcel(
-            dmsRecords,
-            allFilesInventory,
-            previousIterationMatches,
-            currentIterationMatches,
-            regionName);
-        
-        Console.WriteLine($"File saved to {fileName}");*/
+        switch (flowToRun)
+        {
+            case "FindLicenceFilesAsync":
+                // FLOW - Licence file finder (produces LicenceMatchResults_DATE.xlsx
+                Console.WriteLine("Starting licence file processing...");
+                
+                var licenceMatchResultsFilePath = await licenceFileFinder.FindLicenceFilesAsync(
+                    dmsRecords,
+                    dmsManualFixes,
+                    dmsChangeAuditOverrides,
+                    dmsFileIdInformation,
+                    dmsApiClient,
+                    naldRecordsToProcess,
+                    naldAbsLicencesAndVersions,
+                    wradiDoiScrapeResults,
+                    wradiTemplateScrapeResults,
+                    wradiFileTypeScrapeResults,
+                    licenceFinderLastIterationMatches,
+                    regionName);
+                
+                Console.WriteLine($"Licence processing completed. Results saved to: {licenceMatchResultsFilePath}");
+                break;
+            case "FindAllFilesToDownload":
+                 // FLOW - Find all files to download (i.e. all files, not just licences) (previously referred to as Build Version Download Info Excel)
+                Console.WriteLine("Started finding all files to downloadl...");
+                
+                var result = licenceFileFinder.FindAllFilesToDownload(
+                    DmsDictionaryToList(dmsRecords),
+                    licenceFinderCurrentIterationMatches,
+                    wradiAllLocalFilesInventory,
+                    restrictToRegionName);
+                
+                Console.WriteLine($"File saved to {result}");
+                break;
+            case "FindLicenceFilesToDownload":
+                // FLOW - Find licence files to download (previously referred to as 'Build Download Info Excel')
+                Console.WriteLine("Started finding licence files to download...");
+                
+                var path = licenceFileFinder.FindLicenceFilesToDownload(
+                    DmsDictionaryToList(dmsRecords),
+                    licenceFinderCurrentIterationMatches,
+                    wradiAllLocalFilesInventory,
+                    restrictToRegionName);
+                
+                Console.WriteLine($"File saved to {path}");
+                break;            
+            case "FindLicenceFilesToDownload_SpreadsheetCompareOnly":
+                // FLOW - Find licence files to download (spreadsheet compare only - old way)
+                Console.WriteLine("Started finding licence files to download...");
 
-        // FLOW - Build file template identification extract
-        /*Console.WriteLine("Started building file template identification extract...");
-        var resultFilePath = licenceFileFinder.BuildFileTemplateIdentificationExtract(
-            licenceFinderLastIterationMatches,
-            dmsChangeAuditOverrides,
-            jpFileVersionResults);
-        
-        Console.WriteLine($"File saved to {resultFilePath}");*/
+                var fileName = licenceFileFinder.FindLicenceFilesToDownload_SpreadsheetCompareOnly(
+                    DmsDictionaryToList(dmsRecords),
+                    licenceFinderLastIterationMatches,
+                    licenceFinderCurrentIterationMatches,
+                    restrictToRegionName);
 
-        // FLOW - Find duplicate licence files (NOT USED ANYMORE - we read the files and check the hashes)
-        /*var duplicateFilePath = licenceFileFinder.FindDuplicateLicenseFiles(dmsRecords, naldRecords);
-        Console.WriteLine($"Results saved to: {duplicateFilePath}");*/
+                Console.WriteLine($"File saved to {fileName}");
+                break;
+            case "BuildFileTemplateIdentificationExtract":
+                // FLOW - Build file template identification extract
+                Console.WriteLine("Started building file template identification extract...");
+                var resultFilePath = licenceFileFinder.BuildFileTemplateIdentificationExtract(
+                    licenceFinderLastIterationMatches,
+                    dmsChangeAuditOverrides,
+                    jpFileVersionResults);
+
+                Console.WriteLine($"File saved to {resultFilePath}");
+                break;
+            case "FindDuplicateLicenceFiles":
+                // FLOW - Find duplicate licence files (NOT USED ANYMORE - we read the files and check the hashes)
+                var duplicateFilePath = licenceFileFinder.FindDuplicateLicenceFiles(
+                    DmsDictionaryToList(dmsRecords),
+                    naldRecordsToProcess);
+
+                Console.WriteLine($"Results saved to: {duplicateFilePath}");
+                break;
+            default:
+                throw new Exception($"Unknown flow: {flowToRun}");
+        }
     }
     catch (Exception ex)
     {
@@ -142,6 +172,13 @@ using (var scope = host.Services.CreateScope())
 
 await host.StopAsync();
 return;
+
+static List<DmsExtract> DmsDictionaryToList(Dictionary<string, List<DmsExtract>> dict)
+{
+    return dict
+        .SelectMany(kvp => kvp.Value)
+        .ToList();
+}
 
 static async Task<ConcurrentDictionary<Guid, List<DmsFileIdInformation>>>
     GetDmsFileIdInformationAsync(DmsApiClient dmsApiClient)

@@ -93,7 +93,7 @@ public class LicenceFileFinderTests
             new() { LicNo = "1/23/45", Region = "Test Region" }
         };
 
-        _mockReadExtract.Setup(r => r.GetDmsExtracts(It.IsAny<bool>())).Returns(dmsRecords);
+        _mockReadExtract.Setup(r => r.GetDmsExtracts()).Returns(dmsRecords);
         _mockReadExtract.Setup(r => r.GetNaldReportRecords()).Returns(naldRecords);
         _mockReadExtract.Setup(r => r.ReadChangeAuditFiles()).Returns(new List<ChangeAudit>());
         _mockReadExtract.Setup(r => r.GetLicenceFinderPreviousIterationResults(It.IsAny<string>(), It.IsAny<string?>())).Returns(new List<LicenceMatchResult>());
@@ -130,7 +130,7 @@ public class LicenceFileFinderTests
     public async Task FindLicenseFile_WhenExceptionOccurs_ShouldThrowInvalidOperationException()
     {
         // Arrange
-        _mockReadExtract.Setup(r => r.GetDmsExtracts(It.IsAny<bool>()))
+        _mockReadExtract.Setup(r => r.GetDmsExtracts())
             .Throws(new Exception("Test exception"));
 
         var finder = new LicenceFileFinder(_mockFileProcessor.Object, _matchingRules);
@@ -278,7 +278,7 @@ public class LicenceFileFinderTests
 
     private void SetupMocksForBasicTest(Dictionary<string, List<DmsExtract>> dmsRecords, List<NaldSimpleRecord> naldRecords)
     {
-        _mockReadExtract.Setup(r => r.GetDmsExtracts(It.IsAny<bool>())).Returns(dmsRecords);
+        _mockReadExtract.Setup(r => r.GetDmsExtracts()).Returns(dmsRecords);
         _mockReadExtract.Setup(r => r.GetNaldReportRecords()).Returns(naldRecords);
         _mockReadExtract.Setup(r => r.ReadChangeAuditFiles()).Returns(new List<ChangeAudit>());
         _mockReadExtract.Setup(r => r.GetLicenceFinderPreviousIterationResults(It.IsAny<string>(), It.IsAny<string?>())).Returns(new List<LicenceMatchResult>());

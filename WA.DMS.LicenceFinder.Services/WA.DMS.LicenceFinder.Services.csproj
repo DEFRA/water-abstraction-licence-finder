@@ -98,13 +98,7 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <None Remove="Resources\Current_Iteration_Matches.xlsx" />
-    <Content Include="Resources\Current_Iteration_Matches.xlsx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <None Remove="Resources\WaterPdfs_Inventory_20260213.csv" />
-    <Content Include="Resources\WaterPdfs_Inventory_20260213.csv">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <None Remove="Resources\File_Identification_Extract_NW.csv" />
     <Content Include="Resources\File_Identification_Extract_NW.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -138,6 +132,14 @@
     </Content>
     <None Remove="Resources\Previous_Iteration_Matches_20260325_122219.xlsx" />
     <Content Include="Resources\Previous_Iteration_Matches_20260325_122219.xlsx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <None Remove="Resources\WaterPdfs_Inventory_20260415.csv" />
+    <Content Include="Resources\WaterPdfs_Inventory_20260415.csv">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <None Remove="Resources\Current_Iteration_Matches_LicenceMatchResults_20260414_111430.xlsx" />
+    <Content Include="Resources\Current_Iteration_Matches_LicenceMatchResults_20260414_111430.xlsx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

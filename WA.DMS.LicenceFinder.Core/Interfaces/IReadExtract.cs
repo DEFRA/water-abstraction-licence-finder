@@ -8,10 +8,10 @@ namespace WA.DMS.LicenceFinder.Core.Interfaces;
 public interface IReadExtract
 {
     /// <summary>
-    /// Reads all files starting with 'Site' or 'Consolidated' from the resources folder
+    /// Reads all files starting with 'Consolidated' from the resources folder
     /// </summary>
     /// <returns>Combined list of DMS extract records from all matching files</returns>
-    Dictionary<string, List<DmsExtract>> GetDmsExtracts(bool consolidated);
+    Dictionary<string, List<DmsExtract>> GetDmsExtracts();
 
     /// <summary>
     /// Reads all files starting with 'NALD_Extract' from the resources folder
@@ -71,5 +71,5 @@ public interface IReadExtract
     /// Reads all files starting with 'WaterPdfs_Inventory' from the resources folder
     /// </summary>
     /// <returns>Combined list of file inventory records from all matching files</returns>
-    List<FileInventory> ReadWaterPdfsInventoryFiles();
+    List<FileInventory> GetWradiPdfsInventoryFiles();
 }
