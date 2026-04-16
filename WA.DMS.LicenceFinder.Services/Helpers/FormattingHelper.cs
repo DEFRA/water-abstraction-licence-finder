@@ -25,6 +25,11 @@ public static class FormattingHelper
         {
             return StripForComparison_NE(formattedLicenceNumber);
         }
+        
+        if (regionCode == 7)
+        {
+            return StripForComparison_7(formattedLicenceNumber);
+        }
 
         var licenceNumber = formattedLicenceNumber
             .Replace("//", "/")
@@ -74,8 +79,53 @@ public static class FormattingHelper
         var licenceNumber = ToFullLicenceNumber_NE(formattedLicenceNumber);
         return licenceNumber?.Replace("/", "_");
     }
+    
+    private static string? StripForComparison_7(string? formattedLicenceNumber)
+    {
+        if (formattedLicenceNumber == null)
+        {
+            return formattedLicenceNumber;
+        }
+        
+        var licenceNumber = formattedLicenceNumber
+            .Replace("//", "/")
+            .Replace(".", "/")
+            .Replace(" ", "/")
+            .Replace("-", "/");
 
-private static string? ToFullLicenceNumber_NE(string? licenceNumber)
+        var parts = licenceNumber.Split('/');
+
+        var first = true;
+        var sb = new StringBuilder();
+
+        var partCount = 1;
+        
+        foreach (var part in parts)
+        {
+            var partChanged = part;
+
+            if (partCount++ != 3)
+            {
+                while (partChanged.StartsWith('0'))
+                {
+                    partChanged = partChanged[1..];
+                }
+            }
+
+            if (!first)
+            {
+                sb.Append('_');
+            }
+            
+            sb.Append(partChanged);
+            first = false;            
+        }
+
+        var str = sb.ToString();
+        return str;
+    }
+
+    private static string? ToFullLicenceNumber_NE(string? licenceNumber)
     {
         if (string.IsNullOrEmpty(licenceNumber))
         {
