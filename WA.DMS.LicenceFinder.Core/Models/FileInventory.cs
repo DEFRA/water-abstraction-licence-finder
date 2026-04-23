@@ -5,6 +5,7 @@ namespace WA.DMS.LicenceFinder.Core.Models;
 /// </summary>
 public class FileInventory
 {
+    public string FolderName { get; set; } = string.Empty;
     public string? PermitNumber { get; set; } = string.Empty;
     public string? FileId { get; set; } = string.Empty;
     public string FileName { get; set; } = string.Empty;

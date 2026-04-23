@@ -80,9 +80,9 @@ using (var scope = host.Services.CreateScope())
         // DMS file id data from the API
         var dmsFileIdInformation = await dmsFileIdInformationTask;
 
-        var flowToRun = "FindLicenceFilesAsync";
+        //var flowToRun = "FindLicenceFilesAsync";
         //var flowToRun = "FindAllFilesToDownload";
-        //var flowToRun = "FindLicenceFilesToDownload";
+        var flowToRun = "FindLicenceFilesToDownload";
         
         switch (flowToRun)
         {

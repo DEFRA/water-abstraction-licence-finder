@@ -584,7 +584,7 @@ public class LicenceFileFinder : ILicenceFileFinder
         }
 
         // Create Excel output with specified column headers
-        var headerMapping = new Dictionary<string, string>
+        var headerMappingMissing = new Dictionary<string, string>
         {
             { "PermitNumber", "PermitNumber" },
             { "FullPath", "FullPath" },
@@ -595,11 +595,27 @@ public class LicenceFileFinder : ILicenceFileFinder
             { "FileId", "FileId" },
             { "Reason", "Reason" }
         };
+        
+        // Create Excel output with specified column headers
+        var headerMappingHave = new Dictionary<string, string>
+        {
+            { "FolderName", "FolderName" },
+            { "PermitNumber", "PermitNumber" },
+            { "FileId", "FileId" },
+            { "FileName", "FileName" },
+            { "FileSize", "FileSizeBytes" },
+            { "ModifiedTime", "ModifiedTime" }
+        };
 
+        var worksheetData = new List<(string SheetName, Dictionary<string, string>? HeaderMapping, object Data)>
+        {
+            ("Missing", headerMappingMissing, downloadInfoRecords),
+            ("Have", headerMappingHave, wradiAllLocalFilesInventory)
+        };
+        
         var outputFileName = _fileProcessor.GenerateExcel(
-            downloadInfoRecords,
-            $"Download_Info_{DateTime.Now:yyyyMMdd_HHmmss}",
-            headerMapping);
+            worksheetData,
+            $"Download_Info_{DateTime.Now:yyyyMMdd_HHmmss}");
 
         return outputFileName;
     }
