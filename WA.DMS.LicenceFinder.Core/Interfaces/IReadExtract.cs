@@ -44,12 +44,6 @@ public interface IReadExtract
     List<ChangeAudit> ReadChangeAuditFiles();
 
     /// <summary>
-    /// Reads File_Reader_Extract.xlsx file from the resources folder
-    /// </summary>
-    /// <returns>List of file reader records</returns>
-    List<FileReaderExtract> GetWradiDoiScrapeResults();
-
-    /// <summary>
     /// Reads all files starting with 'Manual_Fix_Extract' from the resources folder
     /// </summary>
     /// <returns>Combined list of manual fix extract records from all matching files</returns>
@@ -66,10 +60,4 @@ public interface IReadExtract
     /// </summary>
     /// <returns>List of licence version records</returns>
     List<UnmatchedLicenceMatchResult> ReadFileVersionResultsFile();
-
-    /// <summary>
-    /// Reads all files starting with 'WaterPdfs_Inventory' from the resources folder
-    /// </summary>
-    /// <returns>Combined list of file inventory records from all matching files</returns>
-    List<FileInventory> GetWradiPdfsInventoryFiles();
 }

@@ -6,7 +6,7 @@ namespace WA.DMS.LicenceFinder.Core.Models;
 public class DmsLookupIndexes
 {
     public Dictionary<string, List<DmsExtract>> ByPermitNumber { get; set; }
-        = new(StringComparer.OrdinalIgnoreCase);
+        = new();
     public Dictionary<string, List<DmsExtract>> ByManualFixPermitNumber { get; set; }
-        = new(StringComparer.OrdinalIgnoreCase);
+        = new();
 }

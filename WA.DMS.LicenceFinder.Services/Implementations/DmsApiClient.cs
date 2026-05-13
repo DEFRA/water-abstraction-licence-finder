@@ -38,6 +38,32 @@ public class DmsApiClient : IDmsApiClient
         var response = await HttpClient.PostAsync(new Uri(HttpClient.BaseAddress!, path), httpContent);
         response.EnsureSuccessStatusCode();
     }
+    
+    public async Task<List<DmsExtract>> GetDmsExtractAsync()
+    {
+        var path = "/Extractor/Dms/GetExtract";
+
+        var response = await HttpClient.GetAsync(path);
+        response.EnsureSuccessStatusCode();
+
+        var content = await response.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<List<DmsExtract>>(
+            content,
+            GetSerializerOptions())!;
+    }
+    
+    public async Task<List<DmsFileReaderResult>> GetDmsFileReaderResultsAsync()
+    {
+        var path = "/Extractor/Dms/GetDmsFileReaderResults";
+
+        var response = await HttpClient.GetAsync(path);
+        response.EnsureSuccessStatusCode();
+
+        var content = await response.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<List<DmsFileReaderResult>>(
+            content,
+            GetSerializerOptions())!;
+    }
 
     // TODO - In time this should come from the other project as a NuGet reference
     private static JsonSerializerOptions GetSerializerOptions()

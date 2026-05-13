@@ -309,7 +309,9 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
                 "FileIdStatus", // TODO remove this when we have a new file that contains it - 2025-03-19
                 "FileIdStatusChangeDate", // TODO remove this when we have a new file that contains it - 2025-03-19
                 "IsWaterCompany", // TODO remove this when we have a new file that contains it - 2025-03-20
-                "FolderNameAutoCorrect" // TODO remove this when we have a new file that contains it - 2025-03-23
+                "FolderNameAutoCorrect", // TODO remove this when we have a new file that contains it - 2025-03-23
+                "SeenInDmsExtract",
+                "WeHaveDownloaded"
             ]);
         
         allPreviousIterationResults.AddRange(records);
@@ -365,6 +367,11 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
             throw new FileNotFoundException($"No override files were found with the given filename '{filename}'.");
         }
         
+        if (overrides.Count != 1)
+        {
+            throw new FileNotFoundException("Only 1 override should be used.");
+        }
+        
         foreach (var fileName in overrides)
         {
             var records = _fileProcessor.ExtractExcel<List<Override>>(
@@ -373,56 +380,19 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
                 {
                     { "Permit Number", ["PermitNumber"]},
                     { "File URL", ["FileUrl"]},
+                    { "FullPath", ["FileUrl"]},
                     { "DefinitiveURL", ["FileUrl"]},
                     { "NALD Issue_No", ["IssueNo"]},
                     { "NALD Issue No.", ["IssueNo"]},
                     { "NALD Increment_No", ["IncrementNo"]},
                     { "NALD Increment No.", ["IncrementNo"]},
                     { "File ID", ["FileId"]}
-                },
-                [
-                    "IncrementNo"
-                ]);
+                });
 
             allOverrides.AddRange(records);
         }
 
         return allOverrides;
-    }
-
-    /// <summary>
-    /// Reads File_Reader_Extract.xlsx file from the resources folder
-    /// </summary>
-    /// <returns>List of file reader records</returns>
-    public List<FileReaderExtract> GetWradiDoiScrapeResults()
-    {
-        var fileReaderResults = new List<FileReaderExtract>();
-        var fileReaderRecords = _fileProcessor.FindFilesByPattern("File_Reader_Extract");
-
-        foreach (var fileName in fileReaderRecords)
-        {
-            var records = _fileProcessor.ExtractCsv<List<FileReaderExtract>>(
-                fileName,
-                new Dictionary<string, List<string>>
-            {
-                {"PermitNumber", ["PermitNumber"]},
-                {"DateOfIssue", ["DateOfIssue"]}
-            },
-            [
-                "LicenceNumber",
-                "FileName",
-                "ProcessingStatus"
-            ]);
-
-            fileReaderResults.AddRange(records);
-        }
-        
-        fileReaderResults = fileReaderResults
-            .Where(line => !string.IsNullOrEmpty(line.PermitNumber)
-                || !string.IsNullOrEmpty(line.DateOfIssue))
-            .ToList();
-
-        return fileReaderResults;
     }
 
     /// <summary>
@@ -507,7 +477,7 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
     public List<TemplateFinderResult> GetWradiTemplateFinderScrapeResults()
     {
         var allTemplateFinderResults = new List<TemplateFinderResult>();
-        var templateFiles = _fileProcessor.FindFilesByPattern("Template_Results");
+        var templateFiles = _fileProcessor.FindFilesByPattern("Template_Finder");
 
         foreach (var fileName in templateFiles)
         {
@@ -588,44 +558,6 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
         return allFileversionResults;
     }
     
-    /// <summary>
-    /// Reads all files starting with 'WaterPdfs_Inventory' from the resources folder
-    /// </summary>
-    /// <returns>Combined list of file inventory records from all matching files</returns>
-    public List<FileInventory> GetWradiPdfsInventoryFiles()
-    {
-        var allFileInventoryRecords = new List<FileInventory>();
-        var inventoryFiles = _fileProcessor.FindFilesByPattern("WaterPdfs_Inventory");
-
-        foreach (var fileName in inventoryFiles)
-        {
-            var records = _fileProcessor.ExtractCsv<List<FileInventory>>(
-                fileName,
-                new Dictionary<string, List<string>>
-                {
-                    {"FileSizeBytes", ["FileSize"]}
-                },
-                ["FolderName"]);
-
-            allFileInventoryRecords.AddRange(records);
-        }
-
-        foreach (var record in allFileInventoryRecords)
-        {
-            if (record.PermitNumber == string.Empty)
-            {
-                record.PermitNumber = null;
-            }
-            
-            if (record.FileId == string.Empty)
-            {
-                record.FileId = null;
-            }
-        }
-        
-        return allFileInventoryRecords;
-    }
-
     #region Helper Methods
 
     /// <summary>

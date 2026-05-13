@@ -20,7 +20,9 @@ public class ManualFolderApplicationOrRootFolderMatchRule : BaseRuleWithPriority
         string permitNumber,
         DmsLookupIndexes dmsLookups)
     {
-        if (dmsLookups.ByManualFixPermitNumber.TryGetValue(permitNumber, out var matches))
+        var lowerCasePermitNumber = permitNumber.ToLowerInvariant();
+        
+        if (dmsLookups.ByManualFixPermitNumber.TryGetValue(lowerCasePermitNumber, out var matches))
         {
             return matches
                 .Where(dms => RuleHelpers.IsInApplicationAssociatedDocsFolder(dms.FileUrl))
