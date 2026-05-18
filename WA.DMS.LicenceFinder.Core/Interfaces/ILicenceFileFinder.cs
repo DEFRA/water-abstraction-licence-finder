@@ -23,7 +23,10 @@ public interface ILicenceFileFinder
         List<DmsFileReaderResult> wradiToolScrapeResults,
         List<LicenceMatchResult> licenceFinderPreviousIterationMatches,
         Dictionary<string, FileInventory> wradiLocalFilesInventory,
-        string? regionName);
+        string? regionName,
+        string overridesFilename,
+        string naldDate,
+        string dmsDate);
     
     /// <summary>
     /// Finds all potential duplicates in DMS extract

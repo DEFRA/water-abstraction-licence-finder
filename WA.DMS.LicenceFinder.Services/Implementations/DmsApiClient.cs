@@ -2,7 +2,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using WA.DMS.LicenceFinder.Core.Interfaces;
 using WA.DMS.LicenceFinder.Core.Models;
-using WA.DMS.LicenceFinder.Services.Models;
 
 namespace WA.DMS.LicenceFinder.Services.Implementations;
 
@@ -39,7 +38,7 @@ public class DmsApiClient : IDmsApiClient
         response.EnsureSuccessStatusCode();
     }
     
-    public async Task<List<DmsExtract>> GetDmsExtractAsync()
+    public async Task<(List<DmsExtract> Data, string ImportDate)> GetDmsExtractAsync()
     {
         var path = "/Extractor/Dms/GetExtract";
 
@@ -47,9 +46,21 @@ public class DmsApiClient : IDmsApiClient
         response.EnsureSuccessStatusCode();
 
         var content = await response.Content.ReadAsStringAsync();
-        return JsonSerializer.Deserialize<List<DmsExtract>>(
+        var data = JsonSerializer.Deserialize<List<DmsExtract>>(
             content,
             GetSerializerOptions())!;
+
+        return (data, await GetImportRunDateAsync("DmsExtract") ?? "Unknown");
+    }
+    
+    private async Task<string?> GetImportRunDateAsync(string dataSource)
+    {
+        var path = $"/Extractor/Import/GetDate?dataSource={dataSource}";
+
+        var response = await HttpClient.GetAsync(path);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadAsStringAsync();
     }
     
     public async Task<List<DmsFileReaderResult>> GetDmsFileReaderResultsAsync()
@@ -61,6 +72,32 @@ public class DmsApiClient : IDmsApiClient
 
         var content = await response.Content.ReadAsStringAsync();
         return JsonSerializer.Deserialize<List<DmsFileReaderResult>>(
+            content,
+            GetSerializerOptions())!;
+    }
+    
+    public async Task SaveLicenceFinderResultsAsync(List<LicenceMatchResult> results)
+    {
+        var path = "/Extractor/LicenceFinder/SaveResults";
+        var json = JsonSerializer.Serialize(new
+        {
+            results
+        }, GetSerializerOptions());
+        
+        var httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+        var response = await HttpClient.PostAsync(new Uri(HttpClient.BaseAddress!, path), httpContent);
+        response.EnsureSuccessStatusCode();
+    }
+    
+    public async Task<List<LicenceMatchResult>> GetLicenceFinderResultsAsync()
+    {
+        var path = "/Extractor/LicenceFinder/GetResults";
+
+        var response = await HttpClient.GetAsync(path);
+        response.EnsureSuccessStatusCode();
+
+        var content = await response.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<List<LicenceMatchResult>>(
             content,
             GetSerializerOptions())!;
     }

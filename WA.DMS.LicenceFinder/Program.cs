@@ -23,9 +23,7 @@ using (var scope = host.Services.CreateScope())
 {
     var licenceFileFinder = scope.ServiceProvider.GetRequiredService<ILicenceFileFinder>();
     var readExtractService = scope.ServiceProvider.GetRequiredService<IReadExtract>();
-
-    var changeAuditOverridesFilename = "Overrides";
-    var licenceFinderLastIterationMatchesFilename = "Previous_Iteration_Matches_20260325_122219.xlsx";
+    
     var optionalRegionFilter = (string?)null;//"Anglian Region";
     
     var regionName = "Anglian Region";
@@ -54,16 +52,12 @@ using (var scope = host.Services.CreateScope())
         // (e.g. LicenceReader-yyyyMMdd.csv). Has date of issue, number of pages, template types etc...
         var wradiToolScrapeResultsTask = dmsApiClient.GetDmsFileReaderResultsAsync();
         
+        // API - Licence finder previous iteration run matches
+        var licenceFinderLastIterationMatchesTask = dmsApiClient.GetLicenceFinderResultsAsync();
+        
         // Spreadsheet - DMS change audit overrides by our team (e.g. Overrides.xlsx)
         var dmsChangeAuditOverrides = readExtractService.GetDmsChangeAuditOverrides(
-            changeAuditOverridesFilename);
-        
-        // Spreadsheet - Licence finder previous iteration matches (e.g. Previous_Iteration_Matches.xlsx
-        // (renamed from LicenceMatchResults_.xlsx) // TODO get from API
-        var licenceFinderLastIterationMatches =
-            readExtractService.GetLicenceFinderPreviousIterationResults(
-                licenceFinderLastIterationMatchesFilename,
-                optionalRegionFilter);
+            "Override_");
         
         // Spreadsheet - DMS manual fixes by our team/SamD (e.g. Manual_Fix_Extract.xlsx) - The 'Sam D' file
         // - doesn't often change
@@ -77,8 +71,13 @@ using (var scope = host.Services.CreateScope())
         var licenceFinderCurrentIterationMatches =
             readExtractService.GetLicenceFinderPreviousIterationResults("Current_Iteration_Matches", optionalRegionFilter);
         
-        var (naldRecordsToProcess, naldAbsLicencesAndVersions) = await naldDataTask;
-        var dmsRecordsData = GroupDmsRecords(await dmsRecordsTask);
+        var (
+            naldRecordsToProcess,
+            naldAbsLicencesAndVersions,
+            naldImportDate) = await naldDataTask;
+
+        var dmsRecords = await dmsRecordsTask;
+        var dmsRecordsData = GroupDmsRecords(dmsRecords.Data);
         var wradiAllLocalFilesInventory = await wradiAllLocalFilesInventoryTask;
         
         //var flowToRun = "FindLicenceFilesAsync";
@@ -94,15 +93,18 @@ using (var scope = host.Services.CreateScope())
                 var licenceMatchResultsFilePath = await licenceFileFinder.FindLicenceFilesAsync(
                     dmsRecordsData,
                     dmsManualFixes,
-                    dmsChangeAuditOverrides,
+                    dmsChangeAuditOverrides.Item1,
                     await dmsFileIdInformationTask,
                     dmsApiClient,
                     naldRecordsToProcess,
                     naldAbsLicencesAndVersions,
                     await wradiToolScrapeResultsTask,
-                    licenceFinderLastIterationMatches,
+                    await licenceFinderLastIterationMatchesTask,
                     wradiAllLocalFilesInventory,
-                    regionName);
+                    regionName,
+                    dmsChangeAuditOverrides.Item2,
+                    naldImportDate,
+                    dmsRecords.ImportDate);
                 
                 Console.WriteLine($"Licence processing completed. Results saved to: {licenceMatchResultsFilePath}");
                 break;
@@ -136,7 +138,7 @@ using (var scope = host.Services.CreateScope())
 
                 var fileName = licenceFileFinder.FindLicenceFilesToDownload_SpreadsheetCompareOnly(
                     DmsDictionaryToList(dmsRecordsData),
-                    licenceFinderLastIterationMatches,
+                    await licenceFinderLastIterationMatchesTask,
                     licenceFinderCurrentIterationMatches,
                     restrictToRegionName);
 
@@ -146,8 +148,8 @@ using (var scope = host.Services.CreateScope())
                 // FLOW - Build file template identification extract
                 Console.WriteLine("Started building file template identification extract...");
                 var resultFilePath = licenceFileFinder.BuildFileTemplateIdentificationExtract(
-                    licenceFinderLastIterationMatches,
-                    dmsChangeAuditOverrides,
+                    await licenceFinderLastIterationMatchesTask,
+                    dmsChangeAuditOverrides.Item1,
                     jpFileVersionResults);
 
                 Console.WriteLine($"File saved to {resultFilePath}");
@@ -196,11 +198,6 @@ static async Task<Dictionary<string, FileInventory>> GetWradiPdfsInventoryFiles(
     
     foreach (var fileMetadata in files)
     {
-        if (fileMetadata.Filename.Contains("NE0240005021", StringComparison.InvariantCultureIgnoreCase))
-        {
-            
-        }
-        
         var filenameParts = fileMetadata.Filename.Split("__");
 
         if (filenameParts.Length != 2)
@@ -290,7 +287,10 @@ static async Task<ConcurrentDictionary<Guid, List<DmsFileIdInformation>>>
     return dmsFileIdInformationDict;
 }
 
-static async Task<(List<NaldSimpleRecord> NaldSimpleRecords, Dictionary<string, List<NaldLicenceVersion>> NaldData)>
+static async Task<(List<
+        NaldSimpleRecord> NaldSimpleRecords,
+        Dictionary<string, List<NaldLicenceVersion>> NaldData,
+        string ImportDate)>
     GetNaldDataAsync(string apiBaseUrl)
 {
     var naldApiClient = new NaldApiClient(apiBaseUrl);
@@ -370,8 +370,9 @@ static async Task<(List<NaldSimpleRecord> NaldSimpleRecords, Dictionary<string, 
         
         naldSimpleRecords.Add(naldSimpleRecord);
     }
-    
-    return (naldSimpleRecords, naldData);
+
+    var importDate = await naldApiClient.GetImportRunDateAsync("Nald");
+    return (naldSimpleRecords, naldData, importDate ?? "Unknown");
 }
 
 static string GetRegionName(int regionCode)

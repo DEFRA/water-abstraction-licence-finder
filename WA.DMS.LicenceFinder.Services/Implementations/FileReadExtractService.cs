@@ -357,7 +357,7 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
     /// Reads Change_Audit.xlsx file from the resources folder
     /// </summary>
     /// <returns>List of change audit records</returns>
-    public List<Override> GetDmsChangeAuditOverrides(string filename)
+    public (List<Override>, string) GetDmsChangeAuditOverrides(string filename)
     {
         var allOverrides = new List<Override>();
         var overrides = _fileProcessor.FindFilesByPattern(filename);
@@ -392,7 +392,7 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
             allOverrides.AddRange(records);
         }
 
-        return allOverrides;
+        return (allOverrides, overrides.First());
     }
 
     /// <summary>

@@ -110,9 +110,6 @@
     <None Remove="Resources\March_Consolidated.xlsx" />
     <None Remove="Resources\Overrides_20260324.xlsx" />
     <None Remove="Resources\ANGLIAN_Overrides_20260324.xlsx" />
-    <Content Include="Resources\ANGLIAN_Overrides_20260324.xlsx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <None Remove="Resources\Overrides_2026_04_13.xlsx" />
     <None Remove="Resources\Consolidated_2026_04_13.xlsx" />
     <None Remove="Resources\Previous_Iteration_Matches_20260325_122219.xlsx" />

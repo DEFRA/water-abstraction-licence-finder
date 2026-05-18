@@ -53,7 +53,7 @@ public interface IReadExtract
     /// Reads Change_Audit.xlsx file from the resources folder
     /// </summary>
     /// <returns>List of change audit records</returns>
-    List<Override> GetDmsChangeAuditOverrides(string filename);
+    (List<Override>, string) GetDmsChangeAuditOverrides(string filename);
 
     /// <summary>
     /// Reads LicenceVersionResult.xlsx file from the resources folder

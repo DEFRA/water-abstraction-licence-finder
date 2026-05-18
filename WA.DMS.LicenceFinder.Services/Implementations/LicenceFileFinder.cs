@@ -87,6 +87,51 @@ public class LicenceFileFinder : ILicenceFileFinder
         { "PermitNumber", "Permit Number" },
         { "FileUrl", "File URL" }
     };
+    
+    /// <summary>
+    /// Common header mapping for DMS tab - maps property names to Excel header names
+    /// </summary>
+    private static readonly Dictionary<string, string> DmsMapping = new()
+    {
+        { "PermitNumber", "Permit Number" },
+        { "FileName", "Filename" },
+        { "FileId", "File Id" }
+    };
+    
+    /// <summary>
+    /// Common header mapping for Nald tab - maps property names to Excel header names
+    /// </summary>
+    private static readonly Dictionary<string, string> NaldMapping = new()
+    {
+        { "LicNo", "Licence Number" },
+        { "DmsPermitNo", "(Assumed) Dms Permit No" },
+        { "Region", "Region" }
+    };
+    
+    /// <summary>
+    /// Common header mapping for s3 files tab - maps property names to Excel header names
+    /// </summary>
+    private static readonly Dictionary<string, string> S3FilesMapping = new()
+    {
+        { "PermitNumber", "Permit Number" },
+        { "FileId", "File Id" },
+        { "FileName", "Filename" },
+        { "FolderName", "Folder Name" },
+        { "FileSize", "File Size" },
+        { "ModifiedTime", "Uploaded Date/Time" }
+    };
+    
+    /// <summary>
+    /// Common header mapping for overrides tab - maps property names to Excel header names
+    /// </summary>
+    private static readonly Dictionary<string, string> OverrideMapping = new()
+    {
+        { "PermitNumber", "Permit Number" },
+        { "FileUrl", "File Url" },
+        { "IssueNo", "Issue No" },
+        { "IncrementNo", "Increment No" },
+        { "FileId", "File Id" },
+    };
 
     public LicenceFileFinder(
         ILicenceFileProcessor fileProcessor,
@@ -118,7 +163,10 @@ public class LicenceFileFinder : ILicenceFileFinder
         List<DmsFileReaderResult> wradiToolScrapeResults,
         List<LicenceMatchResult> licenceFinderPreviousIterationMatches,
         Dictionary<string, FileInventory> wradiLocalFilesInventory,
-        string? regionName)
+        string? regionName,
+        string overridesFilename,
+        string naldDate,
+        string dmsDate)
     {
         try
         {
@@ -138,13 +186,28 @@ public class LicenceFileFinder : ILicenceFileFinder
                     wradiToolScrapeResults,
                     licenceFinderPreviousIterationMatches,
                     wradiLocalFilesInventory);
+
+            // Save to DB
+            await dmsApiClient.SaveLicenceFinderResultsAsync(licenceMatchResults);
             
             // Generate output Excel file
             var worksheetData = new List<(string SheetName, Dictionary<string, string>? HeaderMapping, object Data)>
             {
                 ("Match Results", LicenseMatchResultHeaderMapping, licenceMatchResults),
                 ("Version Results", UnmatchedLicenseMatchResultHeaderMapping, unmatchedLicenceMatchResults),
-                ("Files Needed Locally (Delta)", DeltaMapping, deltaResults)
+                ("Files Needed Locally (Delta)", DeltaMapping, deltaResults),
+                ($"DMS Info ({dmsDate})", DmsMapping, dmsRecords
+                    .SelectMany(x => x.Value)
+                    .Select(x => new
+                    {
+                        x.FileName,
+                        x.FileId,
+                        x.PermitNumber
+                    })
+                    .Take(0)),
+                ($"NALD Info ({naldDate})", NaldMapping, naldRecordsToProcess),
+                ($"Overrides ({overridesFilename})", OverrideMapping, dmsChangeAuditOverrides),
+                ("Local files", S3FilesMapping, wradiLocalFilesInventory.Select(x => x.Value))
             };
             
             var outputFileName = $"LicenceMatchResults_{DateTime.Now:yyyyMMdd_HHmmss}";
@@ -1387,7 +1450,7 @@ public class LicenceFileFinder : ILicenceFileFinder
        
         Console.WriteLine($"Processing {naldRecordsToProcess.Count} NALD records...");
         var returnList = new List<LicenceMatchResult>();
-
+        
         // Process each record sequentially
         foreach (var naldReportRecord in naldRecordsToProcess)
         {
@@ -1426,11 +1489,6 @@ public class LicenceFileFinder : ILicenceFileFinder
                 && overrideIssueNo >= naldVersionIssueNo
                 && overrideIncrementNo >= naldVersionIncrementNo)
             {
-                if (overrideRecord.FileId.Equals("6638d66e-cb1a-69f9-1a9b-cebe00d26324", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    
-                }
-                
                 licenceMatchResult.SeenInDmsExtract = dmsRecords.ContainsKey(lowercasePermitNumber)
                     && dmsRecords[lowercasePermitNumber].Any(x => x.FileId == overrideRecord.FileId);
                 licenceMatchResult.WeHaveDownloaded = wradiLocalFilesInventory.ContainsKey(
@@ -1448,21 +1506,20 @@ public class LicenceFileFinder : ILicenceFileFinder
                
                 returnList.Add(licenceMatchResult);
                 
-                var templateResultOverride = wradiToolScrapeResults
+                var overrideScrapeResult = wradiToolScrapeResults
                     .FirstOrDefault(t => 
-                        t.PermitNumber?.Contains(licenceMatchResult.PermitNumber, StringComparison.OrdinalIgnoreCase) == true &&
-                        licenceMatchResult.FileUrl.Contains(t.FileName!, StringComparison.OrdinalIgnoreCase));
+                        t.PermitNumber?.Equals(licenceMatchResult.PermitNumber, StringComparison.OrdinalIgnoreCase) == true);
                 
-                licenceMatchResult.PrimaryTemplate = templateResultOverride != null
-                    ? templateResultOverride.PrimaryType // PrimaryTemplateType
+                licenceMatchResult.PrimaryTemplate = overrideScrapeResult != null
+                    ? overrideScrapeResult.PrimaryType // PrimaryTemplateType
                     : "Scrape Not Attempted";
                 
-                licenceMatchResult.SecondaryTemplate = templateResultOverride != null
-                    ? templateResultOverride.SecondaryType // SecondaryTemplateType
+                licenceMatchResult.SecondaryTemplate = overrideScrapeResult != null
+                    ? overrideScrapeResult.SecondaryType // SecondaryTemplateType
                     : "Scrape Not Attempted";
 
-                licenceMatchResult.NumberOfPages = templateResultOverride != null
-                    ? templateResultOverride.NumberOfPages
+                licenceMatchResult.NumberOfPages = overrideScrapeResult != null
+                    ? overrideScrapeResult.NumberOfPages
                     : -1;
                 
                 licenceMatchResult.FileId = overrideRecord.FileId;
@@ -1552,14 +1609,21 @@ public class LicenceFileFinder : ILicenceFileFinder
                 // Populate result based on match outcome
                 if (matchedDmsRecord != null)
                 {
-                    if (matchedDmsRecord.FileId.Equals("6638d66e-cb1a-69f9-1a9b-cebe00d26324", StringComparison.InvariantCultureIgnoreCase))
+                    var weHaveDownloaded = false;
+
+                    foreach (var (permitNumber, _) in permitNumberFormats)
                     {
-                    
+                        weHaveDownloaded = wradiLocalFilesInventory.ContainsKey(
+                            $"{permitNumber.ToLower()}_{matchedDmsRecord.FileId}");
+
+                        if (weHaveDownloaded)
+                        {
+                            break;
+                        }
                     }
                     
                     licenceMatchResult.SeenInDmsExtract = true;
-                    licenceMatchResult.WeHaveDownloaded = wradiLocalFilesInventory.ContainsKey(
-                        $"{lowercasePermitNumber}_{matchedDmsRecord.FileId}");
+                    licenceMatchResult.WeHaveDownloaded = weHaveDownloaded;
                     licenceMatchResult.FileUrl = matchedDmsRecord.FileUrl;
                     licenceMatchResult.OtherReference = matchedDmsRecord.OtherReference;
                     licenceMatchResult.FileSize = matchedDmsRecord.FileSize;
@@ -1591,11 +1655,15 @@ public class LicenceFileFinder : ILicenceFileFinder
                 }
             }
 
-            var matchingDoiScrapeResult = wradiToolScrapeResults.FirstOrDefault(r =>
-                r.PermitNumber?.Equals(permitNumberToUseForDms, StringComparison.OrdinalIgnoreCase) == true);
+            var fileId = !string.IsNullOrEmpty(licenceMatchResult.FileId)
+                ? Guid.TryParse(licenceMatchResult.FileId, out var tempFileId) ? tempFileId : null
+                : (Guid?)null;
 
-            var dateOfIssue = matchingDoiScrapeResult != null
-                ? LicenceFileHelpers.ConvertDateToStandardFormat(matchingDoiScrapeResult.DateOfIssue.ToString())
+            var scrapeResult = wradiToolScrapeResults.FirstOrDefault(
+                r => fileId != null && r.FileId == fileId);
+            
+            var dateOfIssue = scrapeResult != null
+                ? LicenceFileHelpers.ConvertDateToStandardFormat(scrapeResult.DateOfIssue.ToString())
                 : "Scrape Not Attempted";
             
             licenceMatchResult.RuleUsed = ruleUsed;
@@ -1616,20 +1684,16 @@ public class LicenceFileFinder : ILicenceFileFinder
             licenceMatchResult.DuplicateLicenceInVersionMatchResult = versionMatch?.LicenceCount > 1;
             licenceMatchResult.NaldIssue = versionMatch?.NaldDataQualityIssue;
             
-            var wradiTemplateScrapeResult = wradiToolScrapeResults.FirstOrDefault(t => 
-                t.PermitNumber?.Contains(permitNumberToUseForDms, StringComparison.OrdinalIgnoreCase) == true &&
-                licenceMatchResult.FileUrl.Contains(t.FileName!, StringComparison.OrdinalIgnoreCase));
-            
-            licenceMatchResult.PrimaryTemplate = wradiTemplateScrapeResult != null
-                ? wradiTemplateScrapeResult.PrimaryType //PrimaryTemplateType
+            licenceMatchResult.PrimaryTemplate = scrapeResult != null
+                ? scrapeResult.PrimaryType //PrimaryTemplateType
                 : "Scrape Not Attempted";
             
-            licenceMatchResult.SecondaryTemplate = wradiTemplateScrapeResult != null
-                ? wradiTemplateScrapeResult.SecondaryType //SecondaryTemplateType
+            licenceMatchResult.SecondaryTemplate = scrapeResult != null
+                ? scrapeResult.SecondaryType //SecondaryTemplateType
                 : "Scrape Not Attempted";
             
-            licenceMatchResult.NumberOfPages = wradiTemplateScrapeResult != null
-                ? wradiTemplateScrapeResult.NumberOfPages
+            licenceMatchResult.NumberOfPages = scrapeResult != null
+                ? scrapeResult.NumberOfPages
                 : -1;
             
             returnList.Add(licenceMatchResult);
