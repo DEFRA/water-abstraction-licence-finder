@@ -123,29 +123,6 @@ public class FileReadExtractServiceTests
     }
 
     [Fact]
-    public void ReadFileReaderExtract_WithValidData_ShouldReturnFileReaderRecords()
-    {
-        // Arrange
-        var expectedRecords = new List<FileReaderExtract>
-        {
-            new() { PermitNumber = "12345", DateOfIssue = "01/01/2023" }
-        };
-
-        _mockFileProcessor.Setup(p => p.FindFilesByPattern("File_Reader_Extract"))
-            .Returns(new List<string> { "File_Reader_Extract_test.csv" });
-        _mockFileProcessor.Setup(p => p.ExtractCsv<List<FileReaderExtract>>("File_Reader_Extract_test.csv", It.IsAny<Dictionary<string, List<string>>>(), It.IsAny<List<string>>()))
-            .Returns(expectedRecords);
-
-        // Act
-        var result = _fileReadExtractService.GetWradiDoiScrapeResults();
-
-        // Assert
-        result.Should().BeEquivalentTo(expectedRecords);
-        _mockFileProcessor.Verify(p => p.FindFilesByPattern("File_Reader_Extract"), Times.Once);
-        _mockFileProcessor.Verify(p => p.ExtractCsv<List<FileReaderExtract>>("File_Reader_Extract_test.csv", It.IsAny<Dictionary<string, List<string>>>(), It.IsAny<List<string>>()), Times.Once);
-    }
-
-    [Fact]
     public void ReadLastIterationMatchesFiles_WithNoFile_ShouldReturnEmptyList()
     {
         // Arrange

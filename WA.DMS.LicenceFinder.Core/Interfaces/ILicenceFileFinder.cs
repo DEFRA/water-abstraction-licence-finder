@@ -20,11 +20,13 @@ public interface ILicenceFileFinder
         IDmsApiClient dmsApiClient,
         List<NaldSimpleRecord> naldRecordsToProcess,
         Dictionary<string, List<NaldLicenceVersion>> naldData,
-        List<FileReaderExtract> wradiDoiScrapeResults,
-        List<TemplateFinderResult> wradiTemplateScrapeResults,
-        List<FileIdentificationExtract> wradiFileTypeScrapeResults,
+        List<DmsFileReaderResult> wradiToolScrapeResults,
         List<LicenceMatchResult> licenceFinderPreviousIterationMatches,
-        string? regionName);
+        Dictionary<string, FileInventory> wradiLocalFilesInventory,
+        string? regionName,
+        string overridesFilename,
+        string naldDate,
+        string dmsDate);
     
     /// <summary>
     /// Finds all potential duplicates in DMS extract
@@ -46,12 +48,12 @@ public interface ILicenceFileFinder
     string FindAllFilesToDownload(
         List<DmsExtract> dmsRecords,
         List<LicenceMatchResult> currentIterationMatches,
-        List<FileInventory> wradiAllLocalFilesInventory,
+        Dictionary<string, FileInventory> wradiAllLocalFilesInventory,
         string? filterRegion = null);
     
     string FindLicenceFilesToDownload(
         List<DmsExtract> dmsRecords,
         List<LicenceMatchResult> currentIterationMatches,
-        List<FileInventory> wradiAllLocalFilesInventory,
+        Dictionary<string, FileInventory> wradiAllLocalFilesInventory,
         string? filterRegion = null);
 }

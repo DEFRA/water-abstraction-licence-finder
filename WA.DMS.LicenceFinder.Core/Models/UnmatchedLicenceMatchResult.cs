@@ -38,12 +38,12 @@ public class UnmatchedLicenceMatchResult
     /// <summary>
     /// File evaluated to find match
     /// </summary>
-    public string FileEvaluated { get; set; } = string.Empty;
+    public string? FileEvaluated { get; set; }
 
     /// <summary>
     /// File Type evaluated to find match
     /// </summary>
-    public string FileTypeEvaluated { get; set; } = string.Empty;
+    public string? FileTypeEvaluated { get; set; }
 
     /// <summary>
     /// File identified as a licence

@@ -149,4 +149,8 @@ public class LicenceMatchResult
     /// Has folder name been autocorrected
     /// </summary>
     public bool? FolderNameAutoCorrect { get; set; }
+    
+    public bool SeenInDmsExtract { get; set; }
+    
+    public bool? WeHaveDownloaded { get; set; }
 }
