@@ -7,4 +7,6 @@ public interface IDmsApiClient
     public Task<List<DmsFileIdInformation>> GetDmsFileIdInformationAsync();
 
     public Task AddDmsFileIdInformationAsync(DmsFileIdInformation newDmsFileIdInformation);
+
+    public Task SaveLicenceFinderResultsAsync(List<LicenceMatchResult> results);
 }

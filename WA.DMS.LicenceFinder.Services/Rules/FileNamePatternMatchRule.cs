@@ -18,7 +18,9 @@ public class FileNamePatternMatchRule : BaseRuleWithPriorityMatching
         string permitNumber,
         DmsLookupIndexes dmsLookups)
     {
-        if (dmsLookups.ByPermitNumber.TryGetValue(permitNumber, out var matches))
+        var lowerCasePermitNumber = permitNumber.ToLowerInvariant();
+        
+        if (dmsLookups.ByPermitNumber.TryGetValue(lowerCasePermitNumber, out var matches))
         {
             return matches;
         }

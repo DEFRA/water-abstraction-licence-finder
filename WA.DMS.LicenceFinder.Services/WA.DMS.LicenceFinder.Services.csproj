@@ -63,9 +63,6 @@
     </Content>
     <None Remove="Resources\File_Reader_Extract_Anglian.csv" />
     <None Remove="Resources\File_Reader_Extract_NE.csv" />
-    <Content Include="Resources\File_Reader_Extract_NE.csv">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <None Remove="Resources\File_Identification_Extract_NE.csv" />
     <Content Include="Resources\File_Identification_Extract_NE.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -94,9 +91,6 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <None Remove="Resources\File_Reader_Extract_NW.csv" />
-    <Content Include="Resources\File_Reader_Extract_NW.csv">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <None Remove="Resources\Current_Iteration_Matches.xlsx" />
     <None Remove="Resources\WaterPdfs_Inventory_20260213.csv" />
     <None Remove="Resources\File_Identification_Extract_NW.csv" />
@@ -115,31 +109,24 @@
     </Content>
     <None Remove="Resources\March_Consolidated.xlsx" />
     <None Remove="Resources\Overrides_20260324.xlsx" />
-    <Content Include="Resources\Overrides_20260324.xlsx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <None Remove="Resources\ANGLIAN_Overrides_20260324.xlsx" />
-    <Content Include="Resources\ANGLIAN_Overrides_20260324.xlsx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <None Remove="Resources\Overrides_2026_04_13.xlsx" />
-    <Content Include="Resources\Overrides_2026_04_13.xlsx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <None Remove="Resources\Consolidated_2026_04_13.xlsx" />
-    <Content Include="Resources\Consolidated_2026_04_13.xlsx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <None Remove="Resources\Previous_Iteration_Matches_20260325_122219.xlsx" />
     <Content Include="Resources\Previous_Iteration_Matches_20260325_122219.xlsx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <None Remove="Resources\WaterPdfs_Inventory_20260415.csv" />
-    <Content Include="Resources\WaterPdfs_Inventory_20260415.csv">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <None Remove="Resources\Current_Iteration_Matches_LicenceMatchResults_20260414_111430.xlsx" />
     <Content Include="Resources\Current_Iteration_Matches_LicenceMatchResults_20260414_111430.xlsx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <None Remove="Resources\LicenceReader-20260430.csv" />
+    <Content Include="Resources\LicenceReader-20260430.csv">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <None Remove="Resources\Override_Master_Provided_2026_05_13.xlsx" />
+    <Content Include="Resources\Override_Master_Provided_2026_05_13.xlsx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

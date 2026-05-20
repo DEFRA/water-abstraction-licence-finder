@@ -49,6 +49,16 @@ public class NaldApiClient
             content,
             GetSerializerOptions())!;
     }
+    
+    public async Task<string?> GetImportRunDateAsync(string dataSource)
+    {
+        var path = $"/Extractor/Import/GetDate?dataSource={dataSource}";
+
+        var response = await HttpClient.GetAsync(path);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadAsStringAsync();
+    }
 
     // TODO - In time this should come from the other project as a NuGet reference
     private static JsonSerializerOptions GetSerializerOptions()
