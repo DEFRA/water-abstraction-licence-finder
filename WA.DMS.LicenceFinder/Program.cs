@@ -24,12 +24,15 @@ using (var scope = host.Services.CreateScope())
     var licenceFileFinder = scope.ServiceProvider.GetRequiredService<ILicenceFileFinder>();
     var readExtractService = scope.ServiceProvider.GetRequiredService<IReadExtract>();
     
-    var optionalRegionFilter = (string?)null;//"Anglian Region";
+    var optionalRegionFilter = "Anglian Region";
+    optionalRegionFilter = null;
     
     var regionName = "Anglian Region";
     regionName = null;
     
-    string? restrictToRegionName = "North East";
+    var restrictToRegionName = "North East";
+    restrictToRegionName = null;
+    
     var apiBaseUrl = "http://localhost:8080";
     
     try
@@ -66,11 +69,6 @@ using (var scope = host.Services.CreateScope())
         // Spreadsheet - File version results (e.g. LicenceVersionResults.xlsx) - Comes from JP
         var jpFileVersionResults = readExtractService.ReadFileVersionResultsFile();
         
-        // Spreadsheet - Licence finder Current iteration matches (e.g. Current_Iteration_Matches.xlsx, from
-        // LicenceMatchResults_.xlsx) - TODO get from API
-        var licenceFinderCurrentIterationMatches =
-            readExtractService.GetLicenceFinderPreviousIterationResults("Current_Iteration_Matches", optionalRegionFilter);
-        
         var (
             naldRecordsToProcess,
             naldAbsLicencesAndVersions,
@@ -81,9 +79,8 @@ using (var scope = host.Services.CreateScope())
         var wradiAllLocalFilesInventory = await wradiAllLocalFilesInventoryTask;
         
         //var flowToRun = "FindLicenceFilesAsync";
-        //var flowToRun = "FindAllFilesToDownload";
-        //var flowToRun = "FindLicenceFilesAsync";
         var flowToRun = "FindAllFilesToDownload";
+        //var flowToRun = "FindLicenceFilesAsync";
         
         switch (flowToRun)
         {
@@ -115,8 +112,8 @@ using (var scope = host.Services.CreateScope())
                 Console.WriteLine("Started finding all files to download...");
                 
                 var result = licenceFileFinder.FindAllFilesToDownload(
-                    DmsDictionaryToList(dmsRecordsData),
-                    licenceFinderCurrentIterationMatches,
+                    dmsRecordsData,
+                    await licenceFinderLastIterationMatchesTask,
                     wradiAllLocalFilesInventory,
                     restrictToRegionName);
                 
@@ -128,7 +125,7 @@ using (var scope = host.Services.CreateScope())
                 
                 var path = licenceFileFinder.FindLicenceFilesToDownload(
                     DmsDictionaryToList(dmsRecordsData),
-                    licenceFinderCurrentIterationMatches,
+                    await licenceFinderLastIterationMatchesTask,
                     wradiAllLocalFilesInventory,
                     restrictToRegionName);
                 
@@ -141,7 +138,7 @@ using (var scope = host.Services.CreateScope())
                 var fileName = licenceFileFinder.FindLicenceFilesToDownload_SpreadsheetCompareOnly(
                     DmsDictionaryToList(dmsRecordsData),
                     await licenceFinderLastIterationMatchesTask,
-                    licenceFinderCurrentIterationMatches,
+                    await licenceFinderLastIterationMatchesTask,
                     restrictToRegionName);
 
                 Console.WriteLine($"File saved to {fileName}");

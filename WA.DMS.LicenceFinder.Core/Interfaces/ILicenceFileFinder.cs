@@ -46,7 +46,7 @@ public interface ILicenceFileFinder
         string? region = null);
 
     string FindAllFilesToDownload(
-        List<DmsExtract> dmsRecords,
+        Dictionary<string, List<DmsExtract>> dmsRecords,
         List<LicenceMatchResult> currentIterationMatches,
         Dictionary<string, FileInventory> wradiAllLocalFilesInventory,
         string? filterRegion = null);

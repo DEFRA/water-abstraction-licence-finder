@@ -353,8 +353,6 @@ public class LicenceFileFinder : ILicenceFileFinder
                     FullPath = file.DmsExtract.FileUrl,
                     SitePath = ExtractSitePath(file.DmsExtract.FileUrl),
                     LibraryAndFilePath = ExtractLibraryAndFilePath(file.DmsExtract.FileUrl),
-                    OriginalFileName = file.DmsExtract.FileName,
-                    DestinationFileName__1 = $"{file.DmsExtract.PermitNumber}__{file.DmsExtract.FileName}",
                     FileId = file.FileId,
                     Reason = file.Reason
                 }));
@@ -365,29 +363,6 @@ public class LicenceFileFinder : ILicenceFileFinder
             throw;
         }
 
-        // Handle duplicate destination filenames by appending _1, _2, etc.
-        var destinationFileNameCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var record in downloadInfoRecords)
-        {
-            var baseDestinationFileName = record.DestinationFileName__1;
-
-            if (destinationFileNameCounts.TryAdd(baseDestinationFileName, 1))
-            {
-                continue;
-            }
-            
-            // This is a duplicate, append counter
-            var count = destinationFileNameCounts[baseDestinationFileName] += 1;
-
-            // Split filename and extension
-            var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(baseDestinationFileName);
-            var extension = Path.GetExtension(baseDestinationFileName);
-
-            // Append counter before extension
-            record.DestinationFileName__1 = $"{fileNameWithoutExtension}_{count}{extension}";
-        }
-
         // Create Excel output with specified column headers
         var headerMapping = new Dictionary<string, string>
         {
@@ -395,8 +370,6 @@ public class LicenceFileFinder : ILicenceFileFinder
             { "FullPath", "FullPath" },
             { "SitePath", "SitePath" },
             { "LibraryAndFilePath", "LibraryAndFilePath" },
-            { "OriginalFileName", "OriginalFileName" },
-            { "DestinationFileName__1", "DestinationFileName__1" },
             { "FileId", "FileId" },
             { "Reason", "Reason" }
         };
@@ -410,18 +383,20 @@ public class LicenceFileFinder : ILicenceFileFinder
     }
     
     public string FindAllFilesToDownload(
-        List<DmsExtract> dmsRecords,
+        Dictionary<string, List<DmsExtract>> dmsRecords,
         List<LicenceMatchResult> currentMatches,
         Dictionary<string, FileInventory> wradiAllLocalFilesInventory,
         string? filterRegion = null)
     {
         // Foreach permit number in the newest created file, find the DMS records for that permit number.
-        // // check if the permit number row has a fileId that is different to the previous run. If so fetch the DMS info
+        // Check if the permit number row has a fileId that is different to the previous run. If so fetch the DMS info
         // for that file and include it in files to download
         
         var filteredCurrentMatches = currentMatches
             .Where(c => !c.DoiSignatureDateMatch
-                && !c.ChangeAuditAction.Contains("Override", StringComparison.CurrentCultureIgnoreCase))
+                && !string.IsNullOrEmpty(c.SignatureDate)
+                && !c.ChangeAuditAction.Contains("Override", StringComparison.CurrentCultureIgnoreCase)
+                && c.RuleUsed != "Not Applicable") // Folder not found
             .ToList();
 
         // Filter current match by region if specified, otherwise use all
@@ -438,88 +413,45 @@ public class LicenceFileFinder : ILicenceFileFinder
         
         foreach (var filteredCurrentMatch in filteredCurrentMatches)
         {
-            try
+            // Find all files in DMS records that match the permit number of the current match
+            var dmsRecordsForPermitNumber = dmsRecords.TryGetValue(
+                filteredCurrentMatch.PermitNumber.ToLower(),
+                out var record) ? record : [];
+
+            if (!dmsRecordsForPermitNumber.Any())
             {
-                // Find all files in DMS records that match the permit number of the current match
-                var dmsRecordsForPermitNumber = dmsRecords
-                    .Where(dmsRecord => dmsRecord.PermitNumber == filteredCurrentMatch.PermitNumber)
-                    .ToList();
-
-                // Find files that are NOT in allFilesInventory
-                var filesNotInInventory = dmsRecordsForPermitNumber
-                    .Where(dmsRecordForPermitNumber =>
-                    {
-                        var exists = wradiAllLocalFilesInventory.Any(inventoryRecord =>
-                        {
-                            // Extract filename after first occurrence of "__" from inventory record
-                            var fileNameParts = inventoryRecord.Value.FileName.Split("__");
-                            
-                            var extractedFileName =
-                                fileNameParts.Length > 1 ? fileNameParts.Last() : inventoryRecord.Value.FileName;
-
-                            return inventoryRecord.Value.PermitNumber == dmsRecordForPermitNumber.PermitNumber
-                                && extractedFileName.Equals(dmsRecordForPermitNumber.FileName);
-                        });
-                        
-                        return !exists;
-                    })
-                    .ToList();
-
-                // Add all files not in inventory to missing files
-                missingFiles.AddRange(filesNotInInventory);
+                continue;
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"ERROR - {ex.Message}");
-                throw;
-            }
+            
+            // Find files that are NOT in allFilesInventory
+            var filesNotInInventory = dmsRecordsForPermitNumber
+                .Where(dmsRecordForPermitNumber =>
+                {
+                    var exists = wradiAllLocalFilesInventory.Any(inventoryRecord =>
+                        inventoryRecord.Value.PermitNumber == dmsRecordForPermitNumber.PermitNumber
+                        && inventoryRecord.Value.FileId == dmsRecordForPermitNumber.FileId);
+                    
+                    return !exists;
+                })
+                .ToList();
+
+            // Add all files not in inventory to missing files
+            missingFiles.AddRange(filesNotInInventory);
         }
 
         // Build download info records
         var downloadInfoRecords = new List<DownloadInfo>();
         
-        try
-        {
-            downloadInfoRecords.AddRange(
-                missingFiles.Select(file => new DownloadInfo
-                {
-                    PermitNumber = file.PermitNumber,
-                    FullPath = file.FileUrl,
-                    SitePath = ExtractSitePath(file.FileUrl),
-                    LibraryAndFilePath = ExtractLibraryAndFilePath(file.FileUrl),
-                    OriginalFileName = file.FileName,
-                    DestinationFileName__1 = $"{file.PermitNumber}__{file.FileName}"
-                }));
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"ERROR - {ex.Message}");
-            throw;
-        }
-
-        // Handle duplicate destination filenames by appending _1, _2, etc.
-        var destinationFileNameCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var record in downloadInfoRecords)
-        {
-            var baseDestinationFileName = record.DestinationFileName__1;
-
-            if (destinationFileNameCounts.TryAdd(baseDestinationFileName, 1))
+        downloadInfoRecords.AddRange(
+            missingFiles.Select(file => new DownloadInfo
             {
-                continue;
-            }
-            
-            // This is a duplicate, append counter
-            var count = destinationFileNameCounts[baseDestinationFileName];
-            destinationFileNameCounts[baseDestinationFileName] = count + 1;
-
-            // Split filename and extension
-            var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(baseDestinationFileName);
-            var extension = Path.GetExtension(baseDestinationFileName);
-
-            // Append counter before extension
-            record.DestinationFileName__1 = $"{fileNameWithoutExtension}_{count}{extension}";
-        }
+                PermitNumber = file.PermitNumber,
+                FullPath = file.FileUrl,
+                SitePath = ExtractSitePath(file.FileUrl),
+                LibraryAndFilePath = ExtractLibraryAndFilePath(file.FileUrl),
+                FileId = file.FileId, // Doesn't get used after
+                Reason = string.Empty // Doesn't get used after
+            }));
 
         // Create Excel output with specified column headers
         var headerMapping = new Dictionary<string, string>
@@ -527,17 +459,13 @@ public class LicenceFileFinder : ILicenceFileFinder
             { "PermitNumber", "PermitNumber" },
             { "FullPath", "FullPath" },
             { "SitePath", "SitePath" },
-            { "LibraryAndFilePath", "LibraryAndFilePath" },
-            { "OriginalFileName", "OriginalFileName" },
-            { "DestinationFileName__1", "DestinationFileName__1" }
+            { "LibraryAndFilePath", "LibraryAndFilePath" }
         };
 
-        var outputFileName = _fileProcessor.GenerateExcel(
+        return _fileProcessor.GenerateExcel(
             downloadInfoRecords,
             "Version_Download_Info",
             headerMapping);
-
-        return outputFileName;
     }
 
     public string FindLicenceFilesToDownload(
@@ -622,8 +550,6 @@ public class LicenceFileFinder : ILicenceFileFinder
                     FullPath = file.FileUrl,
                     SitePath = ExtractSitePath(file.FileUrl),
                     LibraryAndFilePath = ExtractLibraryAndFilePath(file.FileUrl),
-                    OriginalFileName = file.FileName,
-                    DestinationFileName__1 = $"{file.PermitNumber}__{file.FileId}__{file.FileName}",
                     FileId = file.FileId,
                     Reason = "Don't have locally"
                 }));
@@ -632,30 +558,6 @@ public class LicenceFileFinder : ILicenceFileFinder
         {
             Console.WriteLine($"ERROR - {ex.Message}");
             throw;
-        }
-
-        // Handle duplicate destination filenames by appending _1, _2, etc.
-        var destinationFileNameCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var record in downloadInfoRecords)
-        {
-            var baseDestinationFileName = record.DestinationFileName__1;
-
-            if (destinationFileNameCounts.TryAdd(baseDestinationFileName, 1))
-            {
-                continue;
-            }
-            
-            // This is a duplicate, append counter
-            var count = destinationFileNameCounts[baseDestinationFileName];
-            destinationFileNameCounts[baseDestinationFileName] = count + 1;
-
-            // Split filename and extension
-            var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(baseDestinationFileName);
-            var extension = Path.GetExtension(baseDestinationFileName);
-
-            // Append counter before extension
-            record.DestinationFileName__1 = $"{fileNameWithoutExtension}_{count}{extension}";
         }
 
         // Create Excel output with specified column headers
