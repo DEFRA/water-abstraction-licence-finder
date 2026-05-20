@@ -82,7 +82,8 @@ using (var scope = host.Services.CreateScope())
         
         //var flowToRun = "FindLicenceFilesAsync";
         //var flowToRun = "FindAllFilesToDownload";
-        var flowToRun = "FindLicenceFilesAsync";
+        //var flowToRun = "FindLicenceFilesAsync";
+        var flowToRun = "FindAllFilesToDownload";
         
         switch (flowToRun)
         {
@@ -109,8 +110,9 @@ using (var scope = host.Services.CreateScope())
                 Console.WriteLine($"Licence processing completed. Results saved to: {licenceMatchResultsFilePath}");
                 break;
             case "FindAllFilesToDownload":
-                 // FLOW - Find all files to download (i.e. all files, not just licences) (previously referred to as Build Version Download Info Excel)
-                Console.WriteLine("Started finding all files to downloadl...");
+                 // FLOW - Find all files to download (i.e. all files, not just licences)
+                 // NOTE - previously referred to as Build Version Download Info Excel
+                Console.WriteLine("Started finding all files to download...");
                 
                 var result = licenceFileFinder.FindAllFilesToDownload(
                     DmsDictionaryToList(dmsRecordsData),
