@@ -2,11 +2,15 @@ using WA.DMS.LicenceFinder.Core.Models;
 
 namespace WA.DMS.LicenceFinder.Core.Interfaces;
 
-public interface IDmsApiClient
+public interface IGeneralApiClient
 {
     public Task<List<DmsFileIdInformation>> GetDmsFileIdInformationAsync();
 
     public Task AddDmsFileIdInformationAsync(DmsFileIdInformation newDmsFileIdInformation);
 
     public Task SaveLicenceFinderResultsAsync(List<LicenceMatchResult> results);
+
+    public Task SaveVersionFilesToDownloadAsync(List<DownloadInfoMissing> results);
+
+    public Task SaveVersionFilesAsync(List<DownloadInfoAll> results);
 }

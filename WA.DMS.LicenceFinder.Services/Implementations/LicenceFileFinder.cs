@@ -157,7 +157,7 @@ public class LicenceFileFinder : ILicenceFileFinder
         Dictionary<string, DmsManualFixExtract> dmsManualFixes,
         List<Override> dmsChangeAuditOverrides,
         ConcurrentDictionary<Guid, List<DmsFileIdInformation>> dmsFileIdInformation,
-        IDmsApiClient dmsApiClient,
+        IGeneralApiClient generalApiClient,
         List<NaldSimpleRecord> naldRecordsToProcess,
         Dictionary<string, List<NaldLicenceVersion>> naldData,
         List<DmsFileReaderResult> wradiToolScrapeResults,
@@ -180,7 +180,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                     dmsManualFixes,
                     dmsChangeAuditOverrides,
                     dmsFileIdInformation,
-                    dmsApiClient,
+                    generalApiClient,
                     naldRecordsToProcess,
                     naldData,
                     wradiToolScrapeResults,
@@ -188,7 +188,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                     wradiLocalFilesInventory);
 
             // Save to DB
-            await dmsApiClient.SaveLicenceFinderResultsAsync(licenceMatchResults);
+            await generalApiClient.SaveLicenceFinderResultsAsync(licenceMatchResults);
             
             // Generate output Excel file
             var worksheetData = new List<(string SheetName, Dictionary<string, string>? HeaderMapping, object Data)>
@@ -342,12 +342,12 @@ public class LicenceFileFinder : ILicenceFileFinder
         }
 
         // Build download info records
-        var downloadInfoRecords = new List<DownloadInfo>();
+        var downloadInfoRecords = new List<DownloadInfoOriginal>();
         
         try
         {
             downloadInfoRecords.AddRange(
-                missingFileDmsRecords.Select(file => new DownloadInfo
+                missingFileDmsRecords.Select(file => new DownloadInfoOriginal
                 {
                     PermitNumber = file.DmsExtract.PermitNumber,
                     FullPath = file.DmsExtract.FileUrl,
@@ -382,11 +382,11 @@ public class LicenceFileFinder : ILicenceFileFinder
         return outputFileName;
     }
     
-    public string FindAllFilesToDownload(
+    public async Task<string> FindAllFilesToDownloadAsync(
         Dictionary<string, List<DmsExtract>> dmsRecords,
         List<LicenceMatchResult> currentMatches,
         Dictionary<string, FileInventory> wradiAllLocalFilesInventory,
-        string? filterRegion = null)
+        IGeneralApiClient apiClient)
     {
         // Foreach permit number in the newest created file, find the DMS records for that permit number.
         // Check if the permit number row has a fileId that is different to the previous run. If so fetch the DMS info
@@ -395,41 +395,50 @@ public class LicenceFileFinder : ILicenceFileFinder
         var filteredCurrentMatches = currentMatches
             .Where(c => !c.DoiSignatureDateMatch
                 && !string.IsNullOrEmpty(c.SignatureDate)
-                && !c.ChangeAuditAction.Contains("Override", StringComparison.CurrentCultureIgnoreCase)
+                && !c.ChangeAuditAction.Equals("Override", StringComparison.CurrentCultureIgnoreCase)
                 && c.RuleUsed != "Not Applicable") // Folder not found
             .ToList();
 
         // Filter current match by region if specified, otherwise use all
-        if (!string.IsNullOrWhiteSpace(filterRegion))
+        /*if (!string.IsNullOrWhiteSpace(filterRegion))
         {
             filteredCurrentMatches = filteredCurrentMatches
                 .Where(pm =>
                     pm.Region.Equals(filterRegion, StringComparison.OrdinalIgnoreCase))
                 .ToList();
-        }
+        }*/
 
-        // Files that should be included in the report
         var missingFiles = new List<DmsExtract>();
+        var allFiles = new List<DmsExtract>();
+
+        var permitNumberRegions = new Dictionary<string, int>();
         
         foreach (var filteredCurrentMatch in filteredCurrentMatches)
         {
+            var permitNumber = filteredCurrentMatch.PermitNumber.ToLower();
+            
             // Find all files in DMS records that match the permit number of the current match
             var dmsRecordsForPermitNumber = dmsRecords.TryGetValue(
-                filteredCurrentMatch.PermitNumber.ToLower(),
-                out var record) ? record : [];
+                permitNumber,
+                out var records) ? records : [];
 
             if (!dmsRecordsForPermitNumber.Any())
             {
                 continue;
             }
+
+            permitNumberRegions.Add(permitNumber, RegionHelper.GetRegionId(filteredCurrentMatch.Region));
+            allFiles.AddRange(dmsRecordsForPermitNumber);
             
-            // Find files that are NOT in allFilesInventory
+            // Find missing files (i.e. that are NOT in allFilesInventory)
             var filesNotInInventory = dmsRecordsForPermitNumber
                 .Where(dmsRecordForPermitNumber =>
                 {
                     var exists = wradiAllLocalFilesInventory.Any(inventoryRecord =>
-                        inventoryRecord.Value.PermitNumber == dmsRecordForPermitNumber.PermitNumber
-                        && inventoryRecord.Value.FileId == dmsRecordForPermitNumber.FileId);
+                        inventoryRecord.Value.PermitNumber?
+                            .Equals(dmsRecordForPermitNumber.PermitNumber, StringComparison.CurrentCultureIgnoreCase) == true
+                        && inventoryRecord.Value.FileId?
+                            .Equals(dmsRecordForPermitNumber.FileId, StringComparison.InvariantCultureIgnoreCase) == true);
                     
                     return !exists;
                 })
@@ -439,33 +448,88 @@ public class LicenceFileFinder : ILicenceFileFinder
             missingFiles.AddRange(filesNotInInventory);
         }
 
-        // Build download info records
-        var downloadInfoRecords = new List<DownloadInfo>();
-        
-        downloadInfoRecords.AddRange(
-            missingFiles.Select(file => new DownloadInfo
+        var missingRecords = missingFiles
+            .Select(file => new DownloadInfoMissing
             {
                 PermitNumber = file.PermitNumber,
                 FullPath = file.FileUrl,
                 SitePath = ExtractSitePath(file.FileUrl),
-                LibraryAndFilePath = ExtractLibraryAndFilePath(file.FileUrl),
-                FileId = file.FileId, // Doesn't get used after
-                Reason = string.Empty // Doesn't get used after
-            }));
+                LibraryAndFilePath = ExtractLibraryAndFilePath(file.FileUrl)
+            })
+            .ToList();
+        
+        var allRecords = allFiles
+            .Select(file =>
+            {
+                int fileSize;
 
-        // Create Excel output with specified column headers
-        var headerMapping = new Dictionary<string, string>
+                if (file.FileSize.EndsWith(" KB"))
+                {
+                    fileSize = Convert.ToInt32(double.Parse(file.FileSize.Replace(" KB", string.Empty)) * 1024.0);
+                }
+                else if (file.FileSize.EndsWith(" MB"))
+                {
+                    fileSize = Convert.ToInt32(double.Parse(file.FileSize.Replace(" MB", string.Empty)) * 1024.0 * 1024.0);
+                }
+                else if (file.FileSize.EndsWith(" B"))
+                {
+                    fileSize = Convert.ToInt32(double.Parse(file.FileSize.Replace(" B", string.Empty)));
+                }
+                else
+                {
+                    fileSize = int.Parse(file.FileSize);
+                }
+                
+                return new DownloadInfoAll
+                {
+                    PermitNumber = file.PermitNumber,
+                    FullPath = file.FileUrl,
+                    SitePath = ExtractSitePath(file.FileUrl),
+                    LibraryAndFilePath = ExtractLibraryAndFilePath(file.FileUrl),
+                    RegionId = permitNumberRegions[file.PermitNumber.ToLower()],
+                    FileId = Guid.Parse(file.FileId),
+                    FileName = file.FileName,
+                    FileSize = fileSize
+                };
+            })
+            .ToList();
+
+        var missingHeaderMapping = new Dictionary<string, string>
         {
             { "PermitNumber", "PermitNumber" },
             { "FullPath", "FullPath" },
             { "SitePath", "SitePath" },
             { "LibraryAndFilePath", "LibraryAndFilePath" }
         };
+        
+        var allHeaderMapping = new Dictionary<string, string>
+        {
+            { "PermitNumber", "PermitNumber" },
+            { "FullPath", "FullPath" },
+            { "SitePath", "SitePath" },
+            { "LibraryAndFilePath", "LibraryAndFilePath" },
+            { "RegionId", "RegionId" },
+            { "FileId", "FileId" },
+            { "FileName", "FileName" },
+            { "FileSize", "FileSize" }
+        };
+        
+        var worksheetData = new List<(string SheetName, Dictionary<string, string>? HeaderMapping, object Data)>
+        {
+            ("Missing", missingHeaderMapping, missingRecords),
+            ("All", allHeaderMapping, allRecords)
+        };
+
+        var saveVersionAllTask = apiClient.SaveVersionFilesAsync(allRecords);
+        await apiClient.SaveVersionFilesToDownloadAsync(missingRecords);
+        await saveVersionAllTask;
+        
+        // NOTE! 2026-May-21 - The number we get for missing is less then the number JP calculated - we need to
+        // look at this in the future to see where the difference in logic is
 
         return _fileProcessor.GenerateExcel(
-            downloadInfoRecords,
-            "Version_Download_Info",
-            headerMapping);
+            worksheetData,
+            $"Version_Download_Info_{DateTime.Now:yyyyMMdd_HHmmss}");
     }
 
     public string FindLicenceFilesToDownload(
@@ -539,12 +603,12 @@ public class LicenceFileFinder : ILicenceFileFinder
         }
 
         // Build download info records
-        var downloadInfoRecords = new List<DownloadInfo>();
+        var downloadInfoRecords = new List<DownloadInfoOriginal>();
         
         try
         {
             downloadInfoRecords.AddRange(
-                missingFiles.Select(file => new DownloadInfo
+                missingFiles.Select(file => new DownloadInfoOriginal
                 {
                     PermitNumber = file.PermitNumber,
                     FullPath = file.FileUrl,
@@ -665,7 +729,7 @@ public class LicenceFileFinder : ILicenceFileFinder
         List<LicenceMatchResult> licenceFinderPreviousIterationMatches,
         List<DmsFileReaderResult> wradiToolScrapeResults,
         ConcurrentDictionary<Guid, List<DmsFileIdInformation>> dmsFileIdInformation,
-        IDmsApiClient dmsApiClient)
+        IGeneralApiClient generalApiClient)
     {
         // (Step 0: Receive previous iteration matches files (from licenceFinderPreviousIterationMatches))
         
@@ -780,7 +844,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                         fileId,
                         fileUrl,
                         dmsFileIdInformation,
-                        dmsApiClient);
+                        generalApiClient);
 
                     unmatchedList.Add(new UnmatchedLicenceMatchResult
                     {
@@ -846,7 +910,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                         fileId,
                         fileUrl,
                         dmsFileIdInformation,
-                        dmsApiClient);
+                        generalApiClient);
                     
                     unmatchedList.Add(new UnmatchedLicenceMatchResult
                     {
@@ -925,7 +989,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                         fileId,
                         fileUrl,
                         dmsFileIdInformation,
-                        dmsApiClient);
+                        generalApiClient);
                     
                     unmatchedList.Add(new UnmatchedLicenceMatchResult
                     {
@@ -1310,7 +1374,7 @@ public class LicenceFileFinder : ILicenceFileFinder
     /// <param name="dmsManualFixes"></param>
     /// <param name="dmsChangeAuditOverrides"></param>
     /// <param name="dmsFileIdInformation"></param>
-    /// <param name="dmsApiClient"></param>
+    /// <param name="generalApiClient"></param>
     /// <param name="naldRecordsToProcess">NALD extract records to process</param>
     /// <param name="naldData"></param>
     /// <param name="wradiToolScrapeResults"></param>
@@ -1325,7 +1389,7 @@ public class LicenceFileFinder : ILicenceFileFinder
             Dictionary<string, DmsManualFixExtract> dmsManualFixes,
             List<Override> dmsChangeAuditOverrides,
             ConcurrentDictionary<Guid, List<DmsFileIdInformation>> dmsFileIdInformation,
-            IDmsApiClient dmsApiClient,
+            IGeneralApiClient generalApiClient,
             List<NaldSimpleRecord> naldRecordsToProcess,
             Dictionary<string, List<NaldLicenceVersion>> naldData,
             List<DmsFileReaderResult> wradiToolScrapeResults,
@@ -1338,7 +1402,7 @@ public class LicenceFileFinder : ILicenceFileFinder
             licenceFinderPreviousIterationMatches,
             wradiToolScrapeResults,
             dmsFileIdInformation,
-            dmsApiClient);
+            generalApiClient);
         
         var deltaResults = new List<DeltaResult>();
         
@@ -1429,7 +1493,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                     overrideRecord.FileId,
                     overrideRecord.FileUrl,
                     dmsFileIdInformation,
-                    dmsApiClient);
+                    generalApiClient);
                     
                 licenceMatchResult.FileIdStatus = fileIdInfo?.Status;
                 licenceMatchResult.FileIdStatusChangeDate = fileIdInfo?.StatusDateUtc.ToString("dd/MM/yyyy");
@@ -1546,7 +1610,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                         matchedDmsRecord.FileId,
                         matchedDmsRecord.FileUrl,
                         dmsFileIdInformation,
-                        dmsApiClient);
+                        generalApiClient);
                     
                     licenceMatchResult.FileIdStatus = fileIdInfo?.Status;
                     licenceMatchResult.FileIdStatusChangeDate = fileIdInfo?.StatusDateUtc.ToString("dd/MM/yyyy");
@@ -1613,7 +1677,7 @@ public class LicenceFileFinder : ILicenceFileFinder
         string? fileId,
         string? fileUrl,
         ConcurrentDictionary<Guid, List<DmsFileIdInformation>> dmsFileIdInformation,
-        IDmsApiClient dmsApiClient)
+        IGeneralApiClient generalApiClient)
     {
         if (string.IsNullOrEmpty(fileId) || string.IsNullOrEmpty(fileUrl))
         {
@@ -1644,7 +1708,7 @@ public class LicenceFileFinder : ILicenceFileFinder
         {
             outputDmsFileIdInformation.Status = "FirstSeen";
             
-            await dmsApiClient.AddDmsFileIdInformationAsync(outputDmsFileIdInformation);
+            await generalApiClient.AddDmsFileIdInformationAsync(outputDmsFileIdInformation);
             dmsFileIdInformation.TryAdd(outputDmsFileIdInformation.FileId, [outputDmsFileIdInformation]);
         }
         else
@@ -1666,7 +1730,7 @@ public class LicenceFileFinder : ILicenceFileFinder
             var isFilenameSame = lastRecordFilenameOnly == filenameOnly;
             outputDmsFileIdInformation.Status = isFilenameSame ? "Moved" : "Renamed";
 
-            await dmsApiClient.AddDmsFileIdInformationAsync(outputDmsFileIdInformation);
+            await generalApiClient.AddDmsFileIdInformationAsync(outputDmsFileIdInformation);
             dmsFileIdInformation[outputDmsFileIdInformation.FileId].Add(outputDmsFileIdInformation);
         }
 

@@ -24,9 +24,6 @@ using (var scope = host.Services.CreateScope())
     var licenceFileFinder = scope.ServiceProvider.GetRequiredService<ILicenceFileFinder>();
     var readExtractService = scope.ServiceProvider.GetRequiredService<IReadExtract>();
     
-    var optionalRegionFilter = "Anglian Region";
-    optionalRegionFilter = null;
-    
     var regionName = "Anglian Region";
     regionName = null;
     
@@ -37,26 +34,26 @@ using (var scope = host.Services.CreateScope())
     
     try
     {
-        var dmsApiClient = new DmsApiClient(apiBaseUrl);
+        var generalApiClient = new GeneralApiClient(apiBaseUrl);
         
         // API - NALD data - started early as async so we can run in parallel
         var naldDataTask = GetNaldDataAsync(apiBaseUrl);
         
         // API - DMS file id data (from what we've seen before)
-        var dmsFileIdInformationTask = GetDmsFileIdInformationAsync(dmsApiClient);
+        var dmsFileIdInformationTask = GetDmsFileIdInformationAsync(generalApiClient);
         
         // API - DMS data file export ~240k records (originally from Consolidate file)
-        var dmsRecordsTask = dmsApiClient.GetDmsExtractAsync();
+        var dmsRecordsTask = generalApiClient.GetDmsExtractAsync();
 
         // API - WRADI tool all local files inventory (from S3 stuff)
         var wradiAllLocalFilesInventoryTask = GetWradiPdfsInventoryFiles(apiBaseUrl);
         
         // API - WRADI tool file reader (DOI, template type etc... scraping) extracts
         // (e.g. LicenceReader-yyyyMMdd.csv). Has date of issue, number of pages, template types etc...
-        var wradiToolScrapeResultsTask = dmsApiClient.GetDmsFileReaderResultsAsync();
+        var wradiToolScrapeResultsTask = generalApiClient.GetDmsFileReaderResultsAsync();
         
         // API - Licence finder previous iteration run matches
-        var licenceFinderLastIterationMatchesTask = dmsApiClient.GetLicenceFinderResultsAsync();
+        var licenceFinderLastIterationMatchesTask = generalApiClient.GetLicenceFinderResultsAsync();
         
         // Spreadsheet - DMS change audit overrides by our team (e.g. Overrides.xlsx)
         var dmsChangeAuditOverrides = readExtractService.GetDmsChangeAuditOverrides(
@@ -93,7 +90,7 @@ using (var scope = host.Services.CreateScope())
                     dmsManualFixes,
                     dmsChangeAuditOverrides.Item1,
                     await dmsFileIdInformationTask,
-                    dmsApiClient,
+                    generalApiClient,
                     naldRecordsToProcess,
                     naldAbsLicencesAndVersions,
                     await wradiToolScrapeResultsTask,
@@ -108,14 +105,14 @@ using (var scope = host.Services.CreateScope())
                 break;
             case "FindAllFilesToDownload":
                  // FLOW - Find all files to download (i.e. all files, not just licences)
-                 // NOTE - previously referred to as Build Version Download Info Excel
+                 // NOTE - previously referred to as 'Build Version Download Info Excel'
                 Console.WriteLine("Started finding all files to download...");
                 
-                var result = licenceFileFinder.FindAllFilesToDownload(
+                var result = await licenceFileFinder.FindAllFilesToDownloadAsync(
                     dmsRecordsData,
                     await licenceFinderLastIterationMatchesTask,
                     wradiAllLocalFilesInventory,
-                    restrictToRegionName);
+                    generalApiClient);
                 
                 Console.WriteLine($"File saved to {result}");
                 break;
@@ -267,9 +264,9 @@ static List<DmsExtract> DmsDictionaryToList(Dictionary<string, List<DmsExtract>>
 }
 
 static async Task<ConcurrentDictionary<Guid, List<DmsFileIdInformation>>>
-    GetDmsFileIdInformationAsync(DmsApiClient dmsApiClient)
+    GetDmsFileIdInformationAsync(IGeneralApiClient generalApiClient)
 {
-    var dmsFileIdInformationList = await dmsApiClient.GetDmsFileIdInformationAsync();
+    var dmsFileIdInformationList = await generalApiClient.GetDmsFileIdInformationAsync();
     var dmsFileIdInformationDict = new ConcurrentDictionary<Guid, List<DmsFileIdInformation>>();
     
     foreach (var dmsFileIdInformation in dmsFileIdInformationList)
@@ -364,7 +361,7 @@ static async Task<(List<
         {
             LicNo = licence.LicenceNo!,
             DmsPermitNo = licenceNumberWithoutSeperators,
-            Region = GetRegionName(licence.FgacRegionCode)
+            Region = RegionHelper.GetRegionName(licence.FgacRegionCode)
         };
         
         naldSimpleRecords.Add(naldSimpleRecord);
@@ -374,18 +371,3 @@ static async Task<(List<
     return (naldSimpleRecords, naldData, importDate ?? "Unknown");
 }
 
-static string GetRegionName(int regionCode)
-{
-    return regionCode switch
-    {
-        1 => "Anglian",
-        2 => "Midlands",
-        3 => "North East",
-        4 => "North West",
-        5 => "South West",
-        6 => "Southern",
-        7 => "Thames",
-        8 => "Wales",
-        _ => throw new ArgumentOutOfRangeException(nameof(regionCode), $"We've not yet mapped region code {regionCode}")
-    };
-}
