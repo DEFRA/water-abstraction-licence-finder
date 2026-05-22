@@ -116,8 +116,26 @@ using (var scope = host.Services.CreateScope())
                 
                 Console.WriteLine($"File saved to {result}");
                 break;
+            case "BuildFileTemplateIdentificationExtract":
+                // FLOW - Build file template identification extract
+                Console.WriteLine("Started building file template identification extract...");
+                var resultFilePath = licenceFileFinder.BuildFileTemplateIdentificationExtract(
+                    await licenceFinderLastIterationMatchesTask,
+                    dmsChangeAuditOverrides.Item1,
+                    jpFileVersionResults);
+
+                Console.WriteLine($"File saved to {resultFilePath}");
+                break;
+            
+            
+            
+            
+            
+            
+            
             case "FindLicenceFilesToDownload":
                 // FLOW - Find licence files to download (previously referred to as 'Build Download Info Excel')
+                // NOTE 2026-May-22 I think FindLicenceFiles extra tabs supersede this NOT USED ANYMORE PROBABLY
                 Console.WriteLine("Started finding licence files to download...");
                 
                 var path = licenceFileFinder.FindLicenceFilesToDownload(
@@ -129,7 +147,7 @@ using (var scope = host.Services.CreateScope())
                 Console.WriteLine($"File saved to {path}");
                 break;            
             case "FindLicenceFilesToDownload_SpreadsheetCompareOnly":
-                // FLOW - Find licence files to download (spreadsheet compare only - old way)
+                // FLOW - Find licence files to download (spreadsheet compare only - old way) NOT USED ANYMORE
                 Console.WriteLine("Started finding licence files to download...");
 
                 var fileName = licenceFileFinder.FindLicenceFilesToDownload_SpreadsheetCompareOnly(
@@ -139,16 +157,6 @@ using (var scope = host.Services.CreateScope())
                     restrictToRegionName);
 
                 Console.WriteLine($"File saved to {fileName}");
-                break;
-            case "BuildFileTemplateIdentificationExtract":
-                // FLOW - Build file template identification extract
-                Console.WriteLine("Started building file template identification extract...");
-                var resultFilePath = licenceFileFinder.BuildFileTemplateIdentificationExtract(
-                    await licenceFinderLastIterationMatchesTask,
-                    dmsChangeAuditOverrides.Item1,
-                    jpFileVersionResults);
-
-                Console.WriteLine($"File saved to {resultFilePath}");
                 break;
             case "FindDuplicateLicenceFiles":
                 // FLOW - Find duplicate licence files (NOT USED ANYMORE - we read the files and check the hashes)
