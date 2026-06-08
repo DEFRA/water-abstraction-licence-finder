@@ -1435,7 +1435,8 @@ public class LicenceFileFinder : ILicenceFileFinder
         };
         
         var processedRecordCount = 0;
-       
+        var rowIndex = 1;
+        
         Console.WriteLine($"Processing {naldRecordsToProcess.Count} NALD records...");
         var returnList = new List<LicenceMatchResult>();
         
@@ -1445,7 +1446,8 @@ public class LicenceFileFinder : ILicenceFileFinder
             var licenceMatchResult = new LicenceMatchResult
             {
                 LicenseNumber = naldReportRecord.LicNo,
-                PermitNumber = LicenceFileHelpers.CleanPermitNumber(naldReportRecord.LicNo)
+                PermitNumber = LicenceFileHelpers.CleanPermitNumber(naldReportRecord.LicNo),
+                UniqueColumnID = rowIndex++.ToString()
             };
             
             var lowercasePermitNumber = licenceMatchResult.PermitNumber.ToLowerInvariant();

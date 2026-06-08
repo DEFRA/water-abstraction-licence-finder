@@ -153,4 +153,18 @@ public class LicenceMatchResult
     public bool SeenInDmsExtract { get; set; }
     
     public bool? WeHaveDownloaded { get; set; }
+    
+    // ReSharper disable InconsistentNaming (named how advised from team)
+    public string? UniqueColumnID { get; set; }
+    
+    public string? Status { get; set; }
+    
+    public string? URL_of_manually_identified_latest_licence_document { get; set; }
+    
+    public string? Confirmed_file_url_is_the_latest_licence { get; set; }
+    
+    public string? Missing_document_from_Dms { get; set; }
+    
+    public string? Comments { get; set; }
+    // ReSharper restore InconsistentNaming
 }
