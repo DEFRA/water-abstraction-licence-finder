@@ -10,6 +10,8 @@ public interface IGeneralApiClient
 
     public Task SaveLicenceFinderResultsAsync(List<LicenceMatchResult> results);
 
+    public Task ClearLicenceFinderResultsAsync();
+
     public Task SaveVersionFilesToDownloadAsync(List<DownloadInfoMissing> results);
 
     public Task SaveVersionFilesAsync(List<DownloadInfoAll> results);

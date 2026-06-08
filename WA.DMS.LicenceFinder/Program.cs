@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Globalization;
+using DocumentFormat.OpenXml.Office2010.ExcelAc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using WA.DMS.LicenceFinder.Core.Interfaces;
@@ -30,7 +31,8 @@ using (var scope = host.Services.CreateScope())
     var restrictToRegionName = "North East";
     restrictToRegionName = null;
     
-    var apiBaseUrl = "http://localhost:8080";
+    //var apiBaseUrl = "http://localhost:8080";
+    var apiBaseUrl = "https://wli-api-dev.aws-int.defra.cloud";
     
     try
     {
@@ -43,7 +45,7 @@ using (var scope = host.Services.CreateScope())
         var dmsFileIdInformationTask = GetDmsFileIdInformationAsync(generalApiClient);
         
         // API - DMS data file export ~240k records (originally from Consolidate file)
-        var dmsRecordsTask = generalApiClient.GetDmsExtractAsync();
+        var dmsRecordsTask = GetDmsExtractAsync(generalApiClient);
 
         // API - WRADI tool all local files inventory (from S3 stuff)
         var wradiAllLocalFilesInventoryTask = GetWradiPdfsInventoryFiles(apiBaseUrl);
@@ -76,8 +78,8 @@ using (var scope = host.Services.CreateScope())
         var wradiAllLocalFilesInventory = await wradiAllLocalFilesInventoryTask;
         
         //var flowToRun = "FindLicenceFilesAsync";
-        var flowToRun = "FindAllFilesToDownload";
-        //var flowToRun = "FindLicenceFilesAsync";
+        //var flowToRun = "FindAllFilesToDownload";
+        var flowToRun = "FindLicenceFilesAsync";
         
         switch (flowToRun)
         {
@@ -179,6 +181,29 @@ using (var scope = host.Services.CreateScope())
 await host.StopAsync();
 return;
 
+static async Task<(List<DmsExtract> Data, string ImportDate)> GetDmsExtractAsync(GeneralApiClient generalApiClient)
+{
+    var dmsExtractInfoRaw = new List<DmsExtract>();
+    const int take = 10_000;
+    
+    List<DmsExtract> dmsExtractPartial = [];
+    var loopIdx = 0;
+    string? filename = null;
+
+    while (loopIdx == 0 || dmsExtractPartial.Count == take)
+    {
+        var skip = take * loopIdx++;
+            
+        var (data, importDate) = await generalApiClient.GetDmsExtractAsync(skip, take);
+        dmsExtractPartial = data;
+        filename = importDate;
+        
+        dmsExtractInfoRaw.AddRange(dmsExtractPartial);
+    }
+
+    return (dmsExtractInfoRaw, filename)!;
+}
+
 static Dictionary<string, List<DmsExtract>> GroupDmsRecords(List<DmsExtract> dmsRecords)
 {
     foreach (var dmsRecord in dmsRecords)
@@ -196,7 +221,22 @@ static Dictionary<string, List<DmsExtract>> GroupDmsRecords(List<DmsExtract> dms
 static async Task<Dictionary<string, FileInventory>> GetWradiPdfsInventoryFiles(string apiBaseUrl)
 {
     var inventoryApi = new InventoryApiClient(apiBaseUrl);
-    var files = await inventoryApi.GetAllWithMetadataAsync();
+    
+    var files = new List<FileMetadata>();
+    var partialFiles = new List<FileMetadata>();
+
+    const int take = 1_000;
+    var loopIdx = 0;
+    var startAfter = string.Empty;
+    
+    while (loopIdx == 0 || partialFiles.Count == take)
+    {
+        partialFiles = await inventoryApi.GetAllWithMetadataAsync(startAfter, take);
+        files.AddRange(partialFiles);
+
+        loopIdx += 1;
+        startAfter = partialFiles.Last().Filename;
+    }
     
     var returnDict = new Dictionary<string, FileInventory>(StringComparer.OrdinalIgnoreCase);
     
@@ -299,22 +339,42 @@ static async Task<(List<
 {
     var naldApiClient = new NaldApiClient(apiBaseUrl);
         
-    var naldApiStatusDataTask = naldApiClient.GetNaldLicenceStatusDataAsync(null);
+    var naldApiStatusDataTask = naldApiClient.GetNaldLicenceStatusDataAsync();
+    
+    const int take = 10_000;
+    var allNaldData = new NaldDataCollection
+    {
+        AbstractionLicences = [],
+        AbstractionLicenceVersions = []
+    };
 
-    var naldApiData = await naldApiClient.GetNaldDataAsync(null);
+    var allNaldDataPartial = new NaldDataCollection();
+    var loopIdx = 0;
+
+    while (loopIdx == 0
+        || allNaldDataPartial.AbstractionLicences!.Count == take
+        || allNaldDataPartial.AbstractionLicenceVersions!.Count == take)
+    {
+        var skip = take * loopIdx++;
+            
+        allNaldDataPartial = await naldApiClient.GetNaldDataAsync(null, false, skip, take);
+        allNaldData.AbstractionLicences!.AddRange(allNaldDataPartial.AbstractionLicences!);
+        allNaldData.AbstractionLicenceVersions!.AddRange(allNaldDataPartial.AbstractionLicenceVersions!);
+    }
+    
     var naldApiStatusData = await naldApiStatusDataTask;
     
     var naldSimpleRecords = new List<NaldSimpleRecord>();
     var naldData = new Dictionary<string, List<NaldLicenceVersion>>();
     var naldVersionsDict = new Dictionary<string, List<NaldLicenceVersionDataLine>>();
 
-    if (naldApiData.AbstractionLicenceVersions == null || naldApiData.AbstractionLicenceVersions.Count == 0)
+    if (allNaldData.AbstractionLicenceVersions == null || allNaldData.AbstractionLicenceVersions.Count == 0)
     {
         throw new Exception("Nald Api licence versions came back empty");
     }
     
     // NOTE - LicenceVersions is only pulling back newest currently, so this is overkill
-    foreach (var licenceVersion in naldApiData.AbstractionLicenceVersions)
+    foreach (var licenceVersion in allNaldData.AbstractionLicenceVersions)
     {
         if (!naldVersionsDict.ContainsKey(licenceVersion.LookupKey))
         {
@@ -324,7 +384,7 @@ static async Task<(List<
         naldVersionsDict[licenceVersion.LookupKey].Add(licenceVersion);
     }
     
-    foreach (var licence in naldApiData.AbstractionLicences!)
+    foreach (var licence in allNaldData.AbstractionLicences!)
     {
         var licenceNumberWithoutSeperators = LicenceFileHelpers.CleanPermitNumber(licence.LicenceNo!);
         

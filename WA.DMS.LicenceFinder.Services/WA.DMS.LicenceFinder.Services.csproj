@@ -126,7 +126,8 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <None Remove="Resources\Override_Master_Provided_2026_05_13.xlsx" />
-    <Content Include="Resources\Override_Master_Provided_2026_05_13.xlsx">
+    <None Remove="Resources\Override_Master_May_29_2026.xlsx" />
+    <Content Include="Resources\Override_Master_May_29_2026.xlsx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

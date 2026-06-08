@@ -38,9 +38,9 @@ public class GeneralApiClient : IGeneralApiClient
         response.EnsureSuccessStatusCode();
     }
     
-    public async Task<(List<DmsExtract> Data, string ImportDate)> GetDmsExtractAsync()
+    public async Task<(List<DmsExtract> Data, string ImportDate)> GetDmsExtractAsync(int skip, int take)
     {
-        var path = "/Extractor/Dms/GetExtract";
+        var path = $"/Extractor/Dms/GetExtract?skip={skip}&take={take}";
 
         var response = await HttpClient.GetAsync(path);
         response.EnsureSuccessStatusCode();
@@ -85,6 +85,15 @@ public class GeneralApiClient : IGeneralApiClient
         }, GetSerializerOptions());
         
         var httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+        var response = await HttpClient.PostAsync(new Uri(HttpClient.BaseAddress!, path), httpContent);
+        response.EnsureSuccessStatusCode();
+    }
+    
+    public async Task ClearLicenceFinderResultsAsync()
+    {
+        var path = "/Extractor/LicenceFinder/ClearResults";
+        
+        var httpContent = new StringContent("{}", System.Text.Encoding.UTF8, "application/json");
         var response = await HttpClient.PostAsync(new Uri(HttpClient.BaseAddress!, path), httpContent);
         response.EnsureSuccessStatusCode();
     }
