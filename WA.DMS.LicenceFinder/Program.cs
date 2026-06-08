@@ -31,8 +31,8 @@ using (var scope = host.Services.CreateScope())
     var restrictToRegionName = "North East";
     restrictToRegionName = null;
     
-    //var apiBaseUrl = "http://localhost:8080";
-    var apiBaseUrl = "https://wli-api-dev.aws-int.defra.cloud";
+    var apiBaseUrl = "http://localhost:8080";
+    //var apiBaseUrl = "https://wli-api-dev.aws-int.defra.cloud";
     
     try
     {

@@ -10,6 +10,8 @@ public class Override
     /// </summary>
     public string PermitNumber { get; set; } = string.Empty;
 
+    public string LicenceReference { get; set; } = string.Empty;
+    
     /// <summary>
     /// Overriden file Path
     /// </summary>
@@ -24,6 +26,11 @@ public class Override
     /// NALD Increment Number
     /// </summary>
     public int? IncrementNo { get; set; }
+    
+    /// <summary>
+    /// 
+    /// </summary>
+    public string OverrideType { get; set; } = string.Empty;
     
     /// <summary>
     /// 

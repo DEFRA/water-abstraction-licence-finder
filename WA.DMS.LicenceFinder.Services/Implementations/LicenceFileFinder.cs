@@ -1468,8 +1468,19 @@ public class LicenceFileFinder : ILicenceFileFinder
             
             // Check if permit number exists in overrides first (IMPORTANT - there should only
             // be one override per permit number or we will intentionally error)
-            var overrideRecord = dmsChangeAuditOverrides.SingleOrDefault(ca => 
-                ca.PermitNumber.Equals(licenceMatchResult.PermitNumber, StringComparison.OrdinalIgnoreCase));
+            var overrideRecords = dmsChangeAuditOverrides
+                .Where(ca =>
+                    ca.PermitNumber.Equals(licenceMatchResult.PermitNumber, StringComparison.OrdinalIgnoreCase)
+                    || ca.LicenceReference.Equals(licenceMatchResult.LicenseNumber, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            
+            if (overrideRecords.Count > 1)
+            {
+                throw new Exception(
+                    $"Duplicate overrides found for {overrideRecords[0].PermitNumber} or {overrideRecords[0].LicenceReference}");
+            }
+            
+            var overrideRecord = overrideRecords.FirstOrDefault();
             
             var naldVersionIssueNo = int.Parse(naldLicenceVersionData?.IssueNo ?? "0");
             var overrideIssueNo = !string.IsNullOrWhiteSpace(overrideRecord?.IssueNo)

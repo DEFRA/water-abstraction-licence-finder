@@ -372,6 +372,8 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
             throw new FileNotFoundException("Only 1 override file should be used.");
         }
         
+        Console.WriteLine($"Override file is {overridesFilenames[0]}");
+        
         foreach (var fileName in overridesFilenames)
         {
             var records = _fileProcessor.ExtractExcel<List<Override>>(
@@ -379,6 +381,7 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
                 new Dictionary<string, List<string>>
                 {
                     { "Permit Number", ["PermitNumber"]},
+                    { "LicenceReference", ["LicenceReference"]},
                     { "File URL", ["FileUrl"]},
                     { "FullPath", ["FileUrl"]},
                     { "DefinitiveURL", ["FileUrl"]},
@@ -386,6 +389,7 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
                     { "NALD Issue No.", ["IssueNo"]},
                     { "NALD Increment_No", ["IncrementNo"]},
                     { "NALD Increment No.", ["IncrementNo"]},
+                    { "OverrideType", ["OverrideType"]},
                     { "File ID", ["FileId"]}
                 });
 
