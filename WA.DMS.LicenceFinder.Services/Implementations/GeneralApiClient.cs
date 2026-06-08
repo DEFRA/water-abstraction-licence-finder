@@ -124,9 +124,9 @@ public class GeneralApiClient : IGeneralApiClient
         response.EnsureSuccessStatusCode();
     }
 
-    public async Task<List<LicenceMatchResult>> GetLicenceFinderResultsAsync()
+    public async Task<List<LicenceMatchResult>> GetLicenceFinderResultsAsync(int skip, int take)
     {
-        var path = "/Extractor/LicenceFinder/GetResults";
+        var path = $"/Extractor/LicenceFinder/GetResults?skip={skip}&take={take}";
 
         var response = await HttpClient.GetAsync(path);
         response.EnsureSuccessStatusCode();

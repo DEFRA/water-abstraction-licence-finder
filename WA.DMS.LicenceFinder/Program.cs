@@ -55,7 +55,7 @@ using (var scope = host.Services.CreateScope())
         var wradiToolScrapeResultsTask = generalApiClient.GetDmsFileReaderResultsAsync();
         
         // API - Licence finder previous iteration run matches
-        var licenceFinderLastIterationMatchesTask = generalApiClient.GetLicenceFinderResultsAsync();
+        var licenceFinderLastIterationMatchesTask = GetLicenceFinderResultsAsync(generalApiClient);
         
         // Spreadsheet - DMS change audit overrides by our team (e.g. Overrides.xlsx)
         var dmsChangeAuditOverrides = readExtractService.GetDmsChangeAuditOverrides(
@@ -180,6 +180,25 @@ using (var scope = host.Services.CreateScope())
 
 await host.StopAsync();
 return;
+
+static async Task<List<LicenceMatchResult>> GetLicenceFinderResultsAsync(GeneralApiClient apiClient)
+{
+    var licenceFindResults = new List<LicenceMatchResult>();
+    const int take = 10_000;
+    
+    List<LicenceMatchResult> licenceFinderResultsPartial = [];
+    var loopIdx = 0;
+
+    while (loopIdx == 0 || licenceFinderResultsPartial.Count == take)
+    {
+        var skip = take * loopIdx++;
+            
+        licenceFinderResultsPartial = await apiClient.GetLicenceFinderResultsAsync(skip, take);
+        licenceFindResults.AddRange(licenceFinderResultsPartial);
+    }
+
+    return licenceFindResults;
+}
 
 static async Task<(List<DmsExtract> Data, string ImportDate)> GetDmsExtractAsync(GeneralApiClient generalApiClient)
 {
