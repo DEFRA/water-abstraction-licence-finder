@@ -5,9 +5,9 @@ using WA.DMS.LicenceFinder.Core.Models;
 
 namespace WA.DMS.LicenceFinder.Services.Implementations;
 
-public class DmsApiClient : IDmsApiClient
+public class GeneralApiClient : IGeneralApiClient
 {
-    public DmsApiClient(string apiBaseUrl)
+    public GeneralApiClient(string apiBaseUrl)
     {
         HttpClient = new HttpClient();
         HttpClient.BaseAddress = new Uri(apiBaseUrl);
@@ -38,9 +38,9 @@ public class DmsApiClient : IDmsApiClient
         response.EnsureSuccessStatusCode();
     }
     
-    public async Task<(List<DmsExtract> Data, string ImportDate)> GetDmsExtractAsync()
+    public async Task<(List<DmsExtract> Data, string ImportDate)> GetDmsExtractAsync(int skip, int take)
     {
-        var path = "/Extractor/Dms/GetExtract";
+        var path = $"/Extractor/Dms/GetExtract?skip={skip}&take={take}";
 
         var response = await HttpClient.GetAsync(path);
         response.EnsureSuccessStatusCode();
@@ -89,9 +89,44 @@ public class DmsApiClient : IDmsApiClient
         response.EnsureSuccessStatusCode();
     }
     
-    public async Task<List<LicenceMatchResult>> GetLicenceFinderResultsAsync()
+    public async Task ClearLicenceFinderResultsAsync()
     {
-        var path = "/Extractor/LicenceFinder/GetResults";
+        var path = "/Extractor/LicenceFinder/ClearResults";
+        
+        var httpContent = new StringContent("{}", System.Text.Encoding.UTF8, "application/json");
+        var response = await HttpClient.PostAsync(new Uri(HttpClient.BaseAddress!, path), httpContent);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task SaveVersionFilesToDownloadAsync(List<DownloadInfoMissing> results)
+    {
+        var path = "/Extractor/VersionFiles/SaveToDownload";
+        var json = JsonSerializer.Serialize(new
+        {
+            results
+        }, GetSerializerOptions());
+        
+        var httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+        var response = await HttpClient.PostAsync(new Uri(HttpClient.BaseAddress!, path), httpContent);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task SaveVersionFilesAsync(List<DownloadInfoAll> results)
+    {
+        var path = "/Extractor/VersionFiles/SaveAll";
+        var json = JsonSerializer.Serialize(new
+        {
+            results
+        }, GetSerializerOptions());
+        
+        var httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+        var response = await HttpClient.PostAsync(new Uri(HttpClient.BaseAddress!, path), httpContent);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task<List<LicenceMatchResult>> GetLicenceFinderResultsAsync(int skip, int take)
+    {
+        var path = $"/Extractor/LicenceFinder/GetResults?skip={skip}&take={take}";
 
         var response = await HttpClient.GetAsync(path);
         response.EnsureSuccessStatusCode();

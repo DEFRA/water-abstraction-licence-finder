@@ -157,7 +157,7 @@ public class LicenceFileFinder : ILicenceFileFinder
         Dictionary<string, DmsManualFixExtract> dmsManualFixes,
         List<Override> dmsChangeAuditOverrides,
         ConcurrentDictionary<Guid, List<DmsFileIdInformation>> dmsFileIdInformation,
-        IDmsApiClient dmsApiClient,
+        IGeneralApiClient generalApiClient,
         List<NaldSimpleRecord> naldRecordsToProcess,
         Dictionary<string, List<NaldLicenceVersion>> naldData,
         List<DmsFileReaderResult> wradiToolScrapeResults,
@@ -180,7 +180,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                     dmsManualFixes,
                     dmsChangeAuditOverrides,
                     dmsFileIdInformation,
-                    dmsApiClient,
+                    generalApiClient,
                     naldRecordsToProcess,
                     naldData,
                     wradiToolScrapeResults,
@@ -188,7 +188,15 @@ public class LicenceFileFinder : ILicenceFileFinder
                     wradiLocalFilesInventory);
 
             // Save to DB
-            await dmsApiClient.SaveLicenceFinderResultsAsync(licenceMatchResults);
+            await generalApiClient.ClearLicenceFinderResultsAsync();
+            const int chunkSize = 1_000;
+            
+            var chunks = licenceMatchResults.Chunk(chunkSize);
+
+            foreach (var chunk in chunks)
+            {
+                await generalApiClient.SaveLicenceFinderResultsAsync(chunk.ToList());
+            }
             
             // Generate output Excel file
             var worksheetData = new List<(string SheetName, Dictionary<string, string>? HeaderMapping, object Data)>
@@ -310,7 +318,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                     }
 
                     var d = new DateTime(1900, 1, 1);
-                    d = d.AddDays(Convert.ToDouble(dmsFileUrlMatch!.ModifiedDate));
+                    d = d.AddDays(Convert.ToDouble(dmsFileUrlMatch.ModifiedDate));
                     
                     Console.WriteLine(
                         $"INFO - File URL '{currentMatchSeenPreviously.FileUrl}' matches." +
@@ -342,19 +350,17 @@ public class LicenceFileFinder : ILicenceFileFinder
         }
 
         // Build download info records
-        var downloadInfoRecords = new List<DownloadInfo>();
+        var downloadInfoRecords = new List<DownloadInfoOriginal>();
         
         try
         {
             downloadInfoRecords.AddRange(
-                missingFileDmsRecords.Select(file => new DownloadInfo
+                missingFileDmsRecords.Select(file => new DownloadInfoOriginal
                 {
                     PermitNumber = file.DmsExtract.PermitNumber,
                     FullPath = file.DmsExtract.FileUrl,
                     SitePath = ExtractSitePath(file.DmsExtract.FileUrl),
                     LibraryAndFilePath = ExtractLibraryAndFilePath(file.DmsExtract.FileUrl),
-                    OriginalFileName = file.DmsExtract.FileName,
-                    DestinationFileName__1 = $"{file.DmsExtract.PermitNumber}__{file.DmsExtract.FileName}",
                     FileId = file.FileId,
                     Reason = file.Reason
                 }));
@@ -365,29 +371,6 @@ public class LicenceFileFinder : ILicenceFileFinder
             throw;
         }
 
-        // Handle duplicate destination filenames by appending _1, _2, etc.
-        var destinationFileNameCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var record in downloadInfoRecords)
-        {
-            var baseDestinationFileName = record.DestinationFileName__1;
-
-            if (destinationFileNameCounts.TryAdd(baseDestinationFileName, 1))
-            {
-                continue;
-            }
-            
-            // This is a duplicate, append counter
-            var count = destinationFileNameCounts[baseDestinationFileName] += 1;
-
-            // Split filename and extension
-            var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(baseDestinationFileName);
-            var extension = Path.GetExtension(baseDestinationFileName);
-
-            // Append counter before extension
-            record.DestinationFileName__1 = $"{fileNameWithoutExtension}_{count}{extension}";
-        }
-
         // Create Excel output with specified column headers
         var headerMapping = new Dictionary<string, string>
         {
@@ -395,8 +378,6 @@ public class LicenceFileFinder : ILicenceFileFinder
             { "FullPath", "FullPath" },
             { "SitePath", "SitePath" },
             { "LibraryAndFilePath", "LibraryAndFilePath" },
-            { "OriginalFileName", "OriginalFileName" },
-            { "DestinationFileName__1", "DestinationFileName__1" },
             { "FileId", "FileId" },
             { "Reason", "Reason" }
         };
@@ -409,135 +390,154 @@ public class LicenceFileFinder : ILicenceFileFinder
         return outputFileName;
     }
     
-    public string FindAllFilesToDownload(
-        List<DmsExtract> dmsRecords,
+    public async Task<string> FindAllFilesToDownloadAsync(
+        Dictionary<string, List<DmsExtract>> dmsRecords,
         List<LicenceMatchResult> currentMatches,
         Dictionary<string, FileInventory> wradiAllLocalFilesInventory,
-        string? filterRegion = null)
+        IGeneralApiClient apiClient)
     {
         // Foreach permit number in the newest created file, find the DMS records for that permit number.
-        // // check if the permit number row has a fileId that is different to the previous run. If so fetch the DMS info
+        // Check if the permit number row has a fileId that is different to the previous run. If so fetch the DMS info
         // for that file and include it in files to download
         
         var filteredCurrentMatches = currentMatches
             .Where(c => !c.DoiSignatureDateMatch
-                && !c.ChangeAuditAction.Contains("Override", StringComparison.CurrentCultureIgnoreCase))
+                && !string.IsNullOrEmpty(c.SignatureDate)
+                && !c.ChangeAuditAction.Equals("Override", StringComparison.CurrentCultureIgnoreCase)
+                && c.RuleUsed != "Not Applicable") // Folder not found
             .ToList();
 
         // Filter current match by region if specified, otherwise use all
-        if (!string.IsNullOrWhiteSpace(filterRegion))
+        /*if (!string.IsNullOrWhiteSpace(filterRegion))
         {
             filteredCurrentMatches = filteredCurrentMatches
                 .Where(pm =>
                     pm.Region.Equals(filterRegion, StringComparison.OrdinalIgnoreCase))
                 .ToList();
-        }
+        }*/
 
-        // Files that should be included in the report
         var missingFiles = new List<DmsExtract>();
+        var allFiles = new List<DmsExtract>();
+
+        var permitNumberRegions = new Dictionary<string, int>();
         
         foreach (var filteredCurrentMatch in filteredCurrentMatches)
         {
-            try
+            var permitNumber = filteredCurrentMatch.PermitNumber.ToLower();
+            
+            // Find all files in DMS records that match the permit number of the current match
+            var dmsRecordsForPermitNumber = dmsRecords.TryGetValue(
+                permitNumber,
+                out var records) ? records : [];
+
+            if (!dmsRecordsForPermitNumber.Any())
             {
-                // Find all files in DMS records that match the permit number of the current match
-                var dmsRecordsForPermitNumber = dmsRecords
-                    .Where(dmsRecord => dmsRecord.PermitNumber == filteredCurrentMatch.PermitNumber)
-                    .ToList();
-
-                // Find files that are NOT in allFilesInventory
-                var filesNotInInventory = dmsRecordsForPermitNumber
-                    .Where(dmsRecordForPermitNumber =>
-                    {
-                        var exists = wradiAllLocalFilesInventory.Any(inventoryRecord =>
-                        {
-                            // Extract filename after first occurrence of "__" from inventory record
-                            var fileNameParts = inventoryRecord.Value.FileName.Split("__");
-                            
-                            var extractedFileName =
-                                fileNameParts.Length > 1 ? fileNameParts.Last() : inventoryRecord.Value.FileName;
-
-                            return inventoryRecord.Value.PermitNumber == dmsRecordForPermitNumber.PermitNumber
-                                && extractedFileName.Equals(dmsRecordForPermitNumber.FileName);
-                        });
-                        
-                        return !exists;
-                    })
-                    .ToList();
-
-                // Add all files not in inventory to missing files
-                missingFiles.AddRange(filesNotInInventory);
+                continue;
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"ERROR - {ex.Message}");
-                throw;
-            }
+
+            permitNumberRegions.Add(permitNumber, RegionHelper.GetRegionId(filteredCurrentMatch.Region));
+            allFiles.AddRange(dmsRecordsForPermitNumber);
+            
+            // Find missing files (i.e. that are NOT in allFilesInventory)
+            var filesNotInInventory = dmsRecordsForPermitNumber
+                .Where(dmsRecordForPermitNumber =>
+                {
+                    var exists = wradiAllLocalFilesInventory.Any(inventoryRecord =>
+                        inventoryRecord.Value.PermitNumber?
+                            .Equals(dmsRecordForPermitNumber.PermitNumber, StringComparison.CurrentCultureIgnoreCase) == true
+                        && inventoryRecord.Value.FileId?
+                            .Equals(dmsRecordForPermitNumber.FileId, StringComparison.InvariantCultureIgnoreCase) == true);
+                    
+                    return !exists;
+                })
+                .ToList();
+
+            // Add all files not in inventory to missing files
+            missingFiles.AddRange(filesNotInInventory);
         }
 
-        // Build download info records
-        var downloadInfoRecords = new List<DownloadInfo>();
+        var missingRecords = missingFiles
+            .Select(file => new DownloadInfoMissing
+            {
+                PermitNumber = file.PermitNumber,
+                FullPath = file.FileUrl,
+                SitePath = ExtractSitePath(file.FileUrl),
+                LibraryAndFilePath = ExtractLibraryAndFilePath(file.FileUrl)
+            })
+            .ToList();
         
-        try
-        {
-            downloadInfoRecords.AddRange(
-                missingFiles.Select(file => new DownloadInfo
+        var allRecords = allFiles
+            .Select(file =>
+            {
+                int fileSize;
+
+                if (file.FileSize.EndsWith(" KB"))
+                {
+                    fileSize = Convert.ToInt32(double.Parse(file.FileSize.Replace(" KB", string.Empty)) * 1024.0);
+                }
+                else if (file.FileSize.EndsWith(" MB"))
+                {
+                    fileSize = Convert.ToInt32(double.Parse(file.FileSize.Replace(" MB", string.Empty)) * 1024.0 * 1024.0);
+                }
+                else if (file.FileSize.EndsWith(" B"))
+                {
+                    fileSize = Convert.ToInt32(double.Parse(file.FileSize.Replace(" B", string.Empty)));
+                }
+                else
+                {
+                    fileSize = int.Parse(file.FileSize);
+                }
+                
+                return new DownloadInfoAll
                 {
                     PermitNumber = file.PermitNumber,
                     FullPath = file.FileUrl,
                     SitePath = ExtractSitePath(file.FileUrl),
                     LibraryAndFilePath = ExtractLibraryAndFilePath(file.FileUrl),
-                    OriginalFileName = file.FileName,
-                    DestinationFileName__1 = $"{file.PermitNumber}__{file.FileName}"
-                }));
-        }
-        catch (Exception ex)
+                    RegionId = permitNumberRegions[file.PermitNumber.ToLower()],
+                    FileId = Guid.Parse(file.FileId),
+                    FileName = file.FileName,
+                    FileSize = fileSize
+                };
+            })
+            .ToList();
+
+        var missingHeaderMapping = new Dictionary<string, string>
         {
-            Console.WriteLine($"ERROR - {ex.Message}");
-            throw;
-        }
-
-        // Handle duplicate destination filenames by appending _1, _2, etc.
-        var destinationFileNameCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var record in downloadInfoRecords)
-        {
-            var baseDestinationFileName = record.DestinationFileName__1;
-
-            if (destinationFileNameCounts.TryAdd(baseDestinationFileName, 1))
-            {
-                continue;
-            }
-            
-            // This is a duplicate, append counter
-            var count = destinationFileNameCounts[baseDestinationFileName];
-            destinationFileNameCounts[baseDestinationFileName] = count + 1;
-
-            // Split filename and extension
-            var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(baseDestinationFileName);
-            var extension = Path.GetExtension(baseDestinationFileName);
-
-            // Append counter before extension
-            record.DestinationFileName__1 = $"{fileNameWithoutExtension}_{count}{extension}";
-        }
-
-        // Create Excel output with specified column headers
-        var headerMapping = new Dictionary<string, string>
+            { "PermitNumber", "PermitNumber" },
+            { "FullPath", "FullPath" },
+            { "SitePath", "SitePath" },
+            { "LibraryAndFilePath", "LibraryAndFilePath" }
+        };
+        
+        var allHeaderMapping = new Dictionary<string, string>
         {
             { "PermitNumber", "PermitNumber" },
             { "FullPath", "FullPath" },
             { "SitePath", "SitePath" },
             { "LibraryAndFilePath", "LibraryAndFilePath" },
-            { "OriginalFileName", "OriginalFileName" },
-            { "DestinationFileName__1", "DestinationFileName__1" }
+            { "RegionId", "RegionId" },
+            { "FileId", "FileId" },
+            { "FileName", "FileName" },
+            { "FileSize", "FileSize" }
+        };
+        
+        var worksheetData = new List<(string SheetName, Dictionary<string, string>? HeaderMapping, object Data)>
+        {
+            ("Missing", missingHeaderMapping, missingRecords),
+            ("All", allHeaderMapping, allRecords)
         };
 
-        var outputFileName = _fileProcessor.GenerateExcel(
-            downloadInfoRecords,
-            "Version_Download_Info",
-            headerMapping);
+        var saveVersionAllTask = apiClient.SaveVersionFilesAsync(allRecords);
+        await apiClient.SaveVersionFilesToDownloadAsync(missingRecords);
+        await saveVersionAllTask;
+        
+        // NOTE! 2026-May-21 - The number we get for missing is less then the number JP calculated - we need to
+        // look at this in the future to see where the difference in logic is
 
-        return outputFileName;
+        return _fileProcessor.GenerateExcel(
+            worksheetData,
+            $"Version_Download_Info_{DateTime.Now:yyyyMMdd_HHmmss}");
     }
 
     public string FindLicenceFilesToDownload(
@@ -611,19 +611,17 @@ public class LicenceFileFinder : ILicenceFileFinder
         }
 
         // Build download info records
-        var downloadInfoRecords = new List<DownloadInfo>();
+        var downloadInfoRecords = new List<DownloadInfoOriginal>();
         
         try
         {
             downloadInfoRecords.AddRange(
-                missingFiles.Select(file => new DownloadInfo
+                missingFiles.Select(file => new DownloadInfoOriginal
                 {
                     PermitNumber = file.PermitNumber,
                     FullPath = file.FileUrl,
                     SitePath = ExtractSitePath(file.FileUrl),
                     LibraryAndFilePath = ExtractLibraryAndFilePath(file.FileUrl),
-                    OriginalFileName = file.FileName,
-                    DestinationFileName__1 = $"{file.PermitNumber}__{file.FileId}__{file.FileName}",
                     FileId = file.FileId,
                     Reason = "Don't have locally"
                 }));
@@ -632,30 +630,6 @@ public class LicenceFileFinder : ILicenceFileFinder
         {
             Console.WriteLine($"ERROR - {ex.Message}");
             throw;
-        }
-
-        // Handle duplicate destination filenames by appending _1, _2, etc.
-        var destinationFileNameCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var record in downloadInfoRecords)
-        {
-            var baseDestinationFileName = record.DestinationFileName__1;
-
-            if (destinationFileNameCounts.TryAdd(baseDestinationFileName, 1))
-            {
-                continue;
-            }
-            
-            // This is a duplicate, append counter
-            var count = destinationFileNameCounts[baseDestinationFileName];
-            destinationFileNameCounts[baseDestinationFileName] = count + 1;
-
-            // Split filename and extension
-            var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(baseDestinationFileName);
-            var extension = Path.GetExtension(baseDestinationFileName);
-
-            // Append counter before extension
-            record.DestinationFileName__1 = $"{fileNameWithoutExtension}_{count}{extension}";
         }
 
         // Create Excel output with specified column headers
@@ -763,65 +737,73 @@ public class LicenceFileFinder : ILicenceFileFinder
         List<LicenceMatchResult> licenceFinderPreviousIterationMatches,
         List<DmsFileReaderResult> wradiToolScrapeResults,
         ConcurrentDictionary<Guid, List<DmsFileIdInformation>> dmsFileIdInformation,
-        IDmsApiClient dmsApiClient)
+        IGeneralApiClient generalApiClient)
     {
         // (Step 0: Receive previous iteration matches files (from licenceFinderPreviousIterationMatches))
         
         // Step 1: From previous matches file find records who have date of issue but date of issue isn't equal to signature date
-        var previousRecordsWithDifferentDates = licenceFinderPreviousIterationMatches
+        var recordsWithDifferentDates = licenceFinderPreviousIterationMatches
             .Where(previousRecord => !string.IsNullOrWhiteSpace(previousRecord.DateOfIssue)
                 && !string.IsNullOrWhiteSpace(previousRecord.SignatureDate)
                 && !previousRecord.DateOfIssue.Equals(previousRecord.SignatureDate, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        Console.WriteLine($"Found {previousRecordsWithDifferentDates.Count} records where Date of Issue differs from Signature Date.");
-
-        var wradiDistinctFileTypeScrapeResults = wradiToolScrapeResults
-            .Distinct()
-            .ToList();
+        Console.WriteLine($"Found {recordsWithDifferentDates.Count} records where Date of Issue differs from Signature Date.");
         
         var unmatchedList = new List<UnmatchedLicenceMatchResult>();
+        UnmatchedLicenceMatchResult? naldIssueResult;
+        string? licenceFileIdStr;
+        NaldLicenceVersion? matchedNaldRecords;
+        bool? isWaterCompany;
+        string fileId = string.Empty;
+        string fileUrl = string.Empty;
+        DmsFileIdInformation? fileIdInfo;
         
-        foreach (var recordWithDifferentDate in previousRecordsWithDifferentDates)
+        foreach (var recordWithDifferentDate in recordsWithDifferentDates)
         {
-            Console.WriteLine($"Record with permit number {recordWithDifferentDate.PermitNumber} has Date of " +
+            if (recordWithDifferentDate.DateOfIssue != "Scrape Not Attempted")
+            {
+                
+            }
+            
+            var permitNumber = recordWithDifferentDate.PermitNumber;
+            var lowercasePermitNumber = permitNumber.ToLower();
+            
+            Console.WriteLine($"Record with permit number {permitNumber} has Date of " +
                 $"Issue: {recordWithDifferentDate.DateOfIssue} and Signature Date: {recordWithDifferentDate.SignatureDate}");
             
             // Step 2: Read DMS extract files for permit number
             var dmsRecordsForPermit =
-                dmsRecords.TryGetValue(recordWithDifferentDate.PermitNumber, out var dmsRecordTemp)
+                dmsRecords.TryGetValue(lowercasePermitNumber, out var dmsRecordTemp)
                     ? dmsRecordTemp
                     : [];
             
             // Step 3: Read NALD extract files for permit number and type ISSUE
             var naldRecordsForPermit =
-                naldData.GetValueOrDefault(recordWithDifferentDate.PermitNumber) ?? [];
-
-            var recordWithDifferentDatePermitNumber = recordWithDifferentDate.PermitNumber;
+                naldData.GetValueOrDefault(permitNumber) ?? [];
             
             // Step 4: Find files from fileIdentificationExtract whose file name matches the
             // dmsRecordsForPermit File name and is of Type Licence or Addendum
-            var wradiAllMatchingFileTypeScrapeResults = wradiDistinctFileTypeScrapeResults
-                .Where(file => dmsRecordsForPermit.Any(dms => dms.FileName.Equals(file.FileName, StringComparison.OrdinalIgnoreCase)
-                    && file.OriginalFileName?.StartsWith(recordWithDifferentDatePermitNumber, StringComparison.OrdinalIgnoreCase) == true
-                ))
+            var allMatchedFiles = wradiToolScrapeResults
+                .Where(scrapeResult => scrapeResult.PermitNumber?.Equals(permitNumber, StringComparison.OrdinalIgnoreCase) == true)
+                .Where(scrapeResult => dmsRecordsForPermit.Any(dms => dms.FileName.Equals(scrapeResult.OriginalFileName, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
             
-            Console.WriteLine($"Found {wradiAllMatchingFileTypeScrapeResults.Count} matching identification files " +
-                $"for permit {recordWithDifferentDate.PermitNumber}");
+            Console.WriteLine($"Found {allMatchedFiles.Count} matching identification files " +
+                $"for permit {permitNumber}");
             
-            var wradiMatchingLicenceOrAddendumFiles = wradiAllMatchingFileTypeScrapeResults
+            var matchedLicenceOrAddendumFiles = allMatchedFiles
                 .Where(file => file.FileType!.Equals("Licence", StringComparison.OrdinalIgnoreCase) || 
                    file.FileType.Equals("Addendum", StringComparison.OrdinalIgnoreCase)
                  )
                 .OrderByDescending(fie => fie.DateOfIssue)
                 .ToList();
             
-            Console.WriteLine($"Found {wradiMatchingLicenceOrAddendumFiles.Count} matching licence or addendum" +
-                $" identification files for permit {recordWithDifferentDate.PermitNumber}");
+            Console.WriteLine($"Found {matchedLicenceOrAddendumFiles.Count} matching licence or addendum" +
+                $" identification files for permit {permitNumber}");
 
             // Step 5: Look for Licence files first
-            var wradiLicenceFiles = wradiMatchingLicenceOrAddendumFiles
+            var dateMatchedLicenceFiles = matchedLicenceOrAddendumFiles
                 .Where(f =>
                 {
                     if (f.FileType?.Equals("Licence", StringComparison.OrdinalIgnoreCase) != true)
@@ -837,28 +819,28 @@ public class LicenceFileFinder : ILicenceFileFinder
                 })
                 .ToList();
 
-            if (wradiLicenceFiles.Any())
+            if (dateMatchedLicenceFiles.Any())
             {
-                Console.WriteLine($"  Found {wradiLicenceFiles.Count} Licence file(s) - processing complete");
+                Console.WriteLine($"  Found {dateMatchedLicenceFiles.Count} Licence file(s) - processing complete");
                 
-                foreach (var licence in wradiLicenceFiles)
+                foreach (var matchedLicence in dateMatchedLicenceFiles)
                 {
-                    var matchedNaldRecords = naldRecordsForPermit
-                        .FirstOrDefault(naldRecord => naldRecord.SignatureDate == licence.DateOfIssue);
+                    matchedNaldRecords = naldRecordsForPermit
+                        .FirstOrDefault(naldRecord => naldRecord.SignatureDate == matchedLicence.DateOfIssue);
 
-                    var isWaterCompany = naldRecordsForPermit.FirstOrDefault() != null
+                    isWaterCompany = naldRecordsForPermit.FirstOrDefault() != null
                         ? naldRecordsForPermit.First().ArepEiucCode?.EndsWith("SWC",
                             StringComparison.InvariantCultureIgnoreCase) == true
-                        : (bool?)null;
+                        : null;
                     
                     // Check for NALD data issues
-                    var naldIssueResult = CheckForNaldDataIssue(
+                    naldIssueResult = CheckForNaldDataIssue(
                         matchedNaldRecords,
                         naldRecordsForPermit,
                         recordWithDifferentDate,
                         dmsRecordsForPermit,
-                        licence,
-                        wradiAllMatchingFileTypeScrapeResults);
+                        matchedLicence,
+                        allMatchedFiles);
                     
                     if (naldIssueResult != null)
                     {
@@ -866,19 +848,21 @@ public class LicenceFileFinder : ILicenceFileFinder
                         continue; // Skip adding the normal record if there's a NALD data issue
                     }
 
-                    var fileId = dmsRecordsForPermit
-                        .FirstOrDefault(d => d.FileName.Equals(licence.FileName, StringComparison.OrdinalIgnoreCase))
+                    licenceFileIdStr = matchedLicence.FileId.ToString();
+                    
+                    fileId = dmsRecordsForPermit
+                        .FirstOrDefault(d => d.FileId.Equals(licenceFileIdStr, StringComparison.OrdinalIgnoreCase))
                         ?.FileId ?? string.Empty;
 
-                    var fileUrl = dmsRecordsForPermit
-                        .FirstOrDefault(d => d.FileName.Equals(licence.FileName, StringComparison.OrdinalIgnoreCase))
+                    fileUrl = dmsRecordsForPermit
+                        .FirstOrDefault(d => d.FileId.Equals(licenceFileIdStr, StringComparison.OrdinalIgnoreCase))
                         ?.FileUrl ?? string.Empty;
                     
-                    var fileIdInfo = await RecordFileIdAsync(
+                    fileIdInfo = await RecordFileIdAsync(
                         fileId,
                         fileUrl,
                         dmsFileIdInformation,
-                        dmsApiClient);
+                        generalApiClient);
 
                     unmatchedList.Add(new UnmatchedLicenceMatchResult
                     {
@@ -887,10 +871,10 @@ public class LicenceFileFinder : ILicenceFileFinder
                         SignatureDateOfFileEvaluated = matchedNaldRecords?.SignatureDate?.ToString("dd/MM/yyyy"),
                         LicenseNumber = recordWithDifferentDate.LicenseNumber,
                         Region = recordWithDifferentDate.Region,
-                        FileEvaluated = licence.FileName,
-                        FileTypeEvaluated = licence.FileType,
+                        FileEvaluated = matchedLicence.FileName,
+                        FileTypeEvaluated = matchedLicence.FileType,
                         FileDeterminedAsLicence = true,
-                        DateOfIssueOfEvaluatedFile = licence.DateOfIssue?.ToString("dd/MM/yyyy"),
+                        DateOfIssueOfEvaluatedFile = matchedLicence.DateOfIssue?.ToString("dd/MM/yyyy"),
                         NaldId = int.Parse(matchedNaldRecords?.AablId ?? "0"),
                         NaldIssueNo = int.Parse(matchedNaldRecords?.IssueNo ?? "0"),
                         NaldIncrementNo = matchedNaldRecords?.IncrementNo,
@@ -901,164 +885,168 @@ public class LicenceFileFinder : ILicenceFileFinder
                         IsWaterCompany = isWaterCompany
                     });
                 }
+                
+                continue;
             }
-            else
-            {
-                // Step 6: If no Licence files, look for Addendum and find corresponding Licence
-                var wradiAddendumFiles = wradiMatchingLicenceOrAddendumFiles
-                    .Where(f =>
-                    {
-                        if (f.FileType?.Equals("Addendum", StringComparison.OrdinalIgnoreCase) != true)
-                        {
-                            return false;
-                        }
-                        
-                        var signatureDate = DateTime.TryParse(recordWithDifferentDate.SignatureDate, out var sd)
-                            ? sd
-                            : (DateTime?)null;
-
-                        return f.DateOfIssue == signatureDate;
-                    })
-                    .DistinctBy(f => f.FileName)
-                    .ToList();
-                
-                foreach (var addendum in wradiAddendumFiles)
+        
+            // Step 6: If no date matched licence files, look for Addendum and find corresponding Licence
+            var dateMatchedAddendums = matchedLicenceOrAddendumFiles
+                .Where(f =>
                 {
-                    var matchedNaldRecords = naldRecordsForPermit.FirstOrDefault(d =>
-                        d.SignatureDate == addendum.DateOfIssue);
-
-                    var isWaterCompany = naldRecordsForPermit.FirstOrDefault() != null
-                        ? naldRecordsForPermit.First().ArepEiucCode?.EndsWith("SWC",
-                            StringComparison.InvariantCultureIgnoreCase) == true
-                        : (bool?)null;
-                    
-                    var fileId = dmsRecordsForPermit
-                        .FirstOrDefault(d => d.FileName.Equals(addendum.FileName, StringComparison.OrdinalIgnoreCase))
-                        ?.FileId ?? string.Empty;
-                    
-                    var fileUrl = dmsRecordsForPermit
-                        .FirstOrDefault(d => d.FileName.Equals(addendum.FileName, StringComparison.OrdinalIgnoreCase))
-                        ?.FileUrl ?? string.Empty;
-                    
-                    var fileIdInfo = await RecordFileIdAsync(
-                        fileId,
-                        fileUrl,
-                        dmsFileIdInformation,
-                        dmsApiClient);
-                    
-                    unmatchedList.Add(new UnmatchedLicenceMatchResult
+                    if (f.FileType?.Equals("Addendum", StringComparison.OrdinalIgnoreCase) != true)
                     {
-                        PermitNumber = recordWithDifferentDate.PermitNumber,
-                        FileUrl = fileUrl,
-                        LicenseNumber = recordWithDifferentDate.LicenseNumber,
-                        SignatureDateOfFileEvaluated = matchedNaldRecords?.SignatureDate?.ToString("dd/MM/yyyy"),
-                        Region = recordWithDifferentDate.Region,
-                        FileEvaluated = addendum.FileName,
-                        FileTypeEvaluated = addendum.FileType,
-                        FileDeterminedAsLicence = false,
-                        DateOfIssueOfEvaluatedFile = addendum.DateOfIssue?.ToString("dd/MM/yyyy"),
-                        NaldId = int.Parse(matchedNaldRecords?.AablId ?? "0"),
-                        NaldIssueNo = int.Parse(matchedNaldRecords?.IssueNo ?? "0"),
-                        NaldIncrementNo = matchedNaldRecords?.IncrementNo,
-                        FileId = fileId,
-                        FileIdStatus = fileIdInfo?.Status,
-                        FileIdStatusChangeDate = fileIdInfo?.StatusDateUtc.ToString("dd/MM/yyyy"),
-                        IsWaterCompany = isWaterCompany
-                    });
-                }
-
-                if (!wradiAddendumFiles.Any())
-                {
-                    continue;
-                }
-
-                Console.WriteLine($"  Found {wradiAddendumFiles.Count} Addendum file(s) - searching for Licence files with date <= {recordWithDifferentDate.SignatureDate}");
-                
-                var correspondingLicence = wradiMatchingLicenceOrAddendumFiles
-                    .Where(f => f.FileType?.Equals("Licence", StringComparison.OrdinalIgnoreCase) == true &&
-                        f.DateOfIssue != null &&
-                        DateTime.TryParse(recordWithDifferentDate.SignatureDate, out var signatureDate) &&
-                        f.DateOfIssue <= signatureDate)
-                    .OrderByDescending(f => f.DateOfIssue!)
-                    .FirstOrDefault();
-
-                if (correspondingLicence != null)
-                {
-                    var matchedNaldRecords = naldRecordsForPermit.FirstOrDefault(d =>
-                        d.SignatureDate == correspondingLicence.DateOfIssue);
-
-                    var isWaterCompany = naldRecordsForPermit.FirstOrDefault() != null
-                        ? naldRecordsForPermit.First().ArepEiucCode?.EndsWith("SWC",
-                            StringComparison.InvariantCultureIgnoreCase) == true
-                        : (bool?)null;
-                    
-                    // Check for NALD data issues
-                    var naldIssueResult = CheckForNaldDataIssue(
-                        matchedNaldRecords,
-                        naldRecordsForPermit,
-                        recordWithDifferentDate,
-                        dmsRecordsForPermit,
-                        correspondingLicence,
-                        wradiAllMatchingFileTypeScrapeResults);
-                    
-                    if (naldIssueResult != null)
-                    {
-                        unmatchedList.Add(naldIssueResult);
-                        continue; // Skip adding the normal record if there's a NALD data issue
+                        return false;
                     }
+                    
+                    var signatureDate = DateTime.TryParse(recordWithDifferentDate.SignatureDate, out var sd)
+                        ? sd
+                        : (DateTime?)null;
 
-                    Console.WriteLine($"    Found corresponding Licence: {correspondingLicence.FileName} (Date: {correspondingLicence.DateOfIssue})");
-
-                    var fileId = dmsRecordsForPermit
-                        .FirstOrDefault(d =>
-                            d.FileName.Equals(correspondingLicence.FileName, StringComparison.OrdinalIgnoreCase))
-                        ?.FileId ?? string.Empty;
-                    
-                    var fileUrl = dmsRecordsForPermit
-                        .FirstOrDefault(d =>
-                            d.FileName.Equals(correspondingLicence.FileName, StringComparison.OrdinalIgnoreCase))
-                        ?.FileUrl ?? string.Empty;
-                    
-                    var fileIdInfo = await RecordFileIdAsync(
-                        fileId,
-                        fileUrl,
-                        dmsFileIdInformation,
-                        dmsApiClient);
-                    
-                    unmatchedList.Add(new UnmatchedLicenceMatchResult
-                    {
-                        PermitNumber = recordWithDifferentDate.PermitNumber,
-                        FileUrl = fileUrl,
-                        LicenseNumber = recordWithDifferentDate.LicenseNumber,
-                        SignatureDateOfFileEvaluated = naldRecordsForPermit
-                            .FirstOrDefault(d => d.SignatureDate == correspondingLicence.DateOfIssue)?
-                            .SignatureDate?
-                            .ToString("dd/MM/yyyy") ?? string.Empty,
-                        Region = recordWithDifferentDate.Region,
-                        FileEvaluated = correspondingLicence.FileName,
-                        FileTypeEvaluated = correspondingLicence.FileType,
-                        FileDeterminedAsLicence = true,
-                        DateOfIssueOfEvaluatedFile = correspondingLicence.DateOfIssue?.ToString("dd/MM/yyyy"),
-                        NaldId = int.Parse(matchedNaldRecords?.AablId ?? "0"),
-                        NaldIssueNo = int.Parse(matchedNaldRecords?.IssueNo ?? "0"),
-                        NaldIncrementNo = matchedNaldRecords?.IncrementNo,
-                        OriginalFileUrlIdentifiedAsLicence = recordWithDifferentDate.FileUrl,
-                        FileId = fileId,
-                        FileIdStatus = fileIdInfo?.Status,
-                        FileIdStatusChangeDate = fileIdInfo?.StatusDateUtc.ToString("dd/MM/yyyy"),
-                        IsWaterCompany = isWaterCompany
-                    });
-                }
-                else
-                {
-                    Console.WriteLine("    No corresponding Licence file found");
-                }
+                    return f.DateOfIssue == signatureDate;
+                })
+                .DistinctBy(f => f.FileName)
+                .ToList();
+            
+            if (!dateMatchedAddendums.Any())
+            {
+                continue;
             }
+            
+            foreach (var addendum in dateMatchedAddendums)
+            {
+                matchedNaldRecords = naldRecordsForPermit.FirstOrDefault(d =>
+                    d.SignatureDate == addendum.DateOfIssue);
+
+                isWaterCompany = naldRecordsForPermit.FirstOrDefault() != null
+                    ? naldRecordsForPermit.First().ArepEiucCode?.EndsWith("SWC",
+                        StringComparison.InvariantCultureIgnoreCase) == true
+                    : null;
+                
+                var addendumFileIdStr = addendum.FileId.ToString();
+                
+                fileId = dmsRecordsForPermit
+                    .FirstOrDefault(d => d.FileId.Equals(addendumFileIdStr, StringComparison.OrdinalIgnoreCase))
+                    ?.FileId ?? string.Empty;
+                
+                fileUrl = dmsRecordsForPermit
+                    .FirstOrDefault(d => d.FileId.Equals(addendumFileIdStr, StringComparison.OrdinalIgnoreCase))
+                    ?.FileUrl ?? string.Empty;
+                
+                fileIdInfo = await RecordFileIdAsync(
+                    fileId,
+                    fileUrl,
+                    dmsFileIdInformation,
+                    generalApiClient);
+                
+                unmatchedList.Add(new UnmatchedLicenceMatchResult
+                {
+                    PermitNumber = recordWithDifferentDate.PermitNumber,
+                    FileUrl = fileUrl,
+                    LicenseNumber = recordWithDifferentDate.LicenseNumber,
+                    SignatureDateOfFileEvaluated = matchedNaldRecords?.SignatureDate?.ToString("dd/MM/yyyy"),
+                    Region = recordWithDifferentDate.Region,
+                    FileEvaluated = addendum.FileName,
+                    FileTypeEvaluated = addendum.FileType,
+                    FileDeterminedAsLicence = false,
+                    DateOfIssueOfEvaluatedFile = addendum.DateOfIssue?.ToString("dd/MM/yyyy"),
+                    NaldId = int.Parse(matchedNaldRecords?.AablId ?? "0"),
+                    NaldIssueNo = int.Parse(matchedNaldRecords?.IssueNo ?? "0"),
+                    NaldIncrementNo = matchedNaldRecords?.IncrementNo,
+                    FileId = fileId,
+                    FileIdStatus = fileIdInfo?.Status,
+                    FileIdStatusChangeDate = fileIdInfo?.StatusDateUtc.ToString("dd/MM/yyyy"),
+                    IsWaterCompany = isWaterCompany
+                });
+            }
+
+            Console.WriteLine($"  Found {dateMatchedAddendums.Count} Addendum file(s) - searching for Licence files with date <= {recordWithDifferentDate.SignatureDate}");
+            
+            var firstLicenceBeforeSignatureDate = matchedLicenceOrAddendumFiles
+                .Where(f => f.FileType?.Equals("Licence", StringComparison.OrdinalIgnoreCase) == true &&
+                    f.DateOfIssue != null &&
+                    DateTime.TryParse(recordWithDifferentDate.SignatureDate, out var signatureDate) &&
+                    f.DateOfIssue <= signatureDate)
+                .OrderByDescending(f => f.DateOfIssue!)
+                .FirstOrDefault();
+
+            if (firstLicenceBeforeSignatureDate == null)
+            {
+                Console.WriteLine("    No corresponding Licence file found");
+                continue;
+            }
+
+            matchedNaldRecords = naldRecordsForPermit.FirstOrDefault(d =>
+                d.SignatureDate == firstLicenceBeforeSignatureDate.DateOfIssue);
+
+            isWaterCompany = naldRecordsForPermit.FirstOrDefault() != null
+                ? naldRecordsForPermit.First().ArepEiucCode?.EndsWith("SWC",
+                    StringComparison.InvariantCultureIgnoreCase) == true
+                : null;
+
+            // Check for NALD data issues
+            naldIssueResult = CheckForNaldDataIssue(
+                matchedNaldRecords,
+                naldRecordsForPermit,
+                recordWithDifferentDate,
+                dmsRecordsForPermit,
+                firstLicenceBeforeSignatureDate,
+                allMatchedFiles);
+
+            //TODO morning Fri why not getting by here
+            
+            if (naldIssueResult != null)
+            {
+                unmatchedList.Add(naldIssueResult);
+                continue; // Skip adding the normal record if there's a NALD data issue
+            }
+
+            Console.WriteLine(
+                $"    Found corresponding Licence: {firstLicenceBeforeSignatureDate.FileName} (Date: {firstLicenceBeforeSignatureDate.DateOfIssue})");
+
+            licenceFileIdStr = firstLicenceBeforeSignatureDate.FileId.ToString();
+            
+            fileId = dmsRecordsForPermit
+                .FirstOrDefault(d => d.FileId.Equals(licenceFileIdStr, StringComparison.OrdinalIgnoreCase))
+                ?.FileId ?? string.Empty;
+
+            fileUrl = dmsRecordsForPermit
+                .FirstOrDefault(d => d.FileId.Equals(licenceFileIdStr, StringComparison.OrdinalIgnoreCase))
+                ?.FileUrl ?? string.Empty;
+
+            fileIdInfo = await RecordFileIdAsync(
+                fileId,
+                fileUrl,
+                dmsFileIdInformation,
+                generalApiClient);
+
+            unmatchedList.Add(new UnmatchedLicenceMatchResult
+            {
+                PermitNumber = recordWithDifferentDate.PermitNumber,
+                FileUrl = fileUrl,
+                LicenseNumber = recordWithDifferentDate.LicenseNumber,
+                SignatureDateOfFileEvaluated = naldRecordsForPermit
+                    .FirstOrDefault(d => d.SignatureDate == firstLicenceBeforeSignatureDate.DateOfIssue)?
+                    .SignatureDate?
+                    .ToString("dd/MM/yyyy") ?? string.Empty,
+                Region = recordWithDifferentDate.Region,
+                FileEvaluated = firstLicenceBeforeSignatureDate.FileName,
+                FileTypeEvaluated = firstLicenceBeforeSignatureDate.FileType,
+                FileDeterminedAsLicence = true,
+                DateOfIssueOfEvaluatedFile = firstLicenceBeforeSignatureDate.DateOfIssue?.ToString("dd/MM/yyyy"),
+                NaldId = int.Parse(matchedNaldRecords?.AablId ?? "0"),
+                NaldIssueNo = int.Parse(matchedNaldRecords?.IssueNo ?? "0"),
+                NaldIncrementNo = matchedNaldRecords?.IncrementNo,
+                OriginalFileUrlIdentifiedAsLicence = recordWithDifferentDate.FileUrl,
+                FileId = fileId,
+                FileIdStatus = fileIdInfo?.Status,
+                FileIdStatusChangeDate = fileIdInfo?.StatusDateUtc.ToString("dd/MM/yyyy"),
+                IsWaterCompany = isWaterCompany
+            });
         }
 
         // Calculate licence count for each permit number
         var orderedUnmatchedResults = unmatchedList
-            .DistinctBy(f => f.FileUrl)
+            .DistinctBy(f => f.FileId)
             .OrderBy(p => p.PermitNumber)
             .ToList();
 
@@ -1408,7 +1396,7 @@ public class LicenceFileFinder : ILicenceFileFinder
     /// <param name="dmsManualFixes"></param>
     /// <param name="dmsChangeAuditOverrides"></param>
     /// <param name="dmsFileIdInformation"></param>
-    /// <param name="dmsApiClient"></param>
+    /// <param name="generalApiClient"></param>
     /// <param name="naldRecordsToProcess">NALD extract records to process</param>
     /// <param name="naldData"></param>
     /// <param name="wradiToolScrapeResults"></param>
@@ -1423,7 +1411,7 @@ public class LicenceFileFinder : ILicenceFileFinder
             Dictionary<string, DmsManualFixExtract> dmsManualFixes,
             List<Override> dmsChangeAuditOverrides,
             ConcurrentDictionary<Guid, List<DmsFileIdInformation>> dmsFileIdInformation,
-            IDmsApiClient dmsApiClient,
+            IGeneralApiClient generalApiClient,
             List<NaldSimpleRecord> naldRecordsToProcess,
             Dictionary<string, List<NaldLicenceVersion>> naldData,
             List<DmsFileReaderResult> wradiToolScrapeResults,
@@ -1436,7 +1424,7 @@ public class LicenceFileFinder : ILicenceFileFinder
             licenceFinderPreviousIterationMatches,
             wradiToolScrapeResults,
             dmsFileIdInformation,
-            dmsApiClient);
+            generalApiClient);
         
         var deltaResults = new List<DeltaResult>();
         
@@ -1447,7 +1435,8 @@ public class LicenceFileFinder : ILicenceFileFinder
         };
         
         var processedRecordCount = 0;
-       
+        var rowIndex = 1;
+        
         Console.WriteLine($"Processing {naldRecordsToProcess.Count} NALD records...");
         var returnList = new List<LicenceMatchResult>();
         
@@ -1457,7 +1446,8 @@ public class LicenceFileFinder : ILicenceFileFinder
             var licenceMatchResult = new LicenceMatchResult
             {
                 LicenseNumber = naldReportRecord.LicNo,
-                PermitNumber = LicenceFileHelpers.CleanPermitNumber(naldReportRecord.LicNo)
+                PermitNumber = LicenceFileHelpers.CleanPermitNumber(naldReportRecord.LicNo),
+                UniqueColumnID = rowIndex++.ToString()
             };
             
             var lowercasePermitNumber = licenceMatchResult.PermitNumber.ToLowerInvariant();
@@ -1465,7 +1455,10 @@ public class LicenceFileFinder : ILicenceFileFinder
             var naldLicenceVersionData = naldData.TryGetValue(
                 licenceMatchResult.PermitNumber,
                 out var tempNaldDataRows)
-                ? tempNaldDataRows.FirstOrDefault()
+                ? tempNaldDataRows
+                    .OrderByDescending(r => r.IssueNo)
+                    .ThenByDescending(r => r.IncrementNo)
+                    .FirstOrDefault()
                 : null;
 
             licenceMatchResult.IsWaterCompany = naldLicenceVersionData != null
@@ -1473,9 +1466,21 @@ public class LicenceFileFinder : ILicenceFileFinder
                     StringComparison.InvariantCultureIgnoreCase) == true
                 : null;
             
-            // Check if permit number exists in overrides first
-            var overrideRecord = dmsChangeAuditOverrides.FirstOrDefault(ca => 
-                ca.PermitNumber.Equals(licenceMatchResult.PermitNumber, StringComparison.OrdinalIgnoreCase));
+            // Check if permit number exists in overrides first (IMPORTANT - there should only
+            // be one override per permit number or we will intentionally error)
+            var overrideRecords = dmsChangeAuditOverrides
+                .Where(ca =>
+                    ca.PermitNumber.Equals(licenceMatchResult.PermitNumber, StringComparison.OrdinalIgnoreCase)
+                    || ca.LicenceReference.Equals(licenceMatchResult.LicenseNumber, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            
+            if (overrideRecords.Count > 1)
+            {
+                throw new Exception(
+                    $"Duplicate overrides found for {overrideRecords[0].PermitNumber} or {overrideRecords[0].LicenceReference}");
+            }
+            
+            var overrideRecord = overrideRecords.FirstOrDefault();
             
             var naldVersionIssueNo = int.Parse(naldLicenceVersionData?.IssueNo ?? "0");
             var overrideIssueNo = !string.IsNullOrWhiteSpace(overrideRecord?.IssueNo)
@@ -1527,7 +1532,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                     overrideRecord.FileId,
                     overrideRecord.FileUrl,
                     dmsFileIdInformation,
-                    dmsApiClient);
+                    generalApiClient);
                     
                 licenceMatchResult.FileIdStatus = fileIdInfo?.Status;
                 licenceMatchResult.FileIdStatusChangeDate = fileIdInfo?.StatusDateUtc.ToString("dd/MM/yyyy");
@@ -1644,7 +1649,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                         matchedDmsRecord.FileId,
                         matchedDmsRecord.FileUrl,
                         dmsFileIdInformation,
-                        dmsApiClient);
+                        generalApiClient);
                     
                     licenceMatchResult.FileIdStatus = fileIdInfo?.Status;
                     licenceMatchResult.FileIdStatusChangeDate = fileIdInfo?.StatusDateUtc.ToString("dd/MM/yyyy");
@@ -1711,7 +1716,7 @@ public class LicenceFileFinder : ILicenceFileFinder
         string? fileId,
         string? fileUrl,
         ConcurrentDictionary<Guid, List<DmsFileIdInformation>> dmsFileIdInformation,
-        IDmsApiClient dmsApiClient)
+        IGeneralApiClient generalApiClient)
     {
         if (string.IsNullOrEmpty(fileId) || string.IsNullOrEmpty(fileUrl))
         {
@@ -1742,7 +1747,7 @@ public class LicenceFileFinder : ILicenceFileFinder
         {
             outputDmsFileIdInformation.Status = "FirstSeen";
             
-            await dmsApiClient.AddDmsFileIdInformationAsync(outputDmsFileIdInformation);
+            await generalApiClient.AddDmsFileIdInformationAsync(outputDmsFileIdInformation);
             dmsFileIdInformation.TryAdd(outputDmsFileIdInformation.FileId, [outputDmsFileIdInformation]);
         }
         else
@@ -1764,7 +1769,7 @@ public class LicenceFileFinder : ILicenceFileFinder
             var isFilenameSame = lastRecordFilenameOnly == filenameOnly;
             outputDmsFileIdInformation.Status = isFilenameSame ? "Moved" : "Renamed";
 
-            await dmsApiClient.AddDmsFileIdInformationAsync(outputDmsFileIdInformation);
+            await generalApiClient.AddDmsFileIdInformationAsync(outputDmsFileIdInformation);
             dmsFileIdInformation[outputDmsFileIdInformation.FileId].Add(outputDmsFileIdInformation);
         }
 
@@ -1789,6 +1794,7 @@ public class LicenceFileFinder : ILicenceFileFinder
         DmsFileReaderResult fileIdentification,
         List<DmsFileReaderResult> allMatchingIdentificationFiles)
     {
+        // Can't find a NALD record
         if (matchedNaldRecord == null)
         {
             return new UnmatchedLicenceMatchResult
@@ -1806,39 +1812,44 @@ public class LicenceFileFinder : ILicenceFileFinder
                 OriginalFileUrlIdentifiedAsLicence = record.FileUrl
             };
         }
-        
-        if (int.TryParse(matchedNaldRecord.IssueNo, out var matchedIssueNo))
-        {
-            var higherIssueRecords = naldRecordsForPermit
-                .Where(n => int.TryParse(n.IssueNo, out var issueNo) 
-                    && issueNo >= matchedIssueNo 
-                    && n.SignatureDate == null)
-                .ToList();
 
-            var doiMatchingSignatureDate = higherIssueRecords.All(h =>
-                allMatchingIdentificationFiles.Any(a => a.DateOfIssue == h.SignatureDate));
-            
-            if (!higherIssueRecords.Any() || (higherIssueRecords.Any() && !doiMatchingSignatureDate))
-            {
-                return new UnmatchedLicenceMatchResult
-                {
-                    PermitNumber = record.PermitNumber,
-                    FileUrl = dmsRecordsForPermit.FirstOrDefault(d => d.FileName.Equals(fileIdentification.FileName, StringComparison.OrdinalIgnoreCase))?.FileUrl ?? string.Empty,
-                    SignatureDateOfFileEvaluated = matchedNaldRecord.SignatureDate?.ToString("dd/MM/yyyy"),
-                    LicenseNumber = record.LicenseNumber,
-                    Region = record.Region,
-                    FileEvaluated = fileIdentification.FileName,
-                    FileTypeEvaluated = fileIdentification.FileType,
-                    FileDeterminedAsLicence = false,
-                    DateOfIssueOfEvaluatedFile = fileIdentification.DateOfIssue?.ToString("dd/MM/yyyy"),
-                    NaldDataQualityIssue = true,
-                    OriginalFileUrlIdentifiedAsLicence = record.FileUrl,
-                    NaldId = int.Parse(matchedNaldRecord.AablId ?? "0"),
-                    NaldIssueNo = int.Parse(matchedNaldRecord.IssueNo),
-                    NaldIncrementNo = matchedNaldRecord.IncrementNo
-                };
-            }
+        // We didn't find an issue number in the NALD record?? TODO
+        if (!int.TryParse(matchedNaldRecord.IssueNo, out var matchedIssueNo))
+        {
+            return null;
         }
+        
+        var higherIssueRecords = naldRecordsForPermit
+            .Where(n => int.TryParse(n.IssueNo, out var issueNo) 
+                && issueNo >= matchedIssueNo 
+                && n.SignatureDate == null)
+            .ToList();
+
+        var doiMatchingSignatureDate = higherIssueRecords.All(h =>
+            allMatchingIdentificationFiles.Any(a => a.DateOfIssue == h.SignatureDate));
+        
+        // There are no higher issue records fiybd, or there are and they don't match the signature date
+        if (!higherIssueRecords.Any() || (higherIssueRecords.Any() && !doiMatchingSignatureDate))
+        {
+            return new UnmatchedLicenceMatchResult
+            {
+                PermitNumber = record.PermitNumber,
+                FileUrl = dmsRecordsForPermit.FirstOrDefault(d => d.FileName.Equals(fileIdentification.FileName, StringComparison.OrdinalIgnoreCase))?.FileUrl ?? string.Empty,
+                SignatureDateOfFileEvaluated = matchedNaldRecord.SignatureDate?.ToString("dd/MM/yyyy"),
+                LicenseNumber = record.LicenseNumber,
+                Region = record.Region,
+                FileEvaluated = fileIdentification.FileName,
+                FileTypeEvaluated = fileIdentification.FileType,
+                FileDeterminedAsLicence = false,
+                DateOfIssueOfEvaluatedFile = fileIdentification.DateOfIssue?.ToString("dd/MM/yyyy"),
+                NaldDataQualityIssue = true,
+                OriginalFileUrlIdentifiedAsLicence = record.FileUrl,
+                NaldId = int.Parse(matchedNaldRecord.AablId ?? "0"),
+                NaldIssueNo = int.Parse(matchedNaldRecord.IssueNo),
+                NaldIncrementNo = matchedNaldRecord.IncrementNo
+            };
+        }
+
         return null;
     }
 

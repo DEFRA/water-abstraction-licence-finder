@@ -15,9 +15,9 @@ public class InventoryApiClient : IInventoryApiClient
     
     private HttpClient HttpClient { get; set; }
 
-    public async Task<List<FileMetadata>> GetAllWithMetadataAsync()
+    public async Task<List<FileMetadata>> GetAllWithMetadataAsync(string startAfter, int take)
     {
-        var path = "/BFF/Files/ListAllWithMetadata";
+        var path = $"/BFF/Files/ListAllWithMetadata?startAfter={startAfter}&take={take}";
 
         var response = await HttpClient.GetAsync(path);
         response.EnsureSuccessStatusCode();

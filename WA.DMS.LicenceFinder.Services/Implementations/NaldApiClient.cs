@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using WA.DMS.LicenceFinder.Services.Models;
@@ -8,19 +9,33 @@ public class NaldApiClient
 {
     public NaldApiClient(string apiBaseUrl)
     {
-        HttpClient = new HttpClient();
+        var clientHandler = new HttpClientHandler
+        {
+            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+        };
+        
+        HttpClient = new HttpClient(clientHandler);
         HttpClient.BaseAddress = new Uri(apiBaseUrl);
     }
     
     private HttpClient HttpClient { get; set; }
 
-    public async Task<NaldDataCollection> GetNaldDataAsync(short? regionCode)
+    public async Task<NaldDataCollection> GetNaldDataAsync(
+        short? regionCode,
+        bool allVersions,
+        int skip,
+        int take)
     {
-        var path = "/Extractor/NaldData/GetAll";
+        var path = $"/Extractor/NaldData/GetAll?skip={skip}&take={take}";
 
         if (regionCode != null)
         {
-            path += $"?regionCode={regionCode}";            
+            path += $"&regionCode={regionCode}";
+        }
+        
+        if (allVersions)
+        {
+            path += "&allVersions=true";
         }
         
         var response = await HttpClient.GetAsync(path);
@@ -32,7 +47,7 @@ public class NaldApiClient
             GetSerializerOptions())!;
     }
     
-    public async Task<NaldLicenceStatusData> GetNaldLicenceStatusDataAsync(short? regionCode)
+    public async Task<NaldLicenceStatusData> GetNaldLicenceStatusDataAsync(short? regionCode = null)
     {
         var path = "/Extractor/NaldData/GetLicenceStatusData";
         

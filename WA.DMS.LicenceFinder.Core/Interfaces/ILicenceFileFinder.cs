@@ -17,7 +17,7 @@ public interface ILicenceFileFinder
         Dictionary<string, DmsManualFixExtract> dmsManualFixes,
         List<Override> dmsChangeAuditOverrides,
         ConcurrentDictionary<Guid, List<DmsFileIdInformation>> dmsFileIdInformation,
-        IDmsApiClient dmsApiClient,
+        IGeneralApiClient generalApiClient,
         List<NaldSimpleRecord> naldRecordsToProcess,
         Dictionary<string, List<NaldLicenceVersion>> naldData,
         List<DmsFileReaderResult> wradiToolScrapeResults,
@@ -45,11 +45,11 @@ public interface ILicenceFileFinder
         List<LicenceMatchResult> currentIterationMatches,
         string? region = null);
 
-    string FindAllFilesToDownload(
-        List<DmsExtract> dmsRecords,
+    Task<string> FindAllFilesToDownloadAsync(
+        Dictionary<string, List<DmsExtract>> dmsRecords,
         List<LicenceMatchResult> currentIterationMatches,
         Dictionary<string, FileInventory> wradiAllLocalFilesInventory,
-        string? filterRegion = null);
+        IGeneralApiClient apiClient);
     
     string FindLicenceFilesToDownload(
         List<DmsExtract> dmsRecords,
