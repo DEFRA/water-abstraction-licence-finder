@@ -123,6 +123,22 @@ public class GeneralApiClient : IGeneralApiClient
         var response = await HttpClient.PostAsync(new Uri(HttpClient.BaseAddress!, path), httpContent);
         response.EnsureSuccessStatusCode();
     }
+    
+    public async Task ClearVersionFilesAsync()
+    {
+        var path = "/Extractor/VersionFiles/ClearAllFiles";
+        
+        var response = await HttpClient.DeleteAsync(new Uri(HttpClient.BaseAddress!, path));
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task ClearVersionFilesToDownloadAsync()
+    {
+        var path = "/Extractor/VersionFiles/ClearDownloadFiles";
+        
+        var response = await HttpClient.DeleteAsync(new Uri(HttpClient.BaseAddress!, path));
+        response.EnsureSuccessStatusCode();
+    }
 
     public async Task<List<LicenceMatchResult>> GetLicenceFinderResultsAsync(int skip, int take)
     {

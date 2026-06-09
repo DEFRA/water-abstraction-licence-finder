@@ -77,7 +77,6 @@ using (var scope = host.Services.CreateScope())
         var dmsRecordsData = GroupDmsRecords(dmsRecords.Data);
         var wradiAllLocalFilesInventory = await wradiAllLocalFilesInventoryTask;
         
-        //var flowToRun = "FindLicenceFilesAsync";
         //var flowToRun = "FindAllFilesToDownload";
         var flowToRun = "FindLicenceFilesAsync";
         

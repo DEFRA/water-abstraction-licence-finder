@@ -400,6 +400,8 @@ public class LicenceFileFinder : ILicenceFileFinder
         // Check if the permit number row has a fileId that is different to the previous run. If so fetch the DMS info
         // for that file and include it in files to download
         
+        Console.WriteLine("Getting filtered current matches");
+        
         var filteredCurrentMatches = currentMatches
             .Where(c => !c.DoiSignatureDateMatch
                 && !string.IsNullOrEmpty(c.SignatureDate)
@@ -416,13 +418,22 @@ public class LicenceFileFinder : ILicenceFileFinder
                 .ToList();
         }*/
 
+        Console.WriteLine($"Got {filteredCurrentMatches.Count} filtered current matches");
+        
         var missingFiles = new List<DmsExtract>();
         var allFiles = new List<DmsExtract>();
 
         var permitNumberRegions = new Dictionary<string, int>();
+
+        var idx = 0;
         
         foreach (var filteredCurrentMatch in filteredCurrentMatches)
         {
+            if (idx++ % 1000 == 0)
+            {
+                Console.WriteLine($"Processing record {idx - 1}");
+            }
+            
             var permitNumber = filteredCurrentMatch.PermitNumber.ToLower();
             
             // Find all files in DMS records that match the permit number of the current match
@@ -455,6 +466,8 @@ public class LicenceFileFinder : ILicenceFileFinder
             // Add all files not in inventory to missing files
             missingFiles.AddRange(filesNotInInventory);
         }
+        
+        Console.WriteLine("Getting mising records");
 
         var missingRecords = missingFiles
             .Select(file => new DownloadInfoMissing
@@ -465,6 +478,8 @@ public class LicenceFileFinder : ILicenceFileFinder
                 LibraryAndFilePath = ExtractLibraryAndFilePath(file.FileUrl)
             })
             .ToList();
+        
+        Console.WriteLine("Getting all records");
         
         var allRecords = allFiles
             .Select(file =>
@@ -528,8 +543,9 @@ public class LicenceFileFinder : ILicenceFileFinder
             ("All", allHeaderMapping, allRecords)
         };
 
-        var saveVersionAllTask = apiClient.SaveVersionFilesAsync(allRecords);
-        await apiClient.SaveVersionFilesToDownloadAsync(missingRecords);
+        var saveVersionAllTask = SaveVersionFilesAsync(apiClient, allRecords);
+        await SaveVersionFilesToDownloadAsync(apiClient, missingRecords);
+
         await saveVersionAllTask;
         
         // NOTE! 2026-May-21 - The number we get for missing is less then the number JP calculated - we need to
@@ -538,6 +554,36 @@ public class LicenceFileFinder : ILicenceFileFinder
         return _fileProcessor.GenerateExcel(
             worksheetData,
             $"Version_Download_Info_{DateTime.Now:yyyyMMdd_HHmmss}");
+    }
+
+    private static async Task SaveVersionFilesAsync(
+        IGeneralApiClient apiClient,
+        List<DownloadInfoAll> results)
+    {
+        await apiClient.ClearVersionFilesAsync();
+        
+        const int chunkSize = 10_000;
+        var chunks = results.Chunk(chunkSize);
+
+        foreach (var chunk in chunks)
+        {
+            await apiClient.SaveVersionFilesAsync(chunk.ToList());            
+        }
+    }
+    
+    private static async Task SaveVersionFilesToDownloadAsync(
+        IGeneralApiClient apiClient,
+        List<DownloadInfoMissing> missingRecords)
+    {
+        await apiClient.ClearVersionFilesToDownloadAsync();
+        
+        const int chunkSize = 10_000;
+        var chunks = missingRecords.Chunk(chunkSize);
+
+        foreach (var chunk in chunks)
+        {
+            await apiClient.SaveVersionFilesToDownloadAsync(chunk.ToList());            
+        }
     }
 
     public string FindLicenceFilesToDownload(
