@@ -1,6 +1,5 @@
 ﻿using System.Collections.Concurrent;
 using System.Globalization;
-using DocumentFormat.OpenXml.Office2010.ExcelAc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using WA.DMS.LicenceFinder.Core.Interfaces;
@@ -32,7 +31,6 @@ using (var scope = host.Services.CreateScope())
     restrictToRegionName = null;
     
     var apiBaseUrl = "http://localhost:8080";
-    //var apiBaseUrl = "https://wli-api-dev.aws-int.defra.cloud";
     
     try
     {
