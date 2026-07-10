@@ -544,14 +544,18 @@ public static class RuleHelpers
     /// <returns>Tuple containing the latest DMS record (or null) and whether duplicates with same dates exist</returns>
     private static (DmsExtract? document, bool hasSameDateDuplicates) SelectLatestDocument(IEnumerable<DmsExtract> dmsRecords)
     {
-        var recordsList = dmsRecords?.ToList();
+        var recordsList = dmsRecords.ToList();
 
-        if (recordsList == null || recordsList.Count == 0)
+        if (recordsList.Count == 0)
+        {
             return (null, false);
+        }
 
         if (recordsList.Count == 1)
-            return (recordsList[0], false);
-
+        {
+            return (recordsList[0], false);            
+        }
+        
         // Order by DocumentDate descending (latest first), then by UploadDate descending
         var orderedRecords = recordsList
             .OrderByDescending(r => GetSafeDateTime(r.DocumentDate))

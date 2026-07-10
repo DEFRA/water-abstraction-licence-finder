@@ -15,4 +15,8 @@ public interface IGeneralApiClient
     public Task SaveVersionFilesToDownloadAsync(List<DownloadInfoMissing> results);
 
     public Task SaveVersionFilesAsync(List<DownloadInfoAll> results);
+
+    public Task ClearVersionFilesAsync();
+
+    public Task ClearVersionFilesToDownloadAsync();
 }
