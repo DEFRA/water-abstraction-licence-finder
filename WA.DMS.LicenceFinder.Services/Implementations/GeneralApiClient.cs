@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using WA.DMS.LicenceFinder.Core.Interfaces;
@@ -9,7 +10,11 @@ public class GeneralApiClient : IGeneralApiClient
 {
     public GeneralApiClient(string apiBaseUrl)
     {
-        HttpClient = new HttpClient();
+        HttpClient = new HttpClient(new HttpClientHandler
+        {
+            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+        });
+        
         HttpClient.BaseAddress = new Uri(apiBaseUrl);
     }
     
