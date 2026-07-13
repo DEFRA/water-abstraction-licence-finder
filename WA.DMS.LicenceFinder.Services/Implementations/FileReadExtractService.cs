@@ -391,7 +391,8 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
                     { "NALD Increment No.", ["IncrementNo"]},
                     { "OverrideType", ["OverrideType"]},
                     { "File ID", ["FileId"]}
-                });
+                },
+                ["Duplicatecheck"]);
 
             allOverrides.AddRange(records);
         }

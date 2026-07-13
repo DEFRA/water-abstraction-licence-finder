@@ -83,12 +83,13 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <None Remove="Resources\Override_Master_2026_07_09.xlsx" />
-    <Content Include="Resources\Override_Master_2026_07_09.xlsx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <None Remove="Resources\Change_Audit.xlsx" />
     <Content Include="Resources\Change_Audit.xlsx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <None Remove="Resources\New_Override_Master_2026Jul13.xlsx" />
+    <Content Include="Resources\New_Override_Master_2026Jul13.xlsx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
 </Project>
