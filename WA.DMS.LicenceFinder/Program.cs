@@ -48,7 +48,7 @@ using (var scope = host.Services.CreateScope())
         // API - WRADI tool all local files inventory (from S3 stuff)
         var wradiAllLocalFilesInventoryTask = GetWradiPdfsInventoryFiles(apiBaseUrl);
         
-        // API - WRADI tool file reader (DOI, template type etc... scraping) extracts
+        // API - WRADI tool file/licence reader (DOI, template type etc... scraping) extracts
         // (e.g. LicenceReader-yyyyMMdd.csv). Has date of issue, number of pages, template types etc...
         var wradiToolScrapeResultsTask = generalApiClient.GetDmsFileReaderResultsAsync();
         
@@ -75,8 +75,8 @@ using (var scope = host.Services.CreateScope())
         var dmsRecordsData = GroupDmsRecords(dmsRecords.Data);
         var wradiAllLocalFilesInventory = await wradiAllLocalFilesInventoryTask;
         
-        //var flowToRun = "FindAllFilesToDownload";
-        var flowToRun = "FindLicenceFilesAsync";
+        var flowToRun = "FindAllFilesToDownload";
+        //var flowToRun = "FindLicenceFilesAsync";
         
         switch (flowToRun)
         {
