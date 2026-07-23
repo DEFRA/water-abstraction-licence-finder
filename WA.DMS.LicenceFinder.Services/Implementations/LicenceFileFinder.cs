@@ -807,11 +807,6 @@ public class LicenceFileFinder : ILicenceFileFinder
         
         foreach (var recordWithDifferentDate in recordsWithDifferentDates)
         {
-            if (recordWithDifferentDate.DateOfIssue != "Scrape Not Attempted")
-            {
-                
-            }
-            
             var permitNumber = recordWithDifferentDate.PermitNumber;
             var lowercasePermitNumber = permitNumber.ToLower();
             
@@ -1547,6 +1542,8 @@ public class LicenceFileFinder : ILicenceFileFinder
                 
                 licenceMatchResult.ChangeAuditAction = "Override";
                 licenceMatchResult.FileUrl = overrideRecord.FileUrl;
+                licenceMatchResult.DmsPermitNumber = GetDmsPermitNumber(overrideRecord.FileUrl);
+                
                 licenceMatchResult.NaldIssueNo = string.IsNullOrWhiteSpace(overrideRecord.IssueNo)
                     ? 0
                     : int.Parse(overrideRecord.IssueNo);
@@ -1676,6 +1673,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                     licenceMatchResult.SeenInDmsExtract = true;
                     licenceMatchResult.WeHaveDownloaded = weHaveDownloaded;
                     licenceMatchResult.FileUrl = matchedDmsRecord.FileUrl;
+                    licenceMatchResult.DmsPermitNumber = GetDmsPermitNumber(matchedDmsRecord.FileUrl);
                     licenceMatchResult.OtherReference = matchedDmsRecord.OtherReference;
                     licenceMatchResult.FileSize = matchedDmsRecord.FileSize;
                     licenceMatchResult.DisclosureStatus = matchedDmsRecord.DisclosureStatus;
@@ -1756,6 +1754,24 @@ public class LicenceFileFinder : ILicenceFileFinder
         Console.WriteLine($"Licence matching completed. Total records processed: {processedRecordCount}");
         
         return (returnList, unmatchedVersionResults, deltaResults);
+    }
+    
+    private static string GetDmsPermitNumber(string? fileUrl)
+    {
+        if (string.IsNullOrEmpty(fileUrl))
+        {
+            return string.Empty;
+        }
+		
+        var parts = fileUrl.Split('/');
+		
+        if (parts.Length < 9)
+        {
+            return string.Empty;
+        }
+		
+        var permitNumberPart = parts[6];		
+        return permitNumberPart;
     }
 
     private static async Task<DmsFileIdInformation?> RecordFileIdAsync(
