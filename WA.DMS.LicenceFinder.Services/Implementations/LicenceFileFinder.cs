@@ -543,6 +543,9 @@ public class LicenceFileFinder : ILicenceFileFinder
             ("All", allHeaderMapping, allRecords)
         };
 
+        
+        Console.WriteLine("Starting saving version files");
+        
         var saveVersionAllTask = SaveVersionFilesAsync(apiClient, allRecords);
         await SaveVersionFilesToDownloadAsync(apiClient, missingRecords);
 
@@ -560,14 +563,18 @@ public class LicenceFileFinder : ILicenceFileFinder
         IGeneralApiClient apiClient,
         List<DownloadInfoAll> results)
     {
+        Console.WriteLine("ClearVersionFilesAsync started");
         await apiClient.ClearVersionFilesAsync();
+        Console.WriteLine("ClearVersionFilesAsync finished");
         
         const int chunkSize = 10_000;
-        var chunks = results.Chunk(chunkSize);
-
+        var chunks = results.Chunk(chunkSize).ToList();
+        var idx = 1;
+        
         foreach (var chunk in chunks)
         {
-            await apiClient.SaveVersionFilesAsync(chunk.ToList());            
+            await apiClient.SaveVersionFilesAsync(chunk.ToList());    
+            Console.WriteLine($"SaveVersionFilesAsync - Chunk {idx++} of {chunks.Count}");
         }
     }
     
@@ -575,14 +582,18 @@ public class LicenceFileFinder : ILicenceFileFinder
         IGeneralApiClient apiClient,
         List<DownloadInfoMissing> missingRecords)
     {
+        Console.WriteLine("ClearVersionFilesToDownloadAsync started");
         await apiClient.ClearVersionFilesToDownloadAsync();
+        Console.WriteLine("ClearVersionFilesToDownloadAsync started");
         
         const int chunkSize = 10_000;
-        var chunks = missingRecords.Chunk(chunkSize);
+        var chunks = missingRecords.Chunk(chunkSize).ToList();
+        var idx = 1;
 
         foreach (var chunk in chunks)
         {
-            await apiClient.SaveVersionFilesToDownloadAsync(chunk.ToList());            
+            await apiClient.SaveVersionFilesToDownloadAsync(chunk.ToList());
+            Console.WriteLine($"SaveVersionFilesToDownloadAsync - Chunk {idx++} of {chunks.Count}");
         }
     }
 
@@ -1475,6 +1486,7 @@ public class LicenceFileFinder : ILicenceFileFinder
             ByManualFixPermitNumber = BuildDmsManualFixDictionary(dmsRecords, dmsManualFixes)
         };
         
+        const string scrapeNotAttemptedError = "Scrape not attempted";
         var processedRecordCount = 0;
         var rowIndex = 1;
         
@@ -1490,6 +1502,11 @@ public class LicenceFileFinder : ILicenceFileFinder
                 PermitNumber = LicenceFileHelpers.CleanPermitNumber(naldReportRecord.LicNo),
                 UniqueColumnID = rowIndex++.ToString()
             };
+
+            if (licenceMatchResult.LicenseNumber == "29/38/02/0078")
+            {
+                
+            }
             
             var lowercasePermitNumber = licenceMatchResult.PermitNumber.ToLowerInvariant();
             
@@ -1560,11 +1577,11 @@ public class LicenceFileFinder : ILicenceFileFinder
                 
                 licenceMatchResult.PrimaryTemplate = overrideScrapeResult != null
                     ? overrideScrapeResult.PrimaryType // PrimaryTemplateType
-                    : "Scrape Not Attempted";
+                    : scrapeNotAttemptedError;
                 
                 licenceMatchResult.SecondaryTemplate = overrideScrapeResult != null
                     ? overrideScrapeResult.SecondaryType // SecondaryTemplateType
-                    : "Scrape Not Attempted";
+                    : scrapeNotAttemptedError;
 
                 licenceMatchResult.NumberOfPages = overrideScrapeResult != null
                     ? overrideScrapeResult.NumberOfPages
@@ -1708,12 +1725,25 @@ public class LicenceFileFinder : ILicenceFileFinder
                 ? Guid.TryParse(licenceMatchResult.FileId, out var tempFileId) ? tempFileId : null
                 : (Guid?)null;
 
+            if (fileId == null)
+            {
+                var count = wradiToolScrapeResults
+                    .Count(sr => sr.PermitNumber == permitNumberToUseForDms);
+                
+                licenceMatchResult.FileId = $"({count} files scraped)";
+            }
+            
+            var fileIdError = fileId == null;
+            const string fileIdNotSetError = "File id not set";
+
+            var fileIdOrScrapeError = fileIdError ? fileIdNotSetError : scrapeNotAttemptedError;
+            
             var scrapeResult = wradiToolScrapeResults.FirstOrDefault(
                 r => fileId != null && r.FileId == fileId);
             
             var dateOfIssue = scrapeResult != null
                 ? LicenceFileHelpers.ConvertDateToStandardFormat(scrapeResult.DateOfIssue.ToString())
-                : "Scrape Not Attempted";
+                : fileIdOrScrapeError;
             
             licenceMatchResult.RuleUsed = ruleUsed;
             licenceMatchResult.Region = naldReportRecord.Region;
@@ -1732,14 +1762,14 @@ public class LicenceFileFinder : ILicenceFileFinder
             licenceMatchResult.VersionMatchFileUrl = versionMatch?.FileUrl;
             licenceMatchResult.DuplicateLicenceInVersionMatchResult = versionMatch?.LicenceCount > 1;
             licenceMatchResult.NaldIssue = versionMatch?.NaldDataQualityIssue;
-            
+
             licenceMatchResult.PrimaryTemplate = scrapeResult != null
                 ? scrapeResult.PrimaryType //PrimaryTemplateType
-                : "Scrape Not Attempted";
+                : fileIdOrScrapeError;
             
             licenceMatchResult.SecondaryTemplate = scrapeResult != null
                 ? scrapeResult.SecondaryType //SecondaryTemplateType
-                : "Scrape Not Attempted";
+                : fileIdOrScrapeError;
             
             licenceMatchResult.NumberOfPages = scrapeResult != null
                 ? scrapeResult.NumberOfPages
