@@ -30,7 +30,9 @@ using (var scope = host.Services.CreateScope())
     var restrictToRegionName = "North East";
     restrictToRegionName = null;
     
-    var apiBaseUrl = "http://localhost:8080";
+    //var apiBaseUrl = "http://localhost:8080";
+    //var apiBaseUrl = "https://wli-api-dev.aws-int.defra.cloud";
+    var apiBaseUrl = "https://wli-api-tst.aws-int.defra.cloud";
     
     try
     {
@@ -115,8 +117,15 @@ using (var scope = host.Services.CreateScope())
                 
                 Console.WriteLine($"File saved to {result}");
                 break;
+            
+            
+            
+            
+            
+            
+            
             case "BuildFileTemplateIdentificationExtract":
-                // FLOW - Build file template identification extract
+                // FLOW - Build file template identification extract - NOT REALLY USED ANYMORE (AUG 2026)
                 Console.WriteLine("Started building file template identification extract...");
                 var resultFilePath = licenceFileFinder.BuildFileTemplateIdentificationExtract(
                     await licenceFinderLastIterationMatchesTask,
@@ -125,13 +134,6 @@ using (var scope = host.Services.CreateScope())
 
                 Console.WriteLine($"File saved to {resultFilePath}");
                 break;
-            
-            
-            
-            
-            
-            
-            
             case "FindLicenceFilesToDownload":
                 // FLOW - Find licence files to download (previously referred to as 'Build Download Info Excel')
                 // NOTE 2026-May-22 I think FindLicenceFiles extra tabs supersede this NOT USED ANYMORE PROBABLY

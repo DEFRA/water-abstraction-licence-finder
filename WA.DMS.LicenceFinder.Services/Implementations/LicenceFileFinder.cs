@@ -1502,11 +1502,6 @@ public class LicenceFileFinder : ILicenceFileFinder
                 PermitNumber = LicenceFileHelpers.CleanPermitNumber(naldReportRecord.LicNo),
                 UniqueColumnID = rowIndex++.ToString()
             };
-
-            if (licenceMatchResult.LicenseNumber == "29/38/02/0078")
-            {
-                
-            }
             
             var lowercasePermitNumber = licenceMatchResult.PermitNumber.ToLowerInvariant();
             
@@ -1547,6 +1542,11 @@ public class LicenceFileFinder : ILicenceFileFinder
             
             var naldVersionIncrementNo = naldLicenceVersionData?.IncrementNo ?? 0;
             var overrideIncrementNo = overrideRecord?.IncrementNo ?? 0;
+            
+            licenceMatchResult.SignatureDate = naldLicenceVersionData?.SignatureDate?.ToString("dd/MM/yyyy");
+            licenceMatchResult.NaldId = int.Parse(naldLicenceVersionData?.AablId ?? "0");
+            licenceMatchResult.NaldIssueNo = int.Parse(naldLicenceVersionData?.IssueNo ?? "0");
+            licenceMatchResult.NaldIncrementNo = naldLicenceVersionData?.IncrementNo;
             
             if (overrideRecord != null
                 && overrideIssueNo >= naldVersionIssueNo
@@ -1748,10 +1748,6 @@ public class LicenceFileFinder : ILicenceFileFinder
             licenceMatchResult.RuleUsed = ruleUsed;
             licenceMatchResult.Region = naldReportRecord.Region;
             licenceMatchResult.DateOfIssue = dateOfIssue;
-            licenceMatchResult.SignatureDate = naldLicenceVersionData?.SignatureDate?.ToString("dd/MM/yyyy");
-            licenceMatchResult.NaldId = int.Parse(naldLicenceVersionData?.AablId ?? "0");
-            licenceMatchResult.NaldIssueNo = int.Parse(naldLicenceVersionData?.IssueNo ?? "0");
-            licenceMatchResult.NaldIncrementNo = naldLicenceVersionData?.IncrementNo;
             licenceMatchResult.DoiSignatureDateMatch = licenceMatchResult.SignatureDate == licenceMatchResult.DateOfIssue;
 
             var versionMatch = unmatchedVersionResults.FirstOrDefault(uvr =>
