@@ -1569,6 +1569,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                 licenceMatchResult.RuleUsed = "Override";
                 licenceMatchResult.Region = naldReportRecord.Region;
                
+                licenceMatchResult.LiveLicenceFound = IsLiveLicenceFound(licenceMatchResult);
                 returnList.Add(licenceMatchResult);
                 
                 var overrideScrapeResult = wradiToolScrapeResults
@@ -1770,8 +1771,10 @@ public class LicenceFileFinder : ILicenceFileFinder
             licenceMatchResult.NumberOfPages = scrapeResult != null
                 ? scrapeResult.NumberOfPages
                 : -1;
-            
+
+            licenceMatchResult.LiveLicenceFound = IsLiveLicenceFound(licenceMatchResult);
             returnList.Add(licenceMatchResult);
+            
             processedRecordCount++;
 
             Console.WriteLine($"Processing record {processedRecordCount}/{naldRecordsToProcess.Count}: {naldReportRecord.LicNo} - {ruleUsed}");
@@ -1780,6 +1783,12 @@ public class LicenceFileFinder : ILicenceFileFinder
         Console.WriteLine($"Licence matching completed. Total records processed: {processedRecordCount}");
         
         return (returnList, unmatchedVersionResults, deltaResults);
+    }
+
+    private static bool IsLiveLicenceFound(LicenceMatchResult licenceMatchResult)
+    {
+        return licenceMatchResult.DoiSignatureDateMatch
+               || licenceMatchResult.ChangeAuditAction == "Override";
     }
     
     private static string GetDmsPermitNumber(string? fileUrl)
