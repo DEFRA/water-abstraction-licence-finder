@@ -172,4 +172,6 @@ public class LicenceMatchResult
     
     public string? Comments { get; set; }
     // ReSharper restore InconsistentNaming
+    
+    public bool? LiveLicenceFound { get; set; }
 }
