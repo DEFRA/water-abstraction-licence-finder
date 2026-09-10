@@ -283,6 +283,154 @@ public class LicenceFileFinderTests
             It.IsAny<Dictionary<string, string>>()), Times.Once);
     }
 
+    [Theory]
+    [InlineData("WRL", "wr51__somefile.pdf", "https://dms/LIB1/x.pdf", true)] // filename pattern "WR51"
+    [InlineData("WRL", "WR 51 report.pdf", "https://dms/LIB1/x.pdf", true)] // filename pattern "WR 51"
+    [InlineData("WRL", "WR-51-report.pdf", "https://dms/LIB1/x.pdf", true)] // filename pattern "WR-51"
+    [InlineData("WRL", "WR_51_report.pdf", "https://dms/LIB1/x.pdf", true)] // filename pattern "WR_51"
+    [InlineData("WRL", "Inspection Report.pdf", "https://dms/LIB1/x.pdf", true)] // filename pattern "Inspection"
+    [InlineData("WRL", "WR51.PDF", "https://dms/LIB1/x.pdf", true)] // case-insensitive filename pattern + extension
+    [InlineData("wrl", "wr51.pdf", "https://dms/LIB1/x.pdf", true)] // case-insensitive regime
+    [InlineData("OTHER", "wr51__somefile.pdf", "https://dms/LIB1/x.pdf", false)] // wrong regime excludes even a filename match
+    [InlineData("WRL", "wr51__somefile.docx", "https://dms/LIB1/x.pdf", false)] // not a .pdf
+    [InlineData("WRL", "random.pdf", "https://dms/LIB2/DP001/Compliance/random.pdf", true)] // Compliance folder, no exclude term
+    [InlineData("WRL", "random.pdf", "https://dms/LIB2/DP001/compliance/random.pdf", true)] // case-insensitive folder segment
+    [InlineData("WRL", "random.pdf", "https://dms/LIB2/DP001/Monitoring/random.pdf", false)] // no Compliance folder, no filename pattern
+    [InlineData("WRL", "Compliance Letter.pdf", "https://dms/LIB2/DP001/Compliance/Compliance Letter.pdf", false)] // "Letter" exclude term
+    [InlineData("WRL", "HOF Record.pdf", "https://dms/LIB2/DP001/Compliance/HOF Record.pdf", false)] // "HOF" exclude term
+    public async Task FindInspectionReportFilesAsync_FiltersByFilenamePatternOrComplianceFolder(
+        string regime, string fileName, string fileUrl, bool expectedIncluded)
+    {
+        // Arrange
+        var dmsRecord = new DmsExtract
+        {
+            PermitNumber = "12345",
+            Regime = regime,
+            FileName = fileName,
+            FileUrl = fileUrl
+        };
+
+        var mockGeneralApiClient = new Mock<IGeneralApiClient>();
+        List<DmsExtract>? savedResults = null;
+        mockGeneralApiClient
+            .Setup(c => c.SaveInspectionReportFinderResultsAsync(It.IsAny<List<DmsExtract>>()))
+            .Callback<List<DmsExtract>>(r => savedResults = r)
+            .Returns(Task.CompletedTask);
+        mockGeneralApiClient
+            .Setup(c => c.ClearInspectionReportFinderResultsAsync())
+            .Returns(Task.CompletedTask);
+
+        _mockFileProcessor.Setup(p => p.GenerateExcel(It.IsAny<List<DmsExtract>>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
+            .Returns("output.xlsx");
+
+        var finder = new LicenceFileFinder(_mockFileProcessor.Object, _matchingRules);
+
+        // Act
+        await finder.FindInspectionReportFilesAsync([dmsRecord], mockGeneralApiClient.Object);
+
+        // Assert - Clear always runs; Save only runs when at least one record survived the
+        // filter (Chunk on an empty sequence yields zero chunks, so Save is never called for a
+        // fully-filtered-out input)
+        mockGeneralApiClient.Verify(c => c.ClearInspectionReportFinderResultsAsync(), Times.Once);
+
+        if (expectedIncluded)
+        {
+            savedResults.Should().ContainSingle().Which.Should().BeSameAs(dmsRecord);
+        }
+        else
+        {
+            mockGeneralApiClient.Verify(c => c.SaveInspectionReportFinderResultsAsync(It.IsAny<List<DmsExtract>>()), Times.Never);
+        }
+    }
+
+    [Fact]
+    public async Task FindInspectionReportFilesAsync_ChunksSavesInBatchesOf1000()
+    {
+        // Arrange - 2,500 matching records should be saved in 3 chunks (1000, 1000, 500)
+        var dmsRecords = Enumerable.Range(1, 2500)
+            .Select(i => new DmsExtract
+            {
+                PermitNumber = $"P{i}",
+                Regime = "WRL",
+                FileName = "wr51__report.pdf",
+                FileUrl = "https://dms/LIB1/x.pdf"
+            })
+            .ToList();
+
+        var mockGeneralApiClient = new Mock<IGeneralApiClient>();
+        var savedChunks = new List<List<DmsExtract>>();
+        mockGeneralApiClient
+            .Setup(c => c.SaveInspectionReportFinderResultsAsync(It.IsAny<List<DmsExtract>>()))
+            .Callback<List<DmsExtract>>(savedChunks.Add)
+            .Returns(Task.CompletedTask);
+        mockGeneralApiClient
+            .Setup(c => c.ClearInspectionReportFinderResultsAsync())
+            .Returns(Task.CompletedTask);
+
+        _mockFileProcessor.Setup(p => p.GenerateExcel(It.IsAny<List<DmsExtract>>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
+            .Returns("output.xlsx");
+
+        var finder = new LicenceFileFinder(_mockFileProcessor.Object, _matchingRules);
+
+        // Act
+        await finder.FindInspectionReportFilesAsync(dmsRecords, mockGeneralApiClient.Object);
+
+        // Assert
+        savedChunks.Should().HaveCount(3);
+        savedChunks[0].Should().HaveCount(1000);
+        savedChunks[1].Should().HaveCount(1000);
+        savedChunks[2].Should().HaveCount(500);
+        mockGeneralApiClient.Verify(c => c.ClearInspectionReportFinderResultsAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task FindInspectionReportFilesAsync_WithValidData_ShouldReturnExcelFilePath()
+    {
+        // Arrange
+        var dmsRecords = new List<DmsExtract>
+        {
+            new() { PermitNumber = "12345", Regime = "WRL", FileName = "wr51__report.pdf", FileUrl = "https://dms/x.pdf" }
+        };
+
+        var mockGeneralApiClient = new Mock<IGeneralApiClient>();
+        mockGeneralApiClient.Setup(c => c.SaveInspectionReportFinderResultsAsync(It.IsAny<List<DmsExtract>>())).Returns(Task.CompletedTask);
+        mockGeneralApiClient.Setup(c => c.ClearInspectionReportFinderResultsAsync()).Returns(Task.CompletedTask);
+
+        _mockFileProcessor.Setup(p => p.GenerateExcel(It.IsAny<List<DmsExtract>>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
+            .Returns("InspectionReportFiles_output.xlsx");
+
+        var finder = new LicenceFileFinder(_mockFileProcessor.Object, _matchingRules);
+
+        // Act
+        var result = await finder.FindInspectionReportFilesAsync(dmsRecords, mockGeneralApiClient.Object);
+
+        // Assert
+        result.Should().Be("InspectionReportFiles_output.xlsx");
+        _mockFileProcessor.Verify(p => p.GenerateExcel(
+                It.Is<List<DmsExtract>>(r => r.Count == 1),
+                It.IsAny<string>(),
+                It.IsAny<Dictionary<string, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task FindInspectionReportFilesAsync_WhenExceptionOccurs_ShouldThrowInvalidOperationException()
+    {
+        // Arrange
+        var mockGeneralApiClient = new Mock<IGeneralApiClient>();
+        mockGeneralApiClient
+            .Setup(c => c.ClearInspectionReportFinderResultsAsync())
+            .ThrowsAsync(new Exception("Test exception"));
+
+        var finder = new LicenceFileFinder(_mockFileProcessor.Object, _matchingRules);
+
+        // Act & Assert
+        var act = () => finder.FindInspectionReportFilesAsync([], mockGeneralApiClient.Object);
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Error occurred while finding inspection report files: Test exception");
+    }
+
     private void SetupMocksForBasicTest(Dictionary<string, List<DmsExtract>> dmsRecords, List<NaldSimpleRecord> naldRecords)
     {
         _mockReadExtract.Setup(r => r.GetDmsExtracts()).Returns(dmsRecords);

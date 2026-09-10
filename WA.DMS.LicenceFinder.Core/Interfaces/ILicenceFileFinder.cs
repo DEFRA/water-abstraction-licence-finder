@@ -56,4 +56,12 @@ public interface ILicenceFileFinder
         List<LicenceMatchResult> currentIterationMatches,
         Dictionary<string, FileInventory> wradiAllLocalFilesInventory,
         string? filterRegion = null);
+
+    /// <summary>
+    /// Filters the DMS extract for inspection report (WR51) PDFs, using filename/folder rules
+    /// Saves results to inspection_report_finder_result via the API (clear then chunked save)
+    /// then also writes an Excel report for human review.
+    /// </summary>
+    /// <returns>The path to the generated Excel results file</returns>
+    Task<string> FindInspectionReportFilesAsync(List<DmsExtract> dmsRecords, IGeneralApiClient generalApiClient);
 }

@@ -729,7 +729,7 @@ public class LicenceFileFinder : ILicenceFileFinder
     /// <summary>
     /// Extracts the site path from a file URL (part before 'lib' occurrence, case-insensitive)
     /// </summary>
-    private string ExtractSitePath(string fileUrl)
+    private static string ExtractSitePath(string fileUrl)
     {
         if (string.IsNullOrWhiteSpace(fileUrl))
             return string.Empty;
@@ -747,7 +747,7 @@ public class LicenceFileFinder : ILicenceFileFinder
     /// <summary>
     /// Extracts the library and file path from a file URL (part from 'lib' occurrence till end, case-insensitive)
     /// </summary>
-    private string ExtractLibraryAndFilePath(string fileUrl)
+    private static string ExtractLibraryAndFilePath(string fileUrl)
     {
         if (string.IsNullOrWhiteSpace(fileUrl))
             return string.Empty;
@@ -785,6 +785,72 @@ public class LicenceFileFinder : ILicenceFileFinder
         catch (Exception ex)
         {
             throw new InvalidOperationException($"Error occurred while finding licence files: {ex.Message}", ex);
+        }
+    }
+
+    private static readonly string[] InspectionReportFilenamePatterns = ["WR51", "WR 51", "WR-51", "WR_51", "Inspection"];
+    private const string InspectionReportComplianceFolderSegment = "/Compliance/";
+    private static readonly string[] InspectionReportComplianceExcludeTerms = ["Letter", "HOF"];
+    
+    private static bool IsInspectionReportFile(DmsExtract dmsRecord)
+    {
+        if (!dmsRecord.Regime.Equals("WRL", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (!dmsRecord.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (InspectionReportFilenamePatterns.Any(pattern =>
+                dmsRecord.FileName.Contains(pattern, StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        if (!dmsRecord.FileUrl.Contains(InspectionReportComplianceFolderSegment, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return !InspectionReportComplianceExcludeTerms.Any(term =>
+            dmsRecord.FileName.Contains(term, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <inheritdoc/>
+    public async Task<string> FindInspectionReportFilesAsync(List<DmsExtract> dmsRecords, IGeneralApiClient generalApiClient)
+    {
+        try
+        {
+            var results = dmsRecords.Where(IsInspectionReportFile).ToList();
+
+            Console.WriteLine($"Found {results.Count} inspection report files out of {dmsRecords.Count} DMS records.");
+
+            // Save to DB clear, then chunked save via the API
+            await generalApiClient.ClearInspectionReportFinderResultsAsync();
+            const int chunkSize = 1_000;
+
+            foreach (var chunk in results.Chunk(chunkSize))
+            {
+                await generalApiClient.SaveInspectionReportFinderResultsAsync(chunk.ToList());
+            }
+
+            var outputFileName = $"InspectionReportFiles_{DateTime.Now:yyyyMMdd_HHmmss}";
+
+            return _fileProcessor.GenerateExcel(results, outputFileName, new Dictionary<string, string>
+            {
+                { "PermitNumber", "Permit Number" },
+                { "FileUrl", "File URL" },
+                { "FileName", "File Name" },
+                { "LibraryName", "Library Name" },
+                { "Regime", "Regime" }
+            });
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Error occurred while finding inspection report files: {ex.Message}", ex);
         }
     }
 

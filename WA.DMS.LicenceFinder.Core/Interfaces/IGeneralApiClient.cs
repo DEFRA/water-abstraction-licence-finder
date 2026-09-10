@@ -19,4 +19,8 @@ public interface IGeneralApiClient
     public Task ClearVersionFilesAsync();
 
     public Task ClearVersionFilesToDownloadAsync();
+
+    public Task SaveInspectionReportFinderResultsAsync(List<DmsExtract> results);
+
+    public Task ClearInspectionReportFinderResultsAsync();
 }
