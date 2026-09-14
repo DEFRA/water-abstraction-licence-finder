@@ -26,18 +26,6 @@ public interface IReadExtract
     List<LicenceMatchResult> GetLicenceFinderPreviousIterationResults(string filename, string? region);
 
     /// <summary>
-    /// Reads File_Identification_Extract.csv file from the resources folder
-    /// </summary>
-    /// <returns>List of file identification records</returns>
-    List<FileIdentificationExtract> GetWradiFileTypeScrapeResults();
-
-    /// <summary>
-    /// Template_Results.xlsx file from the resources folder
-    /// </summary>
-    /// <returns>List of template finder results records</returns>
-    List<TemplateFinderResult> GetWradiTemplateFinderScrapeResults();
-
-    /// <summary>
     /// Reads Change_Audit.xlsx file from the resources folder
     /// </summary>
     /// <returns>List of change audit records</returns>
