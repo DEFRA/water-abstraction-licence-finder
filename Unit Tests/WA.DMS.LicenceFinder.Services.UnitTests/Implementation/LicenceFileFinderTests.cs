@@ -320,13 +320,15 @@ public class LicenceFileFinderTests
             .Setup(c => c.ClearInspectionReportFinderResultsAsync())
             .Returns(Task.CompletedTask);
 
-        _mockFileProcessor.Setup(p => p.GenerateExcel(It.IsAny<List<DmsExtract>>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
+        _mockFileProcessor.Setup(p => p.GenerateExcel(
+                It.IsAny<IEnumerable<(string, Dictionary<string, string>?, object)>>(), It.IsAny<string>()))
             .Returns("output.xlsx");
 
         var finder = new LicenceFileFinder(_mockFileProcessor.Object, _matchingRules);
 
         // Act
-        await finder.FindInspectionReportFilesAsync([dmsRecord], mockGeneralApiClient.Object);
+        await finder.FindInspectionReportFilesAsync(
+            [dmsRecord], mockGeneralApiClient.Object, new Dictionary<string, FileInventory>());
 
         // Assert - Clear always runs; Save only runs when at least one record survived the
         // filter (Chunk on an empty sequence yields zero chunks, so Save is never called for a
@@ -367,13 +369,15 @@ public class LicenceFileFinderTests
             .Setup(c => c.ClearInspectionReportFinderResultsAsync())
             .Returns(Task.CompletedTask);
 
-        _mockFileProcessor.Setup(p => p.GenerateExcel(It.IsAny<List<DmsExtract>>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
+        _mockFileProcessor.Setup(p => p.GenerateExcel(
+                It.IsAny<IEnumerable<(string, Dictionary<string, string>?, object)>>(), It.IsAny<string>()))
             .Returns("output.xlsx");
 
         var finder = new LicenceFileFinder(_mockFileProcessor.Object, _matchingRules);
 
         // Act
-        await finder.FindInspectionReportFilesAsync(dmsRecords, mockGeneralApiClient.Object);
+        await finder.FindInspectionReportFilesAsync(
+            dmsRecords, mockGeneralApiClient.Object, new Dictionary<string, FileInventory>());
 
         // Assert
         savedChunks.Should().HaveCount(3);
@@ -396,20 +400,22 @@ public class LicenceFileFinderTests
         mockGeneralApiClient.Setup(c => c.SaveInspectionReportFinderResultsAsync(It.IsAny<List<DmsExtract>>())).Returns(Task.CompletedTask);
         mockGeneralApiClient.Setup(c => c.ClearInspectionReportFinderResultsAsync()).Returns(Task.CompletedTask);
 
-        _mockFileProcessor.Setup(p => p.GenerateExcel(It.IsAny<List<DmsExtract>>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
+        _mockFileProcessor.Setup(p => p.GenerateExcel(
+                It.IsAny<IEnumerable<(string, Dictionary<string, string>?, object)>>(), It.IsAny<string>()))
             .Returns("InspectionReportFiles_output.xlsx");
 
         var finder = new LicenceFileFinder(_mockFileProcessor.Object, _matchingRules);
 
         // Act
-        var result = await finder.FindInspectionReportFilesAsync(dmsRecords, mockGeneralApiClient.Object);
+        var result = await finder.FindInspectionReportFilesAsync(
+            dmsRecords, mockGeneralApiClient.Object, new Dictionary<string, FileInventory>());
 
         // Assert
         result.Should().Be("InspectionReportFiles_output.xlsx");
         _mockFileProcessor.Verify(p => p.GenerateExcel(
-                It.Is<List<DmsExtract>>(r => r.Count == 1),
-                It.IsAny<string>(),
-                It.IsAny<Dictionary<string, string>>()),
+                It.Is<IEnumerable<(string SheetName, Dictionary<string, string>? HeaderMapping, object Data)>>(w =>
+                    ((List<DmsExtract>)w.First(s => s.SheetName == "Match Results").Data).Count == 1),
+                It.IsAny<string>()),
             Times.Once);
     }
 
@@ -425,7 +431,8 @@ public class LicenceFileFinderTests
         var finder = new LicenceFileFinder(_mockFileProcessor.Object, _matchingRules);
 
         // Act & Assert
-        var act = () => finder.FindInspectionReportFilesAsync([], mockGeneralApiClient.Object);
+        var act = () => finder.FindInspectionReportFilesAsync(
+            [], mockGeneralApiClient.Object, new Dictionary<string, FileInventory>());
 
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("Error occurred while finding inspection report files: Test exception");

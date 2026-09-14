@@ -820,7 +820,10 @@ public class LicenceFileFinder : ILicenceFileFinder
     }
 
     /// <inheritdoc/>
-    public async Task<string> FindInspectionReportFilesAsync(List<DmsExtract> dmsRecords, IGeneralApiClient generalApiClient)
+    public async Task<string> FindInspectionReportFilesAsync(
+        List<DmsExtract> dmsRecords,
+        IGeneralApiClient generalApiClient,
+        Dictionary<string, FileInventory> wradiLocalFilesInventory)
     {
         try
         {
@@ -837,16 +840,35 @@ public class LicenceFileFinder : ILicenceFileFinder
                 await generalApiClient.SaveInspectionReportFinderResultsAsync(chunk.ToList());
             }
 
+            // Delta - matched files not yet in the local/S3 inventory
+            var deltaResults = results
+                .Where(r => !wradiLocalFilesInventory.ContainsKey($"{r.PermitNumber.ToLower()}_{r.FileId}"))
+                .Select(r => new DeltaResult
+                {
+                    PermitNumber = r.PermitNumber,
+                    FileUrl = r.FileUrl
+                })
+                .ToList();
+
+            Console.WriteLine(
+                $"{deltaResults.Count} of {results.Count} inspection report files are not yet in the local/S3 inventory.");
+
             var outputFileName = $"InspectionReportFiles_{DateTime.Now:yyyyMMdd_HHmmss}";
 
-            return _fileProcessor.GenerateExcel(results, outputFileName, new Dictionary<string, string>
+            var worksheetData = new List<(string SheetName, Dictionary<string, string>? HeaderMapping, object Data)>
             {
-                { "PermitNumber", "Permit Number" },
-                { "FileUrl", "File URL" },
-                { "FileName", "File Name" },
-                { "LibraryName", "Library Name" },
-                { "Regime", "Regime" }
-            });
+                ("Match Results", new Dictionary<string, string>
+                {
+                    { "PermitNumber", "Permit Number" },
+                    { "FileUrl", "File URL" },
+                    { "FileName", "File Name" },
+                    { "LibraryName", "Library Name" },
+                    { "Regime", "Regime" }
+                }, results),
+                ("Files Needed Locally (Delta)", DeltaMapping, deltaResults)
+            };
+
+            return _fileProcessor.GenerateExcel(worksheetData, outputFileName);
         }
         catch (Exception ex)
         {

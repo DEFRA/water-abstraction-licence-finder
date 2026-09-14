@@ -60,8 +60,12 @@ public interface ILicenceFileFinder
     /// <summary>
     /// Filters the DMS extract for inspection report (WR51) PDFs, using filename/folder rules
     /// Saves results to inspection_report_finder_result via the API (clear then chunked save)
-    /// then also writes an Excel report for human review.
+    /// then also writes an Excel report for human review, including a "Files Needed Locally
+    /// (Delta)" tab of matched files not yet in wradiLocalFilesInventory.
     /// </summary>
     /// <returns>The path to the generated Excel results file</returns>
-    Task<string> FindInspectionReportFilesAsync(List<DmsExtract> dmsRecords, IGeneralApiClient generalApiClient);
+    Task<string> FindInspectionReportFilesAsync(
+        List<DmsExtract> dmsRecords,
+        IGeneralApiClient generalApiClient,
+        Dictionary<string, FileInventory> wradiLocalFilesInventory);
 }

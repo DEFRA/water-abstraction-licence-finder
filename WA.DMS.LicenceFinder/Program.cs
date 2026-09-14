@@ -102,15 +102,15 @@ using (var scope = host.Services.CreateScope())
             case "FindInspectionReportFiles":
             {
                 // FLOW - Filter the DMS extract for inspection reports (WR51) by filename/folder
-                // rules only (no NALD matching - see IsInspectionReportFile's own comment for why).
-                // Saves to inspection_report_finder_result via the API, then also writes Excel.
-                // Deliberately touches nothing else above (no NALD, no WRADI inventory, no
-                // licence-finder history) - none of it is needed for this filter.
+                // rules only
                 Console.WriteLine("Started finding inspection report files...");
+
+                var wradiAllLocalFilesInventoryTask = GetWradiPdfsInventoryFiles(apiBaseUrl);
 
                 var inspectionReportFilePath = await licenceFileFinder.FindInspectionReportFilesAsync(
                     DmsDictionaryToList(dmsRecordsData),
-                    generalApiClient);
+                    generalApiClient,
+                    await wradiAllLocalFilesInventoryTask);
 
                 Console.WriteLine($"Inspection report files saved to: {inspectionReportFilePath}");
                 break;
