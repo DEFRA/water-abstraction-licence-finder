@@ -41,14 +41,6 @@ using (var scope = host.Services.CreateScope())
     try
     {
         var generalApiClient = new GeneralApiClient(apiBaseUrl);
-
-        // DMS data file export ~240k records - every flow below needs this, so it's fetched
-        // unconditionally. Everything else (NALD, WRADI inventory, DMS file IDs, licence-finder
-        // history, the three Excel reads) is started lazily inside each case instead - a flow
-        // that doesn't use a data source shouldn't have to wait on it or its API/network
-        // dependency. This matters concretely for FindInspectionReportFiles: it needs nothing
-        // from NALD at all (NALD holds no inspection-report data - see IsInspectionReportFile's
-        // own comment), so it shouldn't be blocked by the NALD API being unreachable.
         var dmsRecords = await GetDmsExtractAsync(generalApiClient);
         var dmsRecordsData = GroupDmsRecords(dmsRecords.Data);
 
