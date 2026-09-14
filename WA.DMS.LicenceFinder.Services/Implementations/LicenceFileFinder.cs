@@ -1571,10 +1571,18 @@ public class LicenceFileFinder : ILicenceFileFinder
                
                 licenceMatchResult.LiveLicenceFound = IsLiveLicenceFound(licenceMatchResult);
                 returnList.Add(licenceMatchResult);
+
+                var overrideFileId = Guid.TryParse(overrideRecord.FileId, out var tempOverrideFileId)
+                    ? tempOverrideFileId
+                    : Guid.Empty;
                 
-                var overrideScrapeResult = wradiToolScrapeResults
-                    .FirstOrDefault(t => 
-                        t.PermitNumber?.Equals(licenceMatchResult.PermitNumber, StringComparison.OrdinalIgnoreCase) == true);
+                var overrideScrapeResults = wradiToolScrapeResults
+                    .Where(t =>
+                        t.PermitNumber?.Equals(licenceMatchResult.PermitNumber, StringComparison.OrdinalIgnoreCase) == true
+                        && t.FileId == overrideFileId)
+                    .ToList();
+                
+                var overrideScrapeResult = overrideScrapeResults.FirstOrDefault();
 
                 SetScrapedFields(licenceMatchResult, overrideScrapeResult, scrapeNotAttemptedError);
                 
