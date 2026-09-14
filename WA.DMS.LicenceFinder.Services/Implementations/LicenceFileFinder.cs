@@ -1575,18 +1575,8 @@ public class LicenceFileFinder : ILicenceFileFinder
                 var overrideScrapeResult = wradiToolScrapeResults
                     .FirstOrDefault(t => 
                         t.PermitNumber?.Equals(licenceMatchResult.PermitNumber, StringComparison.OrdinalIgnoreCase) == true);
-                
-                licenceMatchResult.PrimaryTemplate = overrideScrapeResult != null
-                    ? overrideScrapeResult.PrimaryType // PrimaryTemplateType
-                    : scrapeNotAttemptedError;
-                
-                licenceMatchResult.SecondaryTemplate = overrideScrapeResult != null
-                    ? overrideScrapeResult.SecondaryType // SecondaryTemplateType
-                    : scrapeNotAttemptedError;
 
-                licenceMatchResult.NumberOfPages = overrideScrapeResult != null
-                    ? overrideScrapeResult.NumberOfPages
-                    : -1;
+                SetScrapedFields(licenceMatchResult, overrideScrapeResult, scrapeNotAttemptedError);
                 
                 licenceMatchResult.FileId = overrideRecord.FileId;
                 var fileIdInfo = await RecordFileIdAsync(
@@ -1742,13 +1732,8 @@ public class LicenceFileFinder : ILicenceFileFinder
             var scrapeResult = wradiToolScrapeResults.FirstOrDefault(
                 r => fileId != null && r.FileId == fileId);
             
-            var dateOfIssue = scrapeResult != null
-                ? LicenceFileHelpers.ConvertDateToStandardFormat(scrapeResult.DateOfIssue.ToString())
-                : fileIdOrScrapeError;
-            
             licenceMatchResult.RuleUsed = ruleUsed;
             licenceMatchResult.Region = naldReportRecord.Region;
-            licenceMatchResult.DateOfIssue = dateOfIssue;
             licenceMatchResult.DoiSignatureDateMatch = licenceMatchResult.SignatureDate == licenceMatchResult.DateOfIssue;
 
             var versionMatch = unmatchedVersionResults.FirstOrDefault(uvr =>
@@ -1759,18 +1744,8 @@ public class LicenceFileFinder : ILicenceFileFinder
             licenceMatchResult.VersionMatchFileUrl = versionMatch?.FileUrl;
             licenceMatchResult.DuplicateLicenceInVersionMatchResult = versionMatch?.LicenceCount > 1;
             licenceMatchResult.NaldIssue = versionMatch?.NaldDataQualityIssue;
-
-            licenceMatchResult.PrimaryTemplate = scrapeResult != null
-                ? scrapeResult.PrimaryType //PrimaryTemplateType
-                : fileIdOrScrapeError;
             
-            licenceMatchResult.SecondaryTemplate = scrapeResult != null
-                ? scrapeResult.SecondaryType //SecondaryTemplateType
-                : fileIdOrScrapeError;
-            
-            licenceMatchResult.NumberOfPages = scrapeResult != null
-                ? scrapeResult.NumberOfPages
-                : -1;
+            SetScrapedFields(licenceMatchResult, scrapeResult, fileIdOrScrapeError);
 
             licenceMatchResult.LiveLicenceFound = IsLiveLicenceFound(licenceMatchResult);
             returnList.Add(licenceMatchResult);
@@ -1785,6 +1760,29 @@ public class LicenceFileFinder : ILicenceFileFinder
         return (returnList, unmatchedVersionResults, deltaResults);
     }
 
+    private static void SetScrapedFields(
+        LicenceMatchResult licenceMatchResult,
+        DmsFileReaderResult? scrapeResult,
+        string fileIdOrScrapeError)
+    {
+        var dateOfIssue = scrapeResult != null
+            ? LicenceFileHelpers.ConvertDateToStandardFormat(scrapeResult.DateOfIssue.ToString())
+            : fileIdOrScrapeError;
+
+        licenceMatchResult.DateOfIssue = dateOfIssue;
+        licenceMatchResult.PrimaryTemplate = scrapeResult != null
+            ? scrapeResult.PrimaryType //PrimaryTemplateType
+            : fileIdOrScrapeError;
+            
+        licenceMatchResult.SecondaryTemplate = scrapeResult != null
+            ? scrapeResult.SecondaryType //SecondaryTemplateType
+            : fileIdOrScrapeError;
+        
+        licenceMatchResult.NumberOfPages = scrapeResult != null
+            ? scrapeResult.NumberOfPages
+            : -1;
+    }
+    
     private static bool IsLiveLicenceFound(LicenceMatchResult licenceMatchResult)
     {
         return licenceMatchResult.DoiSignatureDateMatch
