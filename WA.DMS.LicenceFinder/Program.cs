@@ -41,6 +41,8 @@ using (var scope = host.Services.CreateScope())
     try
     {
         var generalApiClient = new GeneralApiClient(apiBaseUrl);
+        
+        // API - DMS data file export ~240k records (originally from Consolidate file)
         var dmsRecords = await GetDmsExtractAsync(generalApiClient);
         var dmsRecordsData = GroupDmsRecords(dmsRecords.Data);
 
@@ -51,12 +53,27 @@ using (var scope = host.Services.CreateScope())
                 // FLOW - Licence file finder (produces LicenceMatchResults_DATE.xlsx)
                 Console.WriteLine("Starting licence file processing...");
 
+                // API - NALD data - started early as async so we can run in parallel
                 var naldDataTask = GetNaldDataAsync(apiBaseUrl);
+                
+                // API - DMS file id data (from what we've seen before)
                 var dmsFileIdInformationTask = GetDmsFileIdInformationAsync(generalApiClient);
+                
+                // API - WRADI tool all local files inventory (from S3 stuff)
                 var wradiAllLocalFilesInventoryTask = GetWradiPdfsInventoryFiles(apiBaseUrl);
+                
+                // API - WRADI tool file/licence reader (DOI, template type etc... scraping) extracts
+                // (e.g. LicenceReader-yyyyMMdd.csv). Has date of issue, number of pages, template types etc...
                 var wradiToolScrapeResultsTask = generalApiClient.GetDmsFileReaderResultsAsync();
+                
+                // API - Licence finder previous iteration run matches
                 var licenceFinderLastIterationMatchesTask = GetLicenceFinderResultsAsync(generalApiClient);
+                
+                // Spreadsheet - DMS change audit overrides by our team (e.g. Overrides.xlsx)
                 var dmsChangeAuditOverrides = readExtractService.GetDmsChangeAuditOverrides("Override_");
+                
+                // Spreadsheet - DMS manual fixes by our team/SamD (e.g. Manual_Fix_Extract.xlsx) - The 'Sam D' file
+                // - doesn't often change
                 var dmsManualFixes = readExtractService.GetDmsManualFixes();
 
                 var (naldRecordsToProcess, naldAbsLicencesAndVersions, naldImportDate) = await naldDataTask;
@@ -86,7 +103,10 @@ using (var scope = host.Services.CreateScope())
                  // NOTE - previously referred to as 'Build Version Download Info Excel'
                 Console.WriteLine("Started finding all files to download...");
 
+                // API - Licence finder previous iteration run matches
                 var licenceFinderLastIterationMatchesTask = GetLicenceFinderResultsAsync(generalApiClient);
+                
+                // API - WRADI tool all local files inventory (from S3 stuff)
                 var wradiAllLocalFilesInventoryTask = GetWradiPdfsInventoryFiles(apiBaseUrl);
 
                 var result = await licenceFileFinder.FindAllFilesToDownloadAsync(
@@ -105,6 +125,7 @@ using (var scope = host.Services.CreateScope())
                 // rules only
                 Console.WriteLine("Started finding inspection report files...");
 
+                // API - WRADI tool all local files inventory (from S3 stuff)
                 var wradiAllLocalFilesInventoryTask = GetWradiPdfsInventoryFiles(apiBaseUrl);
 
                 var inspectionReportFilePath = await licenceFileFinder.FindInspectionReportFilesAsync(
@@ -121,8 +142,13 @@ using (var scope = host.Services.CreateScope())
                 // FLOW - Build file template identification extract - NOT REALLY USED ANYMORE (AUG 2026)
                 Console.WriteLine("Started building file template identification extract...");
 
+                // API - Licence finder previous iteration run matches
                 var licenceFinderLastIterationMatchesTask = GetLicenceFinderResultsAsync(generalApiClient);
+                
+                // Spreadsheet - DMS change audit overrides by our team (e.g. Overrides.xlsx)
                 var dmsChangeAuditOverrides = readExtractService.GetDmsChangeAuditOverrides("Override_");
+                
+                // Spreadsheet - File version results (e.g. LicenceVersionResults.xlsx) - Comes from JP
                 var jpFileVersionResults = readExtractService.ReadFileVersionResultsFile();
 
                 var resultFilePath = licenceFileFinder.BuildFileTemplateIdentificationExtract(
@@ -139,7 +165,10 @@ using (var scope = host.Services.CreateScope())
                 // NOTE 2026-May-22 I think FindLicenceFiles extra tabs supersede this NOT USED ANYMORE PROBABLY
                 Console.WriteLine("Started finding licence files to download...");
 
+                // API - Licence finder previous iteration run matches
                 var licenceFinderLastIterationMatchesTask = GetLicenceFinderResultsAsync(generalApiClient);
+                
+                // API - WRADI tool all local files inventory (from S3 stuff)
                 var wradiAllLocalFilesInventoryTask = GetWradiPdfsInventoryFiles(apiBaseUrl);
 
                 var path = licenceFileFinder.FindLicenceFilesToDownload(
@@ -156,6 +185,7 @@ using (var scope = host.Services.CreateScope())
                 // FLOW - Find licence files to download (spreadsheet compare only - old way) NOT USED ANYMORE
                 Console.WriteLine("Started finding licence files to download...");
 
+                // API - Licence finder previous iteration run matches
                 var licenceFinderLastIterationMatches = await GetLicenceFinderResultsAsync(generalApiClient);
 
                 var fileName = licenceFileFinder.FindLicenceFilesToDownload_SpreadsheetCompareOnly(
