@@ -97,7 +97,26 @@ public class GeneralApiClient : IGeneralApiClient
     public async Task ClearLicenceFinderResultsAsync()
     {
         var path = "/Extractor/LicenceFinder/ClearResults";
-        
+
+        var httpContent = new StringContent("{}", System.Text.Encoding.UTF8, "application/json");
+        var response = await HttpClient.PostAsync(new Uri(HttpClient.BaseAddress!, path), httpContent);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task SaveInspectionReportFinderResultsAsync(List<DmsExtract> results)
+    {
+        var path = "/Extractor/InspectionReportFinder/SaveResults";
+        var json = JsonSerializer.Serialize(results, GetSerializerOptions());
+
+        var httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+        var response = await HttpClient.PostAsync(new Uri(HttpClient.BaseAddress!, path), httpContent);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task ClearInspectionReportFinderResultsAsync()
+    {
+        var path = "/Extractor/InspectionReportFinder/ClearResults";
+
         var httpContent = new StringContent("{}", System.Text.Encoding.UTF8, "application/json");
         var response = await HttpClient.PostAsync(new Uri(HttpClient.BaseAddress!, path), httpContent);
         response.EnsureSuccessStatusCode();
