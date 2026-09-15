@@ -1740,6 +1740,8 @@ public class LicenceFileFinder : ILicenceFileFinder
             var scrapeResult = wradiToolScrapeResults.FirstOrDefault(
                 r => fileId != null && r.FileId == fileId);
             
+            SetScrapedFields(licenceMatchResult, scrapeResult, fileIdOrScrapeError);
+            
             licenceMatchResult.RuleUsed = ruleUsed;
             licenceMatchResult.Region = naldReportRecord.Region;
             licenceMatchResult.DoiSignatureDateMatch = licenceMatchResult.SignatureDate == licenceMatchResult.DateOfIssue;
@@ -1752,8 +1754,6 @@ public class LicenceFileFinder : ILicenceFileFinder
             licenceMatchResult.VersionMatchFileUrl = versionMatch?.FileUrl;
             licenceMatchResult.DuplicateLicenceInVersionMatchResult = versionMatch?.LicenceCount > 1;
             licenceMatchResult.NaldIssue = versionMatch?.NaldDataQualityIssue;
-            
-            SetScrapedFields(licenceMatchResult, scrapeResult, fileIdOrScrapeError);
 
             licenceMatchResult.LiveLicenceFound = IsLiveLicenceFound(licenceMatchResult);
             returnList.Add(licenceMatchResult);
