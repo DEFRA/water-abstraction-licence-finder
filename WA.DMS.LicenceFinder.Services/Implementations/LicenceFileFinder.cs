@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 using WA.DMS.LicenceFinder.Core.Interfaces;
 using WA.DMS.LicenceFinder.Core.Models;
 using WA.DMS.LicenceFinder.Services.Helpers;
@@ -788,10 +789,58 @@ public class LicenceFileFinder : ILicenceFileFinder
         }
     }
 
-    private static readonly string[] InspectionReportFilenamePatterns = ["WR51", "WR 51", "WR-51", "WR_51", "Inspection"];
+    /// <summary>
+    /// The only signal strong enough to admit a file on its own. The Inspection pattern below is
+    /// much weaker and is subject to <see cref="InspectionReportNoiseTerms"/>.
+    /// </summary>
+    private static readonly string[] InspectionReportWr51TokenPatterns = ["WR51", "WR 51", "WR-51", "WR_51"];
+
+    private const string InspectionReportInspectionPattern = "Inspection";
     private const string InspectionReportComplianceFolderSegment = "/Compliance/";
-    private static readonly string[] InspectionReportComplianceExcludeTerms = ["Letter", "HOF"];
-    
+
+    /// <summary>
+    /// Words naming a different kind of document. Applied to everything except an explicit WR51
+    /// token. "email" is deliberately absent: it also matches a genuine report.
+    /// </summary>
+    private static readonly string[] InspectionReportNoiseTerms =
+    [
+        "certificate", "test", "photo", "calibration", "supporting information", "readings",
+        "records"
+    ];
+
+    /// <summary>
+    /// The Compliance folder alone is too weak a signal, so a file reaching this branch must also
+    /// read like a report. "insp" covers "insp report" and the "Inspetion" misspelling; "insep" is
+    /// separate because "insepction" transposes the letters and "insp" does not match it.
+    /// </summary>
+    private static readonly string[] InspectionReportComplianceIncludeTerms =
+        ["report", "water resources", "site visit", "insp", "insep"];
+
+    /// <summary>Applied after the include terms, so a WR51-token file is unaffected.</summary>
+    private static readonly string[] InspectionReportComplianceExcludeTerms = ["Letter"];
+
+    /// <summary>
+    /// Hands off Flow, a separate workstream. Word-bounded: a bare "HOF" also matches the surname
+    /// in "Mr and Mrs Hoff Post Insp signed".
+    /// </summary>
+    private static readonly Regex HandsOffFlow =
+        new(@"\bhof\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    /// <summary>
+    /// The WR54 site visit form, spelled the four ways WR51 is. Separate from
+    /// <see cref="OtherWrFormNumber"/>, which ignores separators. "FormWR54" contains "WR54".
+    /// </summary>
+    private static readonly string[] OtherWrFormTerms = ["WR54", "WR 54", "WR-54", "WR_54"];
+
+    /// <summary>
+    /// Any other WR form number written without a separator: WR16, WR32, WR52, WR53, bare
+    /// "wr26.pdf". A separator is not allowed because the digits are then usually a date or a
+    /// licence number ("WR 15.08.17", "WR 13 43 025 S 114").
+    /// </summary>
+    private static readonly Regex OtherWrFormNumber =
+        new(@"\bwr(?!51\b)\d{2}\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+
     private static bool IsInspectionReportFile(DmsExtract dmsRecord)
     {
         if (!dmsRecord.Regime.Equals("WRL", StringComparison.OrdinalIgnoreCase))
@@ -804,8 +853,29 @@ public class LicenceFileFinder : ILicenceFileFinder
             return false;
         }
 
-        if (InspectionReportFilenamePatterns.Any(pattern =>
+        // Before the includes: WR54 inspection reports otherwise arrive on the "Inspection"
+        // pattern, where a later exclusion never sees them.
+        if (NamesAnotherWrForm(dmsRecord.FileName))
+        {
+            return false;
+        }
+
+        if (InspectionReportWr51TokenPatterns.Any(pattern =>
                 dmsRecord.FileName.Contains(pattern, StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        // Before both weaker branches: the folder branch's "insp" include term is a substring of
+        // "inspection", so a file rejected here would otherwise be readmitted.
+        if (InspectionReportNoiseTerms.Any(term =>
+                dmsRecord.FileName.Contains(term, StringComparison.OrdinalIgnoreCase)))
+        {
+            return false;
+        }
+
+        if (dmsRecord.FileName.Contains(
+                InspectionReportInspectionPattern, StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }
@@ -815,9 +885,24 @@ public class LicenceFileFinder : ILicenceFileFinder
             return false;
         }
 
-        return !InspectionReportComplianceExcludeTerms.Any(term =>
-            dmsRecord.FileName.Contains(term, StringComparison.OrdinalIgnoreCase));
+        if (!InspectionReportComplianceIncludeTerms.Any(term =>
+                dmsRecord.FileName.Contains(term, StringComparison.OrdinalIgnoreCase)))
+        {
+            return false;
+        }
+
+        if (InspectionReportComplianceExcludeTerms.Any(term =>
+                dmsRecord.FileName.Contains(term, StringComparison.OrdinalIgnoreCase)))
+        {
+            return false;
+        }
+
+        return !HandsOffFlow.IsMatch(dmsRecord.FileName);
     }
+
+    private static bool NamesAnotherWrForm(string fileName) =>
+        OtherWrFormTerms.Any(term => fileName.Contains(term, StringComparison.OrdinalIgnoreCase))
+        || OtherWrFormNumber.IsMatch(fileName);
 
     /// <inheritdoc/>
     public async Task<string> FindInspectionReportFilesAsync(
