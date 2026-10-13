@@ -1642,9 +1642,30 @@ public class LicenceFileFinder : ILicenceFileFinder
             {
                 licenceMatchResult.SeenInDmsExtract = dmsRecords.ContainsKey(lowercasePermitNumber)
                     && dmsRecords[lowercasePermitNumber].Any(x => x.FileId == overrideRecord.FileId);
-                licenceMatchResult.WeHaveDownloaded = wradiLocalFilesInventory.ContainsKey(
-                    $"{lowercasePermitNumber}_{overrideRecord.FileId}");
                 
+                var weHaveDownloaded = false;
+
+                var (overridePermitNumberFormats, _) = GetPermitNumberFormats(
+                    lowercasePermitNumber,
+                    naldReportRecord.Region);
+                
+                foreach (var (permitNumber, _) in overridePermitNumberFormats)
+                {
+                    weHaveDownloaded = wradiLocalFilesInventory.ContainsKey(
+                        $"{permitNumber.ToLower()}_{overrideRecord.FileId}");
+
+                    if (weHaveDownloaded)
+                    {
+                        break;
+                    }
+                }
+
+                if (!weHaveDownloaded)
+                {
+                        
+                }
+
+                licenceMatchResult.WeHaveDownloaded = weHaveDownloaded;
                 licenceMatchResult.ChangeAuditAction = "Override";
                 licenceMatchResult.FileUrl = overrideRecord.FileUrl;
                 licenceMatchResult.DmsPermitNumber = GetDmsPermitNumber(overrideRecord.FileUrl);
@@ -1697,20 +1718,9 @@ public class LicenceFileFinder : ILicenceFileFinder
                 licenceMatchResult.ChangeAuditAction = $"Override cancelled ({reason})";
             }
 
-            var permitNumberFormats = new List<(string PermitNumber, bool FolderNameAutoCorrect)>
-            {
-                (licenceMatchResult.PermitNumber, false)
-            };
-
-            var permitNumberToUseForDms = permitNumberFormats[0].PermitNumber;
-            
-            var isMidlands = naldReportRecord.Region == "Midlands";
-            var shouldDropTheInitialZero = permitNumberToUseForDms.StartsWith("032");
-
-            if (isMidlands && shouldDropTheInitialZero)
-            {
-                permitNumberFormats.Add((permitNumberToUseForDms[1..], true));
-            }
+            var (permitNumberFormats, permitNumberToUseForDms) = GetPermitNumberFormats(
+                licenceMatchResult.PermitNumber,
+                naldReportRecord.Region);
 
             var folderFound = false;
             
@@ -1772,6 +1782,11 @@ public class LicenceFileFinder : ILicenceFileFinder
                         {
                             break;
                         }
+                    }
+
+                    if (!weHaveDownloaded)
+                    {
+                        
                     }
                     
                     licenceMatchResult.SeenInDmsExtract = true;
@@ -1856,6 +1871,28 @@ public class LicenceFileFinder : ILicenceFileFinder
         return (returnList, unmatchedVersionResults, deltaResults);
     }
 
+    private static (List<(string PermitNumber, bool FolderNameAutoCorrect)> List, string permitNumberToUseForDms) GetPermitNumberFormats(
+        string permitNumber,
+        string regionName)
+    {
+        var permitNumberFormats = new List<(string PermitNumber, bool FolderNameAutoCorrect)>
+        {
+            (permitNumber, false)
+        };
+
+        var permitNumberToUseForDms = permitNumberFormats[0].PermitNumber;
+            
+        var isMidlands = regionName == "Midlands";
+        var shouldDropTheInitialZero = permitNumberToUseForDms.StartsWith("032");
+
+        if (isMidlands && shouldDropTheInitialZero)
+        {
+            permitNumberFormats.Add((permitNumberToUseForDms[1..], true));
+        }
+        
+        return (permitNumberFormats, permitNumberToUseForDms);
+    }
+    
     private static void SetScrapedFields(
         LicenceMatchResult licenceMatchResult,
         DmsFileReaderResult? scrapeResult,
