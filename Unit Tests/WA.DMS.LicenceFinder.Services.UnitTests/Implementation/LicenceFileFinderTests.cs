@@ -293,11 +293,24 @@ public class LicenceFileFinderTests
     [InlineData("wrl", "wr51.pdf", "https://dms/LIB1/x.pdf", true)] // case-insensitive regime
     [InlineData("OTHER", "wr51__somefile.pdf", "https://dms/LIB1/x.pdf", false)] // wrong regime excludes even a filename match
     [InlineData("WRL", "wr51__somefile.docx", "https://dms/LIB1/x.pdf", false)] // not a .pdf
-    [InlineData("WRL", "random.pdf", "https://dms/LIB2/DP001/Compliance/random.pdf", true)] // Compliance folder, no exclude term
-    [InlineData("WRL", "random.pdf", "https://dms/LIB2/DP001/compliance/random.pdf", true)] // case-insensitive folder segment
+    [InlineData("WRL", "site visit report.pdf", "https://dms/LIB2/DP001/Compliance/site visit report.pdf", true)] // Compliance folder plus a report-like word
+    [InlineData("WRL", "Water Resources Report 03_28_05_0043.pdf", "https://dms/LIB2/DP001/compliance/x.pdf", true)] // case-insensitive folder segment
+    [InlineData("WRL", "Inspetion Report 2019.pdf", "https://dms/LIB2/DP001/Compliance/x.pdf", true)] // "insp" covers this misspelling
+    [InlineData("WRL", "insepction form 9783066.pdf", "https://dms/LIB2/DP001/Compliance/x.pdf", true)] // "insep" covers the transposed one
+    [InlineData("WRL", "random.pdf", "https://dms/LIB2/DP001/Compliance/random.pdf", false)] // the folder alone is not enough
+    [InlineData("WRL", "Delete.pdf", "https://dms/LIB2/DP001/Compliance/Delete.pdf", false)] // nor is a file nobody wants
     [InlineData("WRL", "random.pdf", "https://dms/LIB2/DP001/Monitoring/random.pdf", false)] // no Compliance folder, no filename pattern
-    [InlineData("WRL", "Compliance Letter.pdf", "https://dms/LIB2/DP001/Compliance/Compliance Letter.pdf", false)] // "Letter" exclude term
-    [InlineData("WRL", "HOF Record.pdf", "https://dms/LIB2/DP001/Compliance/HOF Record.pdf", false)] // "HOF" exclude term
+    [InlineData("WRL", "Compliance Letter report.pdf", "https://dms/LIB2/DP001/Compliance/x.pdf", false)] // "Letter" exclude term
+    [InlineData("WRL", "Calibration Certificate report.pdf", "https://dms/LIB2/DP001/Compliance/x.pdf", false)] // "Calibration" exclude term
+    [InlineData("WRL", "HOF SITE VISIT REPORT.pdf", "https://dms/LIB2/DP001/Compliance/x.pdf", false)] // Hands off Flow is a separate workstream
+    [InlineData("WRL", "Mr and Mrs Hoff Post Insp signed.pdf", "https://dms/LIB2/DP001/Compliance/x.pdf", true)] // but "Hoff" is a surname, not HoF
+    [InlineData("WRL", "Compliance Inspection WR54 Inspection Report.pdf", "https://dms/LIB1/x.pdf", false)] // another WR form, even via "Inspection"
+    [InlineData("WRL", "WR16 notice requesting payment.pdf", "https://dms/LIB2/DP001/Compliance/x.pdf", false)] // ditto, via the folder branch
+    [InlineData("WRL", "WR 18.07.2017 report.pdf", "https://dms/LIB2/DP001/Compliance/x.pdf", true)] // a date, not form WR18
+    [InlineData("WRL", "Meter Photographs Inspection May 2019.pdf", "https://dms/LIB1/x.pdf", false)] // photographs of a meter, not a report
+    [InlineData("WRL", "Calibration Certificate Inspection.pdf", "https://dms/LIB1/x.pdf", false)] // a certificate, even naming an inspection
+    [InlineData("WRL", "inspection readings 2019.pdf", "https://dms/LIB2/DP001/Compliance/x.pdf", false)] // noise terms beat the folder branch's "insp" too
+    [InlineData("WRL", "WR51 Calibration Certificate.pdf", "https://dms/LIB1/x.pdf", true)] // an explicit token overrides the noise terms
     public async Task FindInspectionReportFilesAsync_FiltersByFilenamePatternOrComplianceFolder(
         string regime, string fileName, string fileUrl, bool expectedIncluded)
     {

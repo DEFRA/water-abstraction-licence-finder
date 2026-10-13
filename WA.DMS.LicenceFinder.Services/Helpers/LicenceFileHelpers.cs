@@ -187,6 +187,43 @@ public static class LicenceFileHelpers
 
         return input;
     }
+    /// <summary>
+    /// The permit number and file id that together key the local/S3 file inventory.
+    /// </summary>
+    /// <param name="filename">
+    /// Any of "{permit}__{fileId}", "{prefix}__{permit}__{fileId}" and
+    /// "{permit}__{fileId}__{description}". The permit is always the part before the Guid, which
+    /// is why this seeks the Guid rather than counting parts.
+    /// </param>
+    /// <returns>Null when no part is a usable Guid.</returns>
+    public static (string PermitNumber, Guid FileId)? ParseIngressFilename(string? filename)
+    {
+        if (string.IsNullOrWhiteSpace(filename))
+        {
+            return null;
+        }
+
+        var parts = Path.GetFileNameWithoutExtension(filename).Split("__");
+
+        // From one, because a permit part has to precede the id part.
+        for (var index = 1; index < parts.Length; index++)
+        {
+            if (!Guid.TryParse(parts[index].Trim(), out var fileId) || fileId == Guid.Empty)
+            {
+                continue;
+            }
+
+            var permitNumber = parts[index - 1].Trim().Replace(" ", string.Empty).ToLower();
+
+            if (permitNumber.Length > 0)
+            {
+                return (permitNumber, fileId);
+            }
+        }
+
+        return null;
+    }
+
     public static string ExtractFilenameFromUrl(string url)
     {
         // The Uri class helps handle URL decoding and standardisation first

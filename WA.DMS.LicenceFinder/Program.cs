@@ -302,26 +302,17 @@ static async Task<Dictionary<string, FileInventory>> GetWradiPdfsInventoryFiles(
 
     foreach (var fileMetadata in files)
     {
-        var filenameParts = fileMetadata.Filename.Split("__");
+        // Inspection report keys have three "__" parts where a licence key has two. Parsing only
+        // the two-part shape left every WR51 file out of this inventory, so the delta reported all
+        // of them as missing.
+        var parsed = LicenceFileHelpers.ParseIngressFilename(fileMetadata.Filename);
 
-        if (filenameParts.Length != 2)
+        if (parsed == null)
         {
             continue;
         }
 
-        var fileIdPart = filenameParts[1].Split('.')[0].ToLower();
-
-        if (!Guid.TryParse(fileIdPart, out var fileId))
-        {
-            continue;
-        }
-
-        if (fileId == Guid.Empty)
-        {
-            continue;
-        }
-
-        var permitNumber = ExtractPermitNumberFromFilename(fileMetadata.Filename);
+        var (permitNumber, fileId) = parsed.Value;
 
         if (returnDict.ContainsKey($"{permitNumber}_{fileId}"))
         {
@@ -342,27 +333,6 @@ static async Task<Dictionary<string, FileInventory>> GetWradiPdfsInventoryFiles(
     return returnDict;
 }
 
-static string? ExtractPermitNumberFromFilename(string filename)
-{
-    if (string.IsNullOrEmpty(filename))
-    {
-        return null;
-    }
-
-    // Remove file extension first
-    var nameWithoutExtension = Path.GetFileNameWithoutExtension(filename).ToLower();
-
-    // Find first underscore and extract everything before it
-    var underscoreIndex = nameWithoutExtension.IndexOf('_');
-
-    if (underscoreIndex > 0)
-    {
-        return nameWithoutExtension[..underscoreIndex].Replace(" ", string.Empty);
-    }
-
-    // If no underscore found, return the whole filename without extension
-    return nameWithoutExtension.Replace(" ", string.Empty);
-}
 
 static List<DmsExtract> DmsDictionaryToList(Dictionary<string, List<DmsExtract>> dict)
 {
