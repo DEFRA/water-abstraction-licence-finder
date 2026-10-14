@@ -43,9 +43,12 @@ public class GeneralApiClient : IGeneralApiClient
         response.EnsureSuccessStatusCode();
     }
     
-    public async Task<(List<DmsExtract> Data, string ImportDate)> GetDmsExtractAsync(int skip, int take)
+    public async Task<(List<DmsExtract> Data, string ImportDate)> GetDmsExtractAsync(
+        int skip,
+        int take,
+        string extractType)
     {
-        var path = $"/Extractor/Dms/GetExtract?skip={skip}&take={take}";
+        var path = $"/Extractor/Dms/GetExtract?skip={skip}&take={take}&extractType={extractType}";
 
         var response = await HttpClient.GetAsync(path);
         response.EnsureSuccessStatusCode();

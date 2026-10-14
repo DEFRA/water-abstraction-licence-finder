@@ -43,7 +43,13 @@ using (var scope = host.Services.CreateScope())
         var generalApiClient = new GeneralApiClient(apiBaseUrl);
         
         // API - DMS data file export ~240k records (originally from Consolidate file)
-        var dmsRecords = await GetDmsExtractAsync(generalApiClient);
+        // dms_extract holds one extract per document type, so the flow decides which to read.
+        // These must match the extractor's DocumentTypes.
+        var extractType = flowToRun == "FindInspectionReportFiles"
+            ? "WrInspectionReport"
+            : "AbstractionLicence";
+
+        var dmsRecords = await GetDmsExtractAsync(generalApiClient, extractType);
         var dmsRecordsData = GroupDmsRecords(dmsRecords.Data);
 
         switch (flowToRun)
@@ -241,7 +247,9 @@ static async Task<List<LicenceMatchResult>> GetLicenceFinderResultsAsync(General
     return licenceFindResults;
 }
 
-static async Task<(List<DmsExtract> Data, string ImportDate)> GetDmsExtractAsync(GeneralApiClient generalApiClient)
+static async Task<(List<DmsExtract> Data, string ImportDate)> GetDmsExtractAsync(
+    GeneralApiClient generalApiClient,
+    string extractType)
 {
     var dmsExtractInfoRaw = new List<DmsExtract>();
     const int take = 10_000;
@@ -254,7 +262,7 @@ static async Task<(List<DmsExtract> Data, string ImportDate)> GetDmsExtractAsync
     {
         var skip = take * loopIdx++;
 
-        var (data, importDate) = await generalApiClient.GetDmsExtractAsync(skip, take);
+        var (data, importDate) = await generalApiClient.GetDmsExtractAsync(skip, take, extractType);
         dmsExtractPartial = data;
         filename = importDate;
 
