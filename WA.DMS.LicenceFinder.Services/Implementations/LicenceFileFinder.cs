@@ -839,16 +839,12 @@ public class LicenceFileFinder : ILicenceFileFinder
     /// </summary>
     private static readonly string[] PdfExtensions = [".pdf"];
 
-    /// Listed for collection only. The extractor cannot read Word, so these deliberately never
-    /// reach inspection_report_finder_result, which is what feeds processing.
     private static readonly string[] WordExtensions = [".doc", ".docx"];
 
     private static readonly Regex OtherWrFormNumber =
         new(@"\bwr(?!51\b)\d{2}\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
 
-    /// Only the extension differs between the two callers - what makes a file a WR51 is the same
-    /// either way, so the rest of the rule is shared rather than copied.
     private static bool IsInspectionReportFile(DmsExtract dmsRecord) =>
         IsInspectionReportFile(dmsRecord, PdfExtensions);
 
@@ -928,11 +924,17 @@ public class LicenceFileFinder : ILicenceFileFinder
 
             Console.WriteLine($"Found {results.Count} inspection report files out of {dmsRecords.Count} DMS records.");
 
-            // Save to DB clear, then chunked save via the API
+            var wordResults = dmsRecords
+                .Where(record => IsInspectionReportFile(record, WordExtensions))
+                .ToList();
+
+            // Word files are saved too, so the table is the full record of what discovery found.
+            // Nothing can read them yet - FileProcessOrchestrationService skips them by file name,
+            // so do not remove them from here to keep them out of a run.
             await generalApiClient.ClearInspectionReportFinderResultsAsync();
             const int chunkSize = 1_000;
 
-            foreach (var chunk in results.Chunk(chunkSize))
+            foreach (var chunk in results.Concat(wordResults).Chunk(chunkSize))
             {
                 await generalApiClient.SaveInspectionReportFinderResultsAsync(chunk.ToList());
             }
@@ -949,12 +951,6 @@ public class LicenceFileFinder : ILicenceFileFinder
 
             Console.WriteLine(
                 $"{deltaResults.Count} of {results.Count} inspection report files are not yet in the local/S3 inventory.");
-
-            // Same WR51 rule, Word extensions. Collected for someone to fetch by hand: these are
-            // not saved above, so nothing queues a file the extractor cannot read.
-            var wordResults = dmsRecords
-                .Where(record => IsInspectionReportFile(record, WordExtensions))
-                .ToList();
 
             var wordDeltaResults = wordResults
                 .Where(r => !wradiLocalFilesInventory.ContainsKey($"{r.PermitNumber.ToLower()}_{r.FileId}"))
