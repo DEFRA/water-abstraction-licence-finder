@@ -837,18 +837,30 @@ public class LicenceFileFinder : ILicenceFileFinder
     /// "wr26.pdf". A separator is not allowed because the digits are then usually a date or a
     /// licence number ("WR 15.08.17", "WR 13 43 025 S 114").
     /// </summary>
+    private static readonly string[] PdfExtensions = [".pdf"];
+
+    /// Listed for collection only. The extractor cannot read Word, so these deliberately never
+    /// reach inspection_report_finder_result, which is what feeds processing.
+    private static readonly string[] WordExtensions = [".doc", ".docx"];
+
     private static readonly Regex OtherWrFormNumber =
         new(@"\bwr(?!51\b)\d{2}\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
 
-    private static bool IsInspectionReportFile(DmsExtract dmsRecord)
+    /// Only the extension differs between the two callers - what makes a file a WR51 is the same
+    /// either way, so the rest of the rule is shared rather than copied.
+    private static bool IsInspectionReportFile(DmsExtract dmsRecord) =>
+        IsInspectionReportFile(dmsRecord, PdfExtensions);
+
+    private static bool IsInspectionReportFile(DmsExtract dmsRecord, string[] allowedExtensions)
     {
         if (!dmsRecord.Regime.Equals("WRL", StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
 
-        if (!dmsRecord.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+        if (!allowedExtensions.Any(extension =>
+                dmsRecord.FileName.EndsWith(extension, StringComparison.OrdinalIgnoreCase)))
         {
             return false;
         }
@@ -938,7 +950,31 @@ public class LicenceFileFinder : ILicenceFileFinder
             Console.WriteLine(
                 $"{deltaResults.Count} of {results.Count} inspection report files are not yet in the local/S3 inventory.");
 
+            // Same WR51 rule, Word extensions. Collected for someone to fetch by hand: these are
+            // not saved above, so nothing queues a file the extractor cannot read.
+            var wordResults = dmsRecords
+                .Where(record => IsInspectionReportFile(record, WordExtensions))
+                .ToList();
+
+            var wordDeltaResults = wordResults
+                .Where(r => !wradiLocalFilesInventory.ContainsKey($"{r.PermitNumber.ToLower()}_{r.FileId}"))
+                .ToList();
+
+            Console.WriteLine(
+                $"Found {wordResults.Count} Word-format inspection report files, "
+                + $"{wordDeltaResults.Count} of them not yet in the local/S3 inventory.");
+
             var outputFileName = $"InspectionReportFiles_{DateTime.Now:yyyyMMdd_HHmmss}";
+
+            // File Id as well as the URL: the ingress key is built from the permit number and the
+            // file id, so whoever uploads these needs both to name them.
+            var wordMapping = new Dictionary<string, string>
+            {
+                { "PermitNumber", "Permit Number" },
+                { "FileName", "File Name" },
+                { "FileUrl", "File URL" },
+                { "FileId", "File Id" }
+            };
 
             var worksheetData = new List<(string SheetName, Dictionary<string, string>? HeaderMapping, object Data)>
             {
@@ -950,7 +986,9 @@ public class LicenceFileFinder : ILicenceFileFinder
                     { "LibraryName", "Library Name" },
                     { "Regime", "Regime" }
                 }, results),
-                ("Files Needed Locally (Delta)", DeltaMapping, deltaResults)
+                ("Files Needed Locally (Delta)", DeltaMapping, deltaResults),
+                ("Word Files Needed Locally", wordMapping, wordDeltaResults),
+                ("Word Files (All)", wordMapping, wordResults)
             };
 
             return _fileProcessor.GenerateExcel(worksheetData, outputFileName);
