@@ -292,7 +292,6 @@ public class LicenceFileFinderTests
     [InlineData("WRL", "WR51.PDF", "https://dms/LIB1/x.pdf", true)] // case-insensitive filename pattern + extension
     [InlineData("wrl", "wr51.pdf", "https://dms/LIB1/x.pdf", true)] // case-insensitive regime
     [InlineData("OTHER", "wr51__somefile.pdf", "https://dms/LIB1/x.pdf", false)] // wrong regime excludes even a filename match
-    [InlineData("WRL", "wr51__somefile.docx", "https://dms/LIB1/x.pdf", false)] // not a .pdf
     [InlineData("WRL", "site visit report.pdf", "https://dms/LIB2/DP001/Compliance/site visit report.pdf", true)] // Compliance folder plus a report-like word
     [InlineData("WRL", "Water Resources Report 03_28_05_0043.pdf", "https://dms/LIB2/DP001/compliance/x.pdf", true)] // case-insensitive folder segment
     [InlineData("WRL", "Inspetion Report 2019.pdf", "https://dms/LIB2/DP001/Compliance/x.pdf", true)] // "insp" covers this misspelling
@@ -356,6 +355,86 @@ public class LicenceFileFinderTests
         {
             mockGeneralApiClient.Verify(c => c.SaveInspectionReportFinderResultsAsync(It.IsAny<List<DmsExtract>>()), Times.Never);
         }
+    }
+
+    [Theory]
+    [InlineData("wr51__somefile.doc")]
+    [InlineData("wr51__somefile.docx")]
+    [InlineData("WR51 Inspection Report.DOC")] // the extension check is case-insensitive too
+    public async Task FindInspectionReportFilesAsync_SavesWordFormatReports(string fileName)
+    {
+        // Arrange - a Word-format report is still a report; it is saved so the table is the full
+        // record of what discovery found, and held out of process runs further downstream by
+        // WrInspectionReportCandidateSelector instead.
+        var dmsRecord = new DmsExtract
+        {
+            PermitNumber = "12345",
+            Regime = "WRL",
+            FileName = fileName,
+            FileUrl = "https://dms/LIB1/x.pdf"
+        };
+
+        var mockGeneralApiClient = new Mock<IGeneralApiClient>();
+        List<DmsExtract>? savedResults = null;
+        mockGeneralApiClient
+            .Setup(c => c.SaveInspectionReportFinderResultsAsync(It.IsAny<List<DmsExtract>>()))
+            .Callback<List<DmsExtract>>(r => savedResults = r)
+            .Returns(Task.CompletedTask);
+        mockGeneralApiClient
+            .Setup(c => c.ClearInspectionReportFinderResultsAsync())
+            .Returns(Task.CompletedTask);
+
+        _mockFileProcessor.Setup(p => p.GenerateExcel(
+                It.IsAny<IEnumerable<(string, Dictionary<string, string>?, object)>>(), It.IsAny<string>()))
+            .Returns("output.xlsx");
+
+        var finder = new LicenceFileFinder(_mockFileProcessor.Object, _matchingRules);
+
+        // Act
+        await finder.FindInspectionReportFilesAsync(
+            [dmsRecord], mockGeneralApiClient.Object, new Dictionary<string, FileInventory>());
+
+        // Assert
+        savedResults.Should().ContainSingle().Which.Should().BeSameAs(dmsRecord);
+    }
+
+    [Theory]
+    [InlineData("random.docx")] // Word, but nothing says inspection report
+    [InlineData("Compliance Letter report.doc")] // an exclude term still excludes
+    [InlineData("WR54 Inspection Report.doc")] // another WR form, same as for PDFs
+    public async Task FindInspectionReportFilesAsync_DoesNotSaveWordFilesThatAreNotReports(string fileName)
+    {
+        // Arrange - the Word pass runs the same name rules as the PDF one, so widening the
+        // extension must not widen what counts as a report.
+        var dmsRecord = new DmsExtract
+        {
+            PermitNumber = "12345",
+            Regime = "WRL",
+            FileName = fileName,
+            FileUrl = "https://dms/LIB1/x.pdf"
+        };
+
+        var mockGeneralApiClient = new Mock<IGeneralApiClient>();
+        mockGeneralApiClient
+            .Setup(c => c.SaveInspectionReportFinderResultsAsync(It.IsAny<List<DmsExtract>>()))
+            .Returns(Task.CompletedTask);
+        mockGeneralApiClient
+            .Setup(c => c.ClearInspectionReportFinderResultsAsync())
+            .Returns(Task.CompletedTask);
+
+        _mockFileProcessor.Setup(p => p.GenerateExcel(
+                It.IsAny<IEnumerable<(string, Dictionary<string, string>?, object)>>(), It.IsAny<string>()))
+            .Returns("output.xlsx");
+
+        var finder = new LicenceFileFinder(_mockFileProcessor.Object, _matchingRules);
+
+        // Act
+        await finder.FindInspectionReportFilesAsync(
+            [dmsRecord], mockGeneralApiClient.Object, new Dictionary<string, FileInventory>());
+
+        // Assert
+        mockGeneralApiClient.Verify(
+            c => c.SaveInspectionReportFinderResultsAsync(It.IsAny<List<DmsExtract>>()), Times.Never);
     }
 
     [Fact]
