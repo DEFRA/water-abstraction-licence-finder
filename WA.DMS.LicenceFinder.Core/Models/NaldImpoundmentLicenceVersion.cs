@@ -13,7 +13,7 @@ public class NaldImpoundmentLicenceVersion
     /// <summary>
     /// NALD Identifier(AABL_ID)
     /// </summary>
-    public string? AablId { get; set; } = string.Empty;
+    public string? AimpId { get; set; } = string.Empty;
     
     /// <summary>
     /// NALD Issue Number(Issue_No)
@@ -28,7 +28,7 @@ public class NaldImpoundmentLicenceVersion
     /// <summary>
     /// Abbreviation Type(AABV_TYPE)
     /// </summary>
-    public string? AabvType { get; set; } = string.Empty;
+    public string? AimvType { get; set; } = string.Empty;
 
     /// <summary>
     /// Signature Date(LIC_SIG_DATE)
@@ -39,9 +39,4 @@ public class NaldImpoundmentLicenceVersion
     /// Region
     /// </summary>
     public string Region { get; set; } = string.Empty;
-    
-    /// <summary>
-    /// 
-    /// </summary>
-    public string? ArepEiucCode { get; set; }
 }

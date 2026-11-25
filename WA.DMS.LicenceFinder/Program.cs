@@ -563,13 +563,13 @@ static async Task<(List<NaldSimpleRecord> NaldSimpleRecords,
     GetNaldImpoundmentDataAsync(string apiBaseUrl)
 {
     var naldApiClient = new NaldApiClient(apiBaseUrl);
-    //var naldApiStatusDataTask = naldApiClient.GetNaldImpoundmentLicenceStatusDataAsync();
+    var naldApiStatusDataTask = naldApiClient.GetNaldImpoundmentLicenceStatusDataAsync();
 
     const int take = 10_000;
     var allNaldData = new NaldImpoundmentDataCollection
     {
         ImpoundmentLicences = [],
-        //ImpoundmentLicencesVersions = []
+        ImpoundmentLicenceVersions = []
     };
 
     var allNaldDataPartial = new NaldImpoundmentDataCollection();
@@ -577,28 +577,28 @@ static async Task<(List<NaldSimpleRecord> NaldSimpleRecords,
 
     while (loopIdx == 0
         || allNaldDataPartial.ImpoundmentLicences!.Count == take
-        )//|| allNaldDataPartial.ImpoundmentLicencesVersions!.Count == take)
+        || allNaldDataPartial.ImpoundmentLicenceVersions!.Count == take)
     {
         var skip = take * loopIdx++;
 
         allNaldDataPartial = await naldApiClient.GetNaldImpoundmentLicenceDataAsync(null, false, skip, take);
         allNaldData.ImpoundmentLicences!.AddRange(allNaldDataPartial.ImpoundmentLicences!);
-        //allNaldData.ImpoundmentLicencesVersions!.AddRange(allNaldDataPartial.ImpoundmentLicencesVersions!);
+        allNaldData.ImpoundmentLicenceVersions!.AddRange(allNaldDataPartial.ImpoundmentLicenceVersions!);
     }
 
-    //var naldApiStatusData = await naldApiStatusDataTask;
+    var naldApiStatusData = await naldApiStatusDataTask;
 
     var naldSimpleRecords = new List<NaldSimpleRecord>();
     var naldData = new Dictionary<string, List<NaldImpoundmentLicenceVersion>>();
     var naldVersionsDict = new Dictionary<string, List<NaldImpoundmentLicenceVersionDataLine>>();
 
-    /*if (allNaldData.ImpoundmentLicencesVersions == null || allNaldData.ImpoundmentLicencesVersions.Count == 0)
+    if (allNaldData.ImpoundmentLicenceVersions == null || allNaldData.ImpoundmentLicenceVersions.Count == 0)
     {
         throw new Exception("Nald Api impoundment licence versions came back empty");
-    }*/
+    }
 
     // NOTE - LicenceVersions is only pulling back newest currently, so this is overkill
-    /*foreach (var licenceVersion in allNaldData.ImpoundmentLicencesVersions)
+    foreach (var licenceVersion in allNaldData.ImpoundmentLicenceVersions)
     {
         if (!naldVersionsDict.ContainsKey(licenceVersion.LookupKey))
         {
@@ -606,7 +606,7 @@ static async Task<(List<NaldSimpleRecord> NaldSimpleRecords,
         }
 
         naldVersionsDict[licenceVersion.LookupKey].Add(licenceVersion);
-    }*/
+    }
 
     foreach (var licence in allNaldData.ImpoundmentLicences!)
     {
@@ -617,9 +617,9 @@ static async Task<(List<NaldSimpleRecord> NaldSimpleRecords,
             naldData.Add(licenceNumberWithoutSeperators, []);
         }
 
-        /*var strippedNumber = FormattingHelper.StripForComparison(
-            licence.LicenceNo!,
-            licence.FgacRegionCode)!;*/
+        var strippedNumber = FormattingHelper.StripForComparison(
+            licence.LicenceNumber,
+            licence.RegionCode)!;
 
         var lookupKey = $"{licence.RegionCode}|{licence.Id}";
 
@@ -630,28 +630,27 @@ static async Task<(List<NaldSimpleRecord> NaldSimpleRecords,
                 naldData[licenceNumberWithoutSeperators].Add(
                     new NaldImpoundmentLicenceVersion
                     {
-                        AablId = version.AablId?.ToString(),
-                        AabvType = version.AabvType,
+                        AimpId = version.AimpId?.ToString(),
+                        AimvType = version.AimvType,
                         IssueNo = version.IssueNo.ToString(),
                         IncrementNo = version.IncrNo,
-                        LicenceNumber = licence.LicenceNumber!,
+                        LicenceNumber = licence.LicenceNumber,
                         Region = licence.RegionCode.ToString(),
-                        SignatureDate = version.LicSigDate,
-                        ArepEiucCode = ""
+                        SignatureDate = version.LicSigDate
                     });
             }
         }
 
-        /*var isLive = naldApiStatusData.LiveLicences.Contains(strippedNumber);
+        var isLive = naldApiStatusData.LiveLicences.Contains(strippedNumber);
 
         if (!isLive)
         {
             continue;
-        }*/
+        }
 
         var naldSimpleRecord = new NaldSimpleRecord
         {
-            LicNo = licence.LicenceNumber!,
+            LicNo = licence.LicenceNumber,
             DmsPermitNo = licenceNumberWithoutSeperators,
             Region = RegionHelper.GetRegionName(licence.RegionCode)
         };

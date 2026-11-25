@@ -5,5 +5,6 @@ namespace WA.DMS.LicenceFinder.Services.Models;
 public class NaldImpoundmentDataCollection
 {
     public List<NaldLicence>? ImpoundmentLicences { get; set; }
-    public List<NaldImpoundmentLicenceVersionDataLine>? ImpoundmentLicencesVersions { get; set; }
+    
+    public List<NaldImpoundmentLicenceVersionDataLine>? ImpoundmentLicenceVersions { get; set; }
 }

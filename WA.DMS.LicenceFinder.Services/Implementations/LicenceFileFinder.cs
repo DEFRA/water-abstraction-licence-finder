@@ -1735,7 +1735,7 @@ public class LicenceFileFinder : ILicenceFileFinder
     /// <param name="licenceFinderPreviousIterationMatches"></param>
     /// <param name="wradiLocalFilesInventory"></param>
     /// <returns>List of license matching results</returns>
-    private async Task<(List<LicenceMatchResult> LicenceMatchResults,
+    private async Task<(List<ImpoundmentLicenceMatchResult> LicenceMatchResults,
             List<UnmatchedLicenceMatchResult> UnmatchedLicenseMatchResults,
             List<DeltaResult> DeltaResults)>
         ProcessImpoundmentLicenceMatchingAsync(
@@ -1765,12 +1765,12 @@ public class LicenceFileFinder : ILicenceFileFinder
         var rowIndex = 1;
         
         Console.WriteLine($"Processing {naldRecordsToProcess.Count} NALD records...");
-        var returnList = new List<LicenceMatchResult>();
+        var returnList = new List<ImpoundmentLicenceMatchResult>();
         
         // Process each record sequentially
         foreach (var naldReportRecord in naldRecordsToProcess)
         {
-            var licenceMatchResult = new LicenceMatchResult
+            var licenceMatchResult = new ImpoundmentLicenceMatchResult
             {
                 LicenseNumber = naldReportRecord.LicNo,
                 PermitNumber = LicenceFileHelpers.CleanPermitNumber(naldReportRecord.LicNo),
@@ -1786,11 +1786,6 @@ public class LicenceFileFinder : ILicenceFileFinder
                     .OrderByDescending(r => r.IssueNo)
                     .ThenByDescending(r => r.IncrementNo)
                     .FirstOrDefault()
-                : null;
-
-            licenceMatchResult.IsWaterCompany = naldLicenceVersionData != null
-                ? naldLicenceVersionData.ArepEiucCode?.EndsWith("SWC",
-                    StringComparison.InvariantCultureIgnoreCase) == true
                 : null;
             
             // Check if permit number exists in overrides first (IMPORTANT - there should only
@@ -1818,7 +1813,7 @@ public class LicenceFileFinder : ILicenceFileFinder
             var overrideIncrementNo = overrideRecord?.IncrementNo ?? 0;
             
             licenceMatchResult.SignatureDate = naldLicenceVersionData?.SignatureDate?.ToString("dd/MM/yyyy");
-            licenceMatchResult.NaldId = int.Parse(naldLicenceVersionData?.AablId ?? "0");
+            licenceMatchResult.NaldId = int.Parse(naldLicenceVersionData?.AimpId ?? "0");
             licenceMatchResult.NaldIssueNo = int.Parse(naldLicenceVersionData?.IssueNo ?? "0");
             licenceMatchResult.NaldIncrementNo = naldLicenceVersionData?.IncrementNo;
             
@@ -1874,7 +1869,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                 
                 var overrideScrapeResult = overrideScrapeResults.FirstOrDefault();
 
-                SetScrapedFields(licenceMatchResult, overrideScrapeResult, scrapeNotAttemptedError);
+                SetScrapedFieldsImpoundment(licenceMatchResult, overrideScrapeResult, scrapeNotAttemptedError);
                 
                 licenceMatchResult.FileId = overrideRecord.FileId;
                 var fileIdInfo = await RecordFileIdAsync(
@@ -2019,7 +2014,7 @@ public class LicenceFileFinder : ILicenceFileFinder
             var scrapeResult = wradiToolScrapeResults.FirstOrDefault(
                 r => fileId != null && r.FileId == fileId);
             
-            SetScrapedFields(licenceMatchResult, scrapeResult, fileIdOrScrapeError);
+            SetScrapedFieldsImpoundment(licenceMatchResult, scrapeResult, fileIdOrScrapeError);
             
             licenceMatchResult.RuleUsed = ruleUsed;
             licenceMatchResult.Region = naldReportRecord.Region;
@@ -2423,7 +2418,36 @@ public class LicenceFileFinder : ILicenceFileFinder
             : -1;
     }
     
+    private static void SetScrapedFieldsImpoundment(
+        ImpoundmentLicenceMatchResult licenceMatchResult,
+        DmsFileReaderResult? scrapeResult,
+        string fileIdOrScrapeError)
+    {
+        var dateOfIssue = scrapeResult != null
+            ? LicenceFileHelpers.ConvertDateToStandardFormat(scrapeResult.DateOfIssue.ToString())
+            : fileIdOrScrapeError;
+
+        licenceMatchResult.DateOfIssue = dateOfIssue;
+        licenceMatchResult.PrimaryTemplate = scrapeResult != null
+            ? scrapeResult.PrimaryType //PrimaryTemplateType
+            : fileIdOrScrapeError;
+            
+        licenceMatchResult.SecondaryTemplate = scrapeResult != null
+            ? scrapeResult.SecondaryType //SecondaryTemplateType
+            : fileIdOrScrapeError;
+        
+        licenceMatchResult.NumberOfPages = scrapeResult != null
+            ? scrapeResult.NumberOfPages
+            : -1;
+    }
+    
     private static bool IsLiveLicenceFound(LicenceMatchResult licenceMatchResult)
+    {
+        return licenceMatchResult.DoiSignatureDateMatch
+               || licenceMatchResult.ChangeAuditAction == "Override";
+    }
+    
+    private static bool IsLiveLicenceFound(ImpoundmentLicenceMatchResult licenceMatchResult)
     {
         return licenceMatchResult.DoiSignatureDateMatch
                || licenceMatchResult.ChangeAuditAction == "Override";
