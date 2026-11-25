@@ -255,6 +255,79 @@ public class LicenceFileFinder : ILicenceFileFinder
         }
     }
 
+    public async Task<string> FindImpoundmentLicenceFilesAsync(
+        Dictionary<string, List<DmsExtract>> dmsRecords,
+        Dictionary<string, DmsManualFixExtract> dmsManualFixes,
+        List<Override> dmsChangeAuditOverrides,
+        ConcurrentDictionary<Guid, List<DmsFileIdInformation>> dmsFileIdInformation,
+        IGeneralApiClient generalApiClient,
+        List<NaldSimpleRecord> naldRecordsToProcess,
+        Dictionary<string, List<NaldImpoundmentLicenceVersion>> naldData,
+        List<DmsFileReaderResult> wradiToolScrapeResults,
+        List<ImpoundmentLicenceMatchResult> licenceFinderPreviousIterationMatches,
+        Dictionary<string, FileInventory> wradiLocalFilesInventory,
+        string? regionName,
+        string overridesFilename,
+        string naldDate,
+        string dmsDate)
+    {
+        try
+        {
+            // Process each NALD record and find matches using rules
+            var (
+                    licenceMatchResults,
+                    unmatchedLicenceMatchResults,
+                    deltaResults)
+                = await ProcessImpoundmentLicenceMatchingAsync(
+                    dmsRecords,
+                    dmsManualFixes,
+                    dmsChangeAuditOverrides,
+                    dmsFileIdInformation,
+                    generalApiClient,
+                    naldRecordsToProcess,
+                    naldData,
+                    wradiToolScrapeResults,
+                    licenceFinderPreviousIterationMatches,
+                    wradiLocalFilesInventory);
+            
+            // Generate output Excel file
+            var worksheetData = new List<(string SheetName, Dictionary<string, string>? HeaderMapping, object Data)>
+            {
+                ("Match Results", LicenseMatchResultHeaderMapping, licenceMatchResults),
+                ("Files Needed Locally (Delta)", DeltaMapping, deltaResults)
+            };
+            
+            var outputFileName = $"ImpoundmentLicenceMatchResults_{DateTime.Now:yyyyMMdd_HHmmss}";
+            var firstFile = _fileProcessor.GenerateExcel(worksheetData, outputFileName);
+
+            if (string.IsNullOrEmpty(regionName))
+            {
+                return firstFile;
+            }
+
+            // OPTIONAL - Filter to only 1 region
+            licenceMatchResults = licenceMatchResults
+                .Where(lmr => lmr.Region == regionName)
+                .ToList();
+
+            // Generate output Excel file
+            worksheetData =
+            [
+                ("Match Results", LicenseMatchResultHeaderMapping, licenceMatchResults)
+            ];
+
+            outputFileName =
+                $"{regionName.Replace(" ", string.Empty)}Only_ImpoundmentLicenceMatchResults_{DateTime.Now:yyyyMMdd_HHmmss}";
+
+            _fileProcessor.GenerateExcel(worksheetData, outputFileName);
+            return firstFile;
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Error occurred while finding impoundment licence files: {ex.Message}", ex);
+        }
+    }
+
     public string FindLicenceFilesToDownload_SpreadsheetCompareOnly(
         List<DmsExtract> dmsRecords,
         List<LicenceMatchResult> prevMatches,
@@ -1663,27 +1736,21 @@ public class LicenceFileFinder : ILicenceFileFinder
     /// <param name="wradiLocalFilesInventory"></param>
     /// <returns>List of license matching results</returns>
     private async Task<(List<LicenceMatchResult> LicenceMatchResults,
-        List<UnmatchedLicenceMatchResult> UnmatchedLicenseMatchResults,
-        List<DeltaResult> DeltaResults)>
-        ProcessLicenceMatchingAsync(
+            List<UnmatchedLicenceMatchResult> UnmatchedLicenseMatchResults,
+            List<DeltaResult> DeltaResults)>
+        ProcessImpoundmentLicenceMatchingAsync(
             Dictionary<string, List<DmsExtract>> dmsRecords,
             Dictionary<string, DmsManualFixExtract> dmsManualFixes,
             List<Override> dmsChangeAuditOverrides,
             ConcurrentDictionary<Guid, List<DmsFileIdInformation>> dmsFileIdInformation,
             IGeneralApiClient generalApiClient,
             List<NaldSimpleRecord> naldRecordsToProcess,
-            Dictionary<string, List<NaldLicenceVersion>> naldData,
+            Dictionary<string, List<NaldImpoundmentLicenceVersion>> naldData,
             List<DmsFileReaderResult> wradiToolScrapeResults,
-            List<LicenceMatchResult> licenceFinderPreviousIterationMatches,
+            List<ImpoundmentLicenceMatchResult> licenceFinderPreviousIterationMatches,
             Dictionary<string, FileInventory> wradiLocalFilesInventory)
     {
-        var unmatchedVersionResults = await FindUnmatchedLicenceFilesAsync(
-            dmsRecords,
-            naldData,
-            licenceFinderPreviousIterationMatches,
-            wradiToolScrapeResults,
-            dmsFileIdInformation,
-            generalApiClient);
+        var unmatchedVersionResults = new List<UnmatchedLicenceMatchResult>(); // TODO
         
         var deltaResults = new List<DeltaResult>();
         
@@ -1777,11 +1844,6 @@ public class LicenceFileFinder : ILicenceFileFinder
                     {
                         break;
                     }
-                }
-
-                if (!weHaveDownloaded)
-                {
-                        
                 }
 
                 licenceMatchResult.WeHaveDownloaded = weHaveDownloaded;
@@ -1902,10 +1964,336 @@ public class LicenceFileFinder : ILicenceFileFinder
                             break;
                         }
                     }
+                    
+                    licenceMatchResult.SeenInDmsExtract = true;
+                    licenceMatchResult.WeHaveDownloaded = weHaveDownloaded;
+                    licenceMatchResult.FileUrl = matchedDmsRecord.FileUrl;
+                    licenceMatchResult.DmsPermitNumber = GetDmsPermitNumber(matchedDmsRecord.FileUrl);
+                    licenceMatchResult.OtherReference = matchedDmsRecord.OtherReference;
+                    licenceMatchResult.FileSize = matchedDmsRecord.FileSize;
+                    licenceMatchResult.DisclosureStatus = matchedDmsRecord.DisclosureStatus;
+                    licenceMatchResult.DocumentDate = matchedDmsRecord.DocumentDate;
+                    licenceMatchResult.FileId = matchedDmsRecord.FileId;
 
-                    if (!weHaveDownloaded)
+                    if (licenceMatchResult.WeHaveDownloaded == false)
                     {
-                        
+                        deltaResults.Add(new DeltaResult
+                        {
+                            PermitNumber = licenceMatchResult.PermitNumber,
+                            FileUrl = licenceMatchResult.FileUrl
+                        });
+                    }
+                    
+                    var fileIdInfo = await RecordFileIdAsync(
+                        matchedDmsRecord.FileId,
+                        matchedDmsRecord.FileUrl,
+                        dmsFileIdInformation,
+                        generalApiClient);
+                    
+                    licenceMatchResult.FileIdStatus = fileIdInfo?.Status;
+                    licenceMatchResult.FileIdStatusChangeDate = fileIdInfo?.StatusDateUtc.ToString("dd/MM/yyyy");
+                }
+                else
+                {
+                    licenceMatchResult.FileUrl = "No Match Found";
+                }
+            }
+
+            var fileId = !string.IsNullOrEmpty(licenceMatchResult.FileId)
+                ? Guid.TryParse(licenceMatchResult.FileId, out var tempFileId) ? tempFileId : null
+                : (Guid?)null;
+
+            if (fileId == null)
+            {
+                var count = wradiToolScrapeResults
+                    .Count(sr => sr.PermitNumber == permitNumberToUseForDms);
+                
+                licenceMatchResult.FileId = $"({count} files scraped)";
+            }
+            
+            var fileIdError = fileId == null;
+            const string fileIdNotSetError = "File id not set";
+
+            var fileIdOrScrapeError = fileIdError ? fileIdNotSetError : scrapeNotAttemptedError;
+            
+            var scrapeResult = wradiToolScrapeResults.FirstOrDefault(
+                r => fileId != null && r.FileId == fileId);
+            
+            SetScrapedFields(licenceMatchResult, scrapeResult, fileIdOrScrapeError);
+            
+            licenceMatchResult.RuleUsed = ruleUsed;
+            licenceMatchResult.Region = naldReportRecord.Region;
+            licenceMatchResult.DoiSignatureDateMatch = licenceMatchResult.SignatureDate == licenceMatchResult.DateOfIssue;
+
+            var versionMatch = unmatchedVersionResults.FirstOrDefault(uvr =>
+                uvr.PermitNumber.Equals(permitNumberToUseForDms, StringComparison.OrdinalIgnoreCase));
+            
+            licenceMatchResult.IncludedInVersionMatch = versionMatch != null;
+            licenceMatchResult.SingleLicenceInVersionMatch = versionMatch?.FileDeterminedAsLicence;
+            licenceMatchResult.VersionMatchFileUrl = versionMatch?.FileUrl;
+            licenceMatchResult.DuplicateLicenceInVersionMatchResult = versionMatch?.LicenceCount > 1;
+            licenceMatchResult.NaldIssue = versionMatch?.NaldDataQualityIssue;
+
+            licenceMatchResult.LiveLicenceFound = IsLiveLicenceFound(licenceMatchResult);
+            returnList.Add(licenceMatchResult);
+            
+            processedRecordCount++;
+
+            Console.WriteLine($"Processing record {processedRecordCount}/{naldRecordsToProcess.Count}: {naldReportRecord.LicNo} - {ruleUsed}");
+        }
+
+        Console.WriteLine($"Impoundment licence matching completed. Total records processed: {processedRecordCount}");
+        return (returnList, [], deltaResults);
+    }
+
+    /// <summary>
+    /// Processes license matching using configured rules
+    /// </summary>
+    /// <param name="dmsRecords">DMS extract records to search in</param>
+    /// <param name="dmsManualFixes"></param>
+    /// <param name="dmsChangeAuditOverrides"></param>
+    /// <param name="dmsFileIdInformation"></param>
+    /// <param name="generalApiClient"></param>
+    /// <param name="naldRecordsToProcess">NALD extract records to process</param>
+    /// <param name="naldData"></param>
+    /// <param name="wradiToolScrapeResults"></param>
+    /// <param name="licenceFinderPreviousIterationMatches"></param>
+    /// <param name="wradiLocalFilesInventory"></param>
+    /// <returns>List of license matching results</returns>
+    private async Task<(List<LicenceMatchResult> LicenceMatchResults,
+        List<UnmatchedLicenceMatchResult> UnmatchedLicenseMatchResults,
+        List<DeltaResult> DeltaResults)>
+        ProcessLicenceMatchingAsync(
+            Dictionary<string, List<DmsExtract>> dmsRecords,
+            Dictionary<string, DmsManualFixExtract> dmsManualFixes,
+            List<Override> dmsChangeAuditOverrides,
+            ConcurrentDictionary<Guid, List<DmsFileIdInformation>> dmsFileIdInformation,
+            IGeneralApiClient generalApiClient,
+            List<NaldSimpleRecord> naldRecordsToProcess,
+            Dictionary<string, List<NaldLicenceVersion>> naldData,
+            List<DmsFileReaderResult> wradiToolScrapeResults,
+            List<LicenceMatchResult> licenceFinderPreviousIterationMatches,
+            Dictionary<string, FileInventory> wradiLocalFilesInventory)
+    {
+        var unmatchedVersionResults = await FindUnmatchedLicenceFilesAsync(
+            dmsRecords,
+            naldData,
+            licenceFinderPreviousIterationMatches,
+            wradiToolScrapeResults,
+            dmsFileIdInformation,
+            generalApiClient);
+        
+        var deltaResults = new List<DeltaResult>();
+        
+        var dmsDictionaries = new DmsLookupIndexes
+        {
+            ByPermitNumber = dmsRecords,
+            ByManualFixPermitNumber = BuildDmsManualFixDictionary(dmsRecords, dmsManualFixes)
+        };
+        
+        const string scrapeNotAttemptedError = "Scrape not attempted";
+        var processedRecordCount = 0;
+        var rowIndex = 1;
+        
+        Console.WriteLine($"Processing {naldRecordsToProcess.Count} NALD records...");
+        var returnList = new List<LicenceMatchResult>();
+        
+        // Process each record sequentially
+        foreach (var naldReportRecord in naldRecordsToProcess)
+        {
+            var licenceMatchResult = new LicenceMatchResult
+            {
+                LicenseNumber = naldReportRecord.LicNo,
+                PermitNumber = LicenceFileHelpers.CleanPermitNumber(naldReportRecord.LicNo),
+                UniqueColumnID = rowIndex++.ToString()
+            };
+            
+            var lowercasePermitNumber = licenceMatchResult.PermitNumber.ToLowerInvariant();
+            
+            var naldLicenceVersionData = naldData.TryGetValue(
+                licenceMatchResult.PermitNumber,
+                out var tempNaldDataRows)
+                ? tempNaldDataRows
+                    .OrderByDescending(r => r.IssueNo)
+                    .ThenByDescending(r => r.IncrementNo)
+                    .FirstOrDefault()
+                : null;
+
+            licenceMatchResult.IsWaterCompany = naldLicenceVersionData != null
+                ? naldLicenceVersionData.ArepEiucCode?.EndsWith("SWC",
+                    StringComparison.InvariantCultureIgnoreCase) == true
+                : null;
+            
+            // Check if permit number exists in overrides first (IMPORTANT - there should only
+            // be one override per permit number or we will intentionally error)
+            var overrideRecords = dmsChangeAuditOverrides
+                .Where(ca =>
+                    ca.PermitNumber.Equals(licenceMatchResult.PermitNumber, StringComparison.OrdinalIgnoreCase)
+                    || ca.LicenceReference.Equals(licenceMatchResult.LicenseNumber, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            
+            if (overrideRecords.Count > 1)
+            {
+                throw new Exception(
+                    $"Duplicate overrides found for {overrideRecords[0].PermitNumber} or {overrideRecords[0].LicenceReference}");
+            }
+            
+            var overrideRecord = overrideRecords.FirstOrDefault();
+            
+            var naldVersionIssueNo = int.Parse(naldLicenceVersionData?.IssueNo ?? "0");
+            var overrideIssueNo = !string.IsNullOrWhiteSpace(overrideRecord?.IssueNo)
+                ? int.Parse(overrideRecord.IssueNo)
+                : 0;
+            
+            var naldVersionIncrementNo = naldLicenceVersionData?.IncrementNo ?? 0;
+            var overrideIncrementNo = overrideRecord?.IncrementNo ?? 0;
+            
+            licenceMatchResult.SignatureDate = naldLicenceVersionData?.SignatureDate?.ToString("dd/MM/yyyy");
+            licenceMatchResult.NaldId = int.Parse(naldLicenceVersionData?.AablId ?? "0");
+            licenceMatchResult.NaldIssueNo = int.Parse(naldLicenceVersionData?.IssueNo ?? "0");
+            licenceMatchResult.NaldIncrementNo = naldLicenceVersionData?.IncrementNo;
+            
+            if (overrideRecord != null
+                && overrideIssueNo >= naldVersionIssueNo
+                && overrideIncrementNo >= naldVersionIncrementNo)
+            {
+                licenceMatchResult.SeenInDmsExtract = dmsRecords.ContainsKey(lowercasePermitNumber)
+                    && dmsRecords[lowercasePermitNumber].Any(x => x.FileId == overrideRecord.FileId);
+                
+                var weHaveDownloaded = false;
+
+                var (overridePermitNumberFormats, _) = GetPermitNumberFormats(
+                    lowercasePermitNumber,
+                    naldReportRecord.Region);
+                
+                foreach (var (permitNumber, _) in overridePermitNumberFormats)
+                {
+                    weHaveDownloaded = wradiLocalFilesInventory.ContainsKey(
+                        $"{permitNumber.ToLower()}_{overrideRecord.FileId}");
+
+                    if (weHaveDownloaded)
+                    {
+                        break;
+                    }
+                }
+
+                licenceMatchResult.WeHaveDownloaded = weHaveDownloaded;
+                licenceMatchResult.ChangeAuditAction = "Override";
+                licenceMatchResult.FileUrl = overrideRecord.FileUrl;
+                licenceMatchResult.DmsPermitNumber = GetDmsPermitNumber(overrideRecord.FileUrl);
+                
+                licenceMatchResult.NaldIssueNo = string.IsNullOrWhiteSpace(overrideRecord.IssueNo)
+                    ? 0
+                    : int.Parse(overrideRecord.IssueNo);
+                licenceMatchResult.NaldIncrementNo = overrideRecord.IncrementNo;
+            
+                licenceMatchResult.RuleUsed = "Override";
+                licenceMatchResult.Region = naldReportRecord.Region;
+               
+                licenceMatchResult.LiveLicenceFound = IsLiveLicenceFound(licenceMatchResult);
+                returnList.Add(licenceMatchResult);
+
+                var overrideFileId = Guid.TryParse(overrideRecord.FileId, out var tempOverrideFileId)
+                    ? tempOverrideFileId
+                    : Guid.Empty;
+                
+                var overrideScrapeResults = wradiToolScrapeResults
+                    .Where(t =>
+                        t.PermitNumber?.Equals(licenceMatchResult.PermitNumber, StringComparison.OrdinalIgnoreCase) == true
+                        && t.FileId == overrideFileId)
+                    .ToList();
+                
+                var overrideScrapeResult = overrideScrapeResults.FirstOrDefault();
+
+                SetScrapedFields(licenceMatchResult, overrideScrapeResult, scrapeNotAttemptedError);
+                
+                licenceMatchResult.FileId = overrideRecord.FileId;
+                var fileIdInfo = await RecordFileIdAsync(
+                    overrideRecord.FileId,
+                    overrideRecord.FileUrl,
+                    dmsFileIdInformation,
+                    generalApiClient);
+                    
+                licenceMatchResult.FileIdStatus = fileIdInfo?.Status;
+                licenceMatchResult.FileIdStatusChangeDate = fileIdInfo?.StatusDateUtc.ToString("dd/MM/yyyy");
+                
+                processedRecordCount++;
+                continue;
+            }
+
+            // Override record exists but was cancelled
+            if (overrideRecord != null)
+            {
+                var becauseOfIncrement = overrideIssueNo >= naldVersionIssueNo;
+                var reason = becauseOfIncrement ? "Increment No increased" : "Issue No increased";
+                
+                licenceMatchResult.ChangeAuditAction = $"Override cancelled ({reason})";
+            }
+
+            var (permitNumberFormats, permitNumberToUseForDms) = GetPermitNumberFormats(
+                licenceMatchResult.PermitNumber,
+                naldReportRecord.Region);
+
+            var folderFound = false;
+            
+            foreach (var (permitNumber, folderNameAutoCorrected) in permitNumberFormats)
+            {
+                licenceMatchResult.FolderNameAutoCorrect = folderNameAutoCorrected;
+                var lowerCasePermitNumber = permitNumber.ToLowerInvariant();
+                
+                if (!dmsDictionaries.ByPermitNumber.ContainsKey(lowerCasePermitNumber)
+                    && !dmsDictionaries.ByManualFixPermitNumber.ContainsKey(lowerCasePermitNumber))
+                {
+                    continue;
+                }
+                
+                folderFound = true;
+                permitNumberToUseForDms = permitNumber;
+                
+                break;
+            }
+
+            var ruleUsed = "No Match";
+
+            if (!folderFound)
+            {
+                ruleUsed = "Not Applicable";
+                licenceMatchResult.FileUrl = "No Folder Found";
+            }
+            else
+            {
+                DmsExtract? matchedDmsRecord = null;
+                
+                // Try each rule in priority order until a match is found
+                foreach (var ruleToMatch in _rulesToMatch)
+                {
+                    matchedDmsRecord = ruleToMatch.FindMatch(
+                        permitNumberToUseForDms,
+                        dmsDictionaries);
+
+                    if (matchedDmsRecord == null)
+                    {
+                        continue;
+                    }
+                    
+                    ruleUsed = ruleToMatch.RuleName;
+                    break;
+                }
+
+                // Populate result based on match outcome
+                if (matchedDmsRecord != null)
+                {
+                    var weHaveDownloaded = false;
+
+                    foreach (var (permitNumber, _) in permitNumberFormats)
+                    {
+                        weHaveDownloaded = wradiLocalFilesInventory.ContainsKey(
+                            $"{permitNumber.ToLower()}_{matchedDmsRecord.FileId}");
+
+                        if (weHaveDownloaded)
+                        {
+                            break;
+                        }
                     }
                     
                     licenceMatchResult.SeenInDmsExtract = true;

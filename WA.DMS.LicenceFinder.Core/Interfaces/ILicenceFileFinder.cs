@@ -29,6 +29,26 @@ public interface ILicenceFileFinder
         string dmsDate);
     
     /// <summary>
+    /// Finds and matches impoundment license files, generating an Excel report with results
+    /// </summary>
+    /// <returns>The path to the generated Excel results file</returns>
+    Task<string> FindImpoundmentLicenceFilesAsync(
+        Dictionary<string, List<DmsExtract>> dmsRecords,
+        Dictionary<string, DmsManualFixExtract> dmsManualFixes,
+        List<Override> dmsChangeAuditOverrides,
+        ConcurrentDictionary<Guid, List<DmsFileIdInformation>> dmsFileIdInformation,
+        IGeneralApiClient generalApiClient,
+        List<NaldSimpleRecord> naldRecordsToProcess,
+        Dictionary<string, List<NaldImpoundmentLicenceVersion>> naldData,
+        List<DmsFileReaderResult> wradiToolScrapeResults,
+        List<ImpoundmentLicenceMatchResult> licenceFinderPreviousIterationMatches,
+        Dictionary<string, FileInventory> wradiLocalFilesInventory,
+        string? regionName,
+        string overridesFilename,
+        string naldDate,
+        string dmsDate);
+    
+    /// <summary>
     /// Finds all potential duplicates in DMS extract
     /// </summary>
     /// <returns>The path to the generated Excel results file</returns>

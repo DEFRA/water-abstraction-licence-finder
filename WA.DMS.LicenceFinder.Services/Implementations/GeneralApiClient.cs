@@ -167,6 +167,11 @@ public class GeneralApiClient : IGeneralApiClient
         response.EnsureSuccessStatusCode();
     }
 
+    public async Task<List<ImpoundmentLicenceMatchResult>> GetImpoundmentLicenceFinderResultsAsync(int skip, int take)
+    {
+        throw new NotImplementedException();
+    }
+    
     public async Task<List<LicenceMatchResult>> GetLicenceFinderResultsAsync(int skip, int take)
     {
         var path = $"/Extractor/LicenceFinder/GetResults?skip={skip}&take={take}";
