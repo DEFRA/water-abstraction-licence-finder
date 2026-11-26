@@ -11,7 +11,7 @@ public class NaldImpoundmentLicenceVersion
     public string LicenceNumber { get; set; } = string.Empty;
     
     /// <summary>
-    /// NALD Identifier(AABL_ID)
+    /// NALD Identifier(AIMP_ID)
     /// </summary>
     public string? AimpId { get; set; } = string.Empty;
     
@@ -21,12 +21,12 @@ public class NaldImpoundmentLicenceVersion
     public string IssueNo { get; set; } = string.Empty;
     
     /// <summary>
-    /// NALD Issue Number(Issue_No)
+    /// NALD Increment No(Incr_No)
     /// </summary>
     public int? IncrementNo { get; set; }
     
     /// <summary>
-    /// Abbreviation Type(AABV_TYPE)
+    /// Abbreviation Type(AIMV_TYPE)
     /// </summary>
     public string? AimvType { get; set; } = string.Empty;
 
