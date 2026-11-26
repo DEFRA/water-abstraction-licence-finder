@@ -84,7 +84,7 @@ public class GeneralApiClient : IGeneralApiClient
             GetSerializerOptions())!;
     }
     
-    public async Task SaveLicenceFinderResultsAsync(List<LicenceMatchResult> results)
+    public async Task SaveAbstractionLicenceFinderResultsAsync(List<LicenceMatchResult> results)
     {
         var path = "/Extractor/LicenceFinder/SaveResults";
         var json = JsonSerializer.Serialize(new
@@ -96,10 +96,23 @@ public class GeneralApiClient : IGeneralApiClient
         var response = await HttpClient.PostAsync(new Uri(HttpClient.BaseAddress!, path), httpContent);
         response.EnsureSuccessStatusCode();
     }
-    
-    public async Task ClearLicenceFinderResultsAsync()
+
+    public async Task SaveImpoundmentLicenceFinderResultsAsync(List<ImpoundmentLicenceMatchResult> results)
     {
-        var path = "/Extractor/LicenceFinder/ClearResults";
+        var path = "/Extractor/LicenceFinder/SaveImpoundmentResults";
+        var json = JsonSerializer.Serialize(new
+        {
+            results
+        }, GetSerializerOptions());
+        
+        var httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+        var response = await HttpClient.PostAsync(new Uri(HttpClient.BaseAddress!, path), httpContent);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task ClearLicenceFinderResultsAsync(string licenceType)
+    {
+        var path = "/Extractor/LicenceFinder/ClearResults?licenceType={licenceType}";
 
         var httpContent = new StringContent("{}", System.Text.Encoding.UTF8, "application/json");
         var response = await HttpClient.PostAsync(new Uri(HttpClient.BaseAddress!, path), httpContent);

@@ -189,14 +189,14 @@ public class LicenceFileFinder : ILicenceFileFinder
                     wradiLocalFilesInventory);
 
             // Save to DB
-            await generalApiClient.ClearLicenceFinderResultsAsync();
+            await generalApiClient.ClearLicenceFinderResultsAsync("Abstraction");
             const int chunkSize = 1_000;
             
             var chunks = licenceMatchResults.Chunk(chunkSize);
 
             foreach (var chunk in chunks)
             {
-                await generalApiClient.SaveLicenceFinderResultsAsync(chunk.ToList());
+                await generalApiClient.SaveAbstractionLicenceFinderResultsAsync(chunk.ToList());
             }
             
             // Generate output Excel file
@@ -289,6 +289,17 @@ public class LicenceFileFinder : ILicenceFileFinder
                     wradiToolScrapeResults,
                     licenceFinderPreviousIterationMatches,
                     wradiLocalFilesInventory);
+            
+            // Save to DB
+            await generalApiClient.ClearLicenceFinderResultsAsync("Impoundment");
+            const int chunkSize = 1_000;
+            
+            var chunks = licenceMatchResults.Chunk(chunkSize);
+
+            foreach (var chunk in chunks)
+            {
+                await generalApiClient.SaveImpoundmentLicenceFinderResultsAsync(chunk.ToList());
+            }
             
             // Generate output Excel file
             var worksheetData = new List<(string SheetName, Dictionary<string, string>? HeaderMapping, object Data)>
