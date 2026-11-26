@@ -196,7 +196,7 @@ public class LicenceFileFinder : ILicenceFileFinder
 
             foreach (var chunk in chunks)
             {
-                await generalApiClient.SaveAbstractionLicenceFinderResultsAsync(chunk.ToList());
+                await generalApiClient.SaveAbstractionLicenceFinderResultsAsync(chunk.ToList(), "Abstraction");
             }
             
             // Generate output Excel file
@@ -264,7 +264,7 @@ public class LicenceFileFinder : ILicenceFileFinder
         List<NaldSimpleRecord> naldRecordsToProcess,
         Dictionary<string, List<NaldImpoundmentLicenceVersion>> naldData,
         List<DmsFileReaderResult> wradiToolScrapeResults,
-        List<ImpoundmentLicenceMatchResult> licenceFinderPreviousIterationMatches,
+        List<LicenceMatchResult> licenceFinderPreviousIterationMatches,
         Dictionary<string, FileInventory> wradiLocalFilesInventory,
         string? regionName,
         string overridesFilename,
@@ -298,7 +298,7 @@ public class LicenceFileFinder : ILicenceFileFinder
 
             foreach (var chunk in chunks)
             {
-                await generalApiClient.SaveImpoundmentLicenceFinderResultsAsync(chunk.ToList());
+                await generalApiClient.SaveAbstractionLicenceFinderResultsAsync(chunk.ToList(), "Impoundment");
             }
             
             // Generate output Excel file
@@ -1415,7 +1415,7 @@ public class LicenceFileFinder : ILicenceFileFinder
     private async Task<List<UnmatchedLicenceMatchResult>> FindUnmatchedImpoundmentLicenceFilesAsync(
         Dictionary<string, List<DmsExtract>> dmsRecords,
         Dictionary<string, List<NaldImpoundmentLicenceVersion>> naldData,
-        List<ImpoundmentLicenceMatchResult> licenceFinderPreviousIterationMatches,
+        List<LicenceMatchResult> licenceFinderPreviousIterationMatches,
         List<DmsFileReaderResult> wradiToolScrapeResults,
         ConcurrentDictionary<Guid, List<DmsFileIdInformation>> dmsFileIdInformation,
         IGeneralApiClient generalApiClient)
@@ -2059,7 +2059,7 @@ public class LicenceFileFinder : ILicenceFileFinder
     /// <param name="licenceFinderPreviousIterationMatches"></param>
     /// <param name="wradiLocalFilesInventory"></param>
     /// <returns>List of license matching results</returns>
-    private async Task<(List<ImpoundmentLicenceMatchResult> LicenceMatchResults,
+    private async Task<(List<LicenceMatchResult> LicenceMatchResults,
             List<UnmatchedLicenceMatchResult> UnmatchedLicenseMatchResults,
             List<DeltaResult> DeltaResults)>
         ProcessImpoundmentLicenceMatchingAsync(
@@ -2071,7 +2071,7 @@ public class LicenceFileFinder : ILicenceFileFinder
             List<NaldSimpleRecord> naldRecordsToProcess,
             Dictionary<string, List<NaldImpoundmentLicenceVersion>> naldData,
             List<DmsFileReaderResult> wradiToolScrapeResults,
-            List<ImpoundmentLicenceMatchResult> licenceFinderPreviousIterationMatches,
+            List<LicenceMatchResult> licenceFinderPreviousIterationMatches,
             Dictionary<string, FileInventory> wradiLocalFilesInventory)
     {
         var unmatchedVersionResults = await FindUnmatchedImpoundmentLicenceFilesAsync(
@@ -2095,12 +2095,12 @@ public class LicenceFileFinder : ILicenceFileFinder
         var rowIndex = 1;
         
         Console.WriteLine($"Processing {naldRecordsToProcess.Count} NALD records...");
-        var returnList = new List<ImpoundmentLicenceMatchResult>();
+        var returnList = new List<LicenceMatchResult>();
         
         // Process each record sequentially
         foreach (var naldReportRecord in naldRecordsToProcess)
         {
-            var licenceMatchResult = new ImpoundmentLicenceMatchResult
+            var licenceMatchResult = new LicenceMatchResult
             {
                 LicenseNumber = naldReportRecord.LicNo,
                 PermitNumber = LicenceFileHelpers.CleanPermitNumber(naldReportRecord.LicNo),
@@ -2749,7 +2749,7 @@ public class LicenceFileFinder : ILicenceFileFinder
     }
     
     private static void SetScrapedFieldsImpoundment(
-        ImpoundmentLicenceMatchResult licenceMatchResult,
+        LicenceMatchResult licenceMatchResult,
         DmsFileReaderResult? scrapeResult,
         string fileIdOrScrapeError)
     {
@@ -2772,12 +2772,6 @@ public class LicenceFileFinder : ILicenceFileFinder
     }
     
     private static bool IsLiveLicenceFound(LicenceMatchResult licenceMatchResult)
-    {
-        return licenceMatchResult.DoiSignatureDateMatch
-               || licenceMatchResult.ChangeAuditAction == "Override";
-    }
-    
-    private static bool IsLiveLicenceFound(ImpoundmentLicenceMatchResult licenceMatchResult)
     {
         return licenceMatchResult.DoiSignatureDateMatch
                || licenceMatchResult.ChangeAuditAction == "Override";
@@ -2955,7 +2949,7 @@ public class LicenceFileFinder : ILicenceFileFinder
     private UnmatchedLicenceMatchResult? CheckForNaldDataIssue_Impoundment(
         NaldImpoundmentLicenceVersion? matchedNaldRecord,
         List<NaldImpoundmentLicenceVersion> naldRecordsForPermit,
-        ImpoundmentLicenceMatchResult record,
+        LicenceMatchResult record,
         List<DmsExtract> dmsRecordsForPermit,
         DmsFileReaderResult fileIdentification,
         List<DmsFileReaderResult> allMatchingIdentificationFiles)

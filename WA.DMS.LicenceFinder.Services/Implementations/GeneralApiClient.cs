@@ -84,22 +84,9 @@ public class GeneralApiClient : IGeneralApiClient
             GetSerializerOptions())!;
     }
     
-    public async Task SaveAbstractionLicenceFinderResultsAsync(List<LicenceMatchResult> results)
+    public async Task SaveAbstractionLicenceFinderResultsAsync(List<LicenceMatchResult> results, string licenceType)
     {
-        var path = "/Extractor/LicenceFinder/SaveResults";
-        var json = JsonSerializer.Serialize(new
-        {
-            results
-        }, GetSerializerOptions());
-        
-        var httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
-        var response = await HttpClient.PostAsync(new Uri(HttpClient.BaseAddress!, path), httpContent);
-        response.EnsureSuccessStatusCode();
-    }
-
-    public async Task SaveImpoundmentLicenceFinderResultsAsync(List<ImpoundmentLicenceMatchResult> results)
-    {
-        var path = "/Extractor/LicenceFinder/SaveImpoundmentResults";
+        var path = $"/Extractor/LicenceFinder/SaveResults?licenceType={licenceType}";
         var json = JsonSerializer.Serialize(new
         {
             results
@@ -180,12 +167,8 @@ public class GeneralApiClient : IGeneralApiClient
         response.EnsureSuccessStatusCode();
     }
 
-    public async Task<List<ImpoundmentLicenceMatchResult>> GetImpoundmentLicenceFinderResultsAsync(int skip, int take)
-    {
-        throw new NotImplementedException();
-    }
     
-    public async Task<List<LicenceMatchResult>> GetLicenceFinderResultsAsync(int skip, int take)
+    public async Task<List<LicenceMatchResult>> GetLicenceFinderResultsAsync(int skip, int take, string licenceType)
     {
         var path = $"/Extractor/LicenceFinder/GetResults?skip={skip}&take={take}";
 

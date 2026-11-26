@@ -41,7 +41,7 @@ public interface ILicenceFileFinder
         List<NaldSimpleRecord> naldRecordsToProcess,
         Dictionary<string, List<NaldImpoundmentLicenceVersion>> naldData,
         List<DmsFileReaderResult> wradiToolScrapeResults,
-        List<ImpoundmentLicenceMatchResult> licenceFinderPreviousIterationMatches,
+        List<LicenceMatchResult> licenceFinderPreviousIterationMatches,
         Dictionary<string, FileInventory> wradiLocalFilesInventory,
         string? regionName,
         string overridesFilename,

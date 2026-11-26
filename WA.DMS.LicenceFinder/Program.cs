@@ -79,7 +79,7 @@ using (var scope = host.Services.CreateScope())
                 var wradiToolScrapeResultsTask = generalApiClient.GetDmsFileReaderResultsAsync();
                 
                 // API - Licence finder previous iteration run matches
-                var licenceFinderLastIterationMatchesTask = GetImpoundmentLicenceFinderResultsAsync(generalApiClient);
+                var licenceFinderLastIterationMatchesTask = GetLicenceFinderResultsAsync(generalApiClient, "Impoundment");
                 
                 // Spreadsheet - DMS change audit overrides by our team (e.g. Overrides.xlsx)
                 // NOTE - Overrides not yet implemented for this
@@ -133,7 +133,7 @@ using (var scope = host.Services.CreateScope())
                 var wradiToolScrapeResultsTask = generalApiClient.GetDmsFileReaderResultsAsync();
                 
                 // API - Licence finder previous iteration run matches
-                var licenceFinderLastIterationMatchesTask = GetAbstractionLicenceFinderResultsAsync(generalApiClient);
+                var licenceFinderLastIterationMatchesTask = GetLicenceFinderResultsAsync(generalApiClient, "Abstraction");
                 
                 // Spreadsheet - DMS change audit overrides by our team (e.g. Overrides.xlsx)
                 var dmsChangeAuditOverrides = readExtractService.GetDmsChangeAuditOverrides("Override_");
@@ -170,7 +170,7 @@ using (var scope = host.Services.CreateScope())
                 Console.WriteLine("Started finding all files to download...");
 
                 // API - Licence finder previous iteration run matches
-                var licenceFinderLastIterationMatchesTask = GetAbstractionLicenceFinderResultsAsync(generalApiClient);
+                var licenceFinderLastIterationMatchesTask = GetLicenceFinderResultsAsync(generalApiClient, "Abstraction");
                 
                 // API - WRADI tool all local files inventory (from S3 stuff)
                 var wradiAllLocalFilesInventoryTask = GetWradiPdfsInventoryFiles(apiBaseUrl);
@@ -209,7 +209,7 @@ using (var scope = host.Services.CreateScope())
                 Console.WriteLine("Started building file template identification extract...");
 
                 // API - Licence finder previous iteration run matches
-                var licenceFinderLastIterationMatchesTask = GetAbstractionLicenceFinderResultsAsync(generalApiClient);
+                var licenceFinderLastIterationMatchesTask = GetLicenceFinderResultsAsync(generalApiClient, "Abstraction");
                 
                 // Spreadsheet - DMS change audit overrides by our team (e.g. Overrides.xlsx)
                 var dmsChangeAuditOverrides = readExtractService.GetDmsChangeAuditOverrides("Override_");
@@ -232,7 +232,7 @@ using (var scope = host.Services.CreateScope())
                 Console.WriteLine("Started finding licence files to download...");
 
                 // API - Licence finder previous iteration run matches
-                var licenceFinderLastIterationMatchesTask = GetAbstractionLicenceFinderResultsAsync(generalApiClient);
+                var licenceFinderLastIterationMatchesTask = GetLicenceFinderResultsAsync(generalApiClient, "Abstraction");
                 
                 // API - WRADI tool all local files inventory (from S3 stuff)
                 var wradiAllLocalFilesInventoryTask = GetWradiPdfsInventoryFiles(apiBaseUrl);
@@ -252,7 +252,7 @@ using (var scope = host.Services.CreateScope())
                 Console.WriteLine("Started finding licence files to download...");
 
                 // API - Licence finder previous iteration run matches
-                var licenceFinderLastIterationMatches = await GetAbstractionLicenceFinderResultsAsync(generalApiClient);
+                var licenceFinderLastIterationMatches = await GetLicenceFinderResultsAsync(generalApiClient, "Abstraction");
 
                 var fileName = licenceFileFinder.FindLicenceFilesToDownload_SpreadsheetCompareOnly(
                     DmsDictionaryToList(dmsRecordsData),
@@ -288,29 +288,8 @@ using (var scope = host.Services.CreateScope())
 await host.StopAsync();
 return;
 
-static async Task<List<ImpoundmentLicenceMatchResult>> GetImpoundmentLicenceFinderResultsAsync(GeneralApiClient apiClient)
-{
-    return [];
-    // TODO
-    
-    var licenceFindResults = new List<ImpoundmentLicenceMatchResult>();
-    const int take = 10_000;
 
-    List<ImpoundmentLicenceMatchResult> licenceFinderResultsPartial = [];
-    var loopIdx = 0;
-
-    while (loopIdx == 0 || licenceFinderResultsPartial.Count == take)
-    {
-        var skip = take * loopIdx++;
-
-        licenceFinderResultsPartial = await apiClient.GetImpoundmentLicenceFinderResultsAsync(skip, take);
-        licenceFindResults.AddRange(licenceFinderResultsPartial);
-    }
-
-    return licenceFindResults;
-}
-
-static async Task<List<LicenceMatchResult>> GetAbstractionLicenceFinderResultsAsync(GeneralApiClient apiClient)
+static async Task<List<LicenceMatchResult>> GetLicenceFinderResultsAsync(IGeneralApiClient apiClient, string licenceType)
 {
     var licenceFindResults = new List<LicenceMatchResult>();
     const int take = 10_000;
@@ -322,7 +301,7 @@ static async Task<List<LicenceMatchResult>> GetAbstractionLicenceFinderResultsAs
     {
         var skip = take * loopIdx++;
 
-        licenceFinderResultsPartial = await apiClient.GetLicenceFinderResultsAsync(skip, take);
+        licenceFinderResultsPartial = await apiClient.GetLicenceFinderResultsAsync(skip, take, licenceType);
         licenceFindResults.AddRange(licenceFinderResultsPartial);
     }
 
