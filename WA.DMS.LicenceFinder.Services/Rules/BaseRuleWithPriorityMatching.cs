@@ -29,7 +29,7 @@ public abstract class BaseRuleWithPriorityMatching : ILicenceMatchingRule
     /// <param name="permitNumber"></param>
     /// <param name="dmsLookups">Pre-built lookup dictionaries for fast searching</param>
     /// <returns>Matching DMS record or null if no match found</returns>
-    public DmsExtract? FindMatch(
+    public DmsExtract? FindAbstractionMatch(
         string? permitNumber,
         DmsLookupIndexes dmsLookups)
     {
@@ -52,7 +52,43 @@ public abstract class BaseRuleWithPriorityMatching : ILicenceMatchingRule
         }
 
         // Apply priority matching logic
-        var priorityResult = RuleHelpers.FindPriorityMatch(matchingRecords, GetRuleBaseName());
+        var priorityResult = RuleHelpers.FindPriorityMatch(
+            matchingRecords,
+            GetRuleBaseName(),
+            "Abstraction");
+        
+        // Update state based on results
+        _dynamicRuleName = priorityResult.ruleName;
+        _hasDuplicates = priorityResult.hasDuplicate;
+
+        return priorityResult.dmsExtract;
+    }
+
+    public DmsExtract? FindImpoundmentMatch(string permitNumber, DmsLookupIndexes dmsLookups)
+    {
+        // Reset state for new search
+        _dynamicRuleName = null;
+        _hasDuplicates = false;
+
+        // Input validation
+        if (string.IsNullOrWhiteSpace(permitNumber))
+        {
+            return null;
+        }
+
+        // Get matching records using the specific rule's logic
+        var matchingRecords = GetMatchingRecords(permitNumber, dmsLookups);
+
+        if (!matchingRecords.Any())
+        {
+            return null;
+        }
+
+        // Apply priority matching logic
+        var priorityResult = RuleHelpers.FindPriorityMatch(
+            matchingRecords,
+            GetRuleBaseName(),
+            "Impoundment");
 
         // Update state based on results
         _dynamicRuleName = priorityResult.ruleName;

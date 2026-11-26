@@ -28,5 +28,13 @@ public interface ILicenceMatchingRule
     /// <param name="permitNumber"></param>
     /// <param name="dmsLookups">Pre-built lookup dictionaries for fast searching</param>
     /// <returns>Matching DMS record or null if no match found</returns>
-    DmsExtract? FindMatch(string permitNumber, DmsLookupIndexes dmsLookups);
+    DmsExtract? FindAbstractionMatch(string permitNumber, DmsLookupIndexes dmsLookups);
+    
+    /// <summary>
+    /// Finds a matching DMS record using optimized lookup dictionaries
+    /// </summary>
+    /// <param name="permitNumber"></param>
+    /// <param name="dmsLookups">Pre-built lookup dictionaries for fast searching</param>
+    /// <returns>Matching DMS record or null if no match found</returns>
+    DmsExtract? FindImpoundmentMatch(string permitNumber, DmsLookupIndexes dmsLookups);
 }

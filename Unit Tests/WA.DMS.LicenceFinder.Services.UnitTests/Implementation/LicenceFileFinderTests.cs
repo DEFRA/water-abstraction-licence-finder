@@ -176,12 +176,12 @@ public class LicenceFileFinderTests
 
         SetupMocksForBasicTest(dmsRecords, naldRecords);
 
-        _mockRule1.Setup(r => r.FindMatch(
+        _mockRule1.Setup(r => r.FindAbstractionMatch(
                 It.IsAny<string>(),
                 It.IsAny<DmsLookupIndexes>()))
             .Returns((DmsExtract?)null);
         
-        _mockRule2.Setup(r => r.FindMatch(
+        _mockRule2.Setup(r => r.FindAbstractionMatch(
                 It.IsAny<string>(),
                 It.IsAny<DmsLookupIndexes>()))
             .Returns((DmsExtract?)null);
@@ -245,7 +245,7 @@ public class LicenceFileFinderTests
 
         SetupMocksForBasicTest(dmsRecords, naldRecords);
 
-        _mockRule1.Setup(r => r.FindMatch(
+        _mockRule1.Setup(r => r.FindAbstractionMatch(
                 It.IsAny<string>(),
                 It.IsAny<DmsLookupIndexes>()))
             .Returns(dmsRecord);

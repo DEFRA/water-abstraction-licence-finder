@@ -39,14 +39,17 @@ public static class RuleHelpers
         return (document, $@"{ruleName} - {priorityLabel}", priorityMatches.Count > 1);
     }
 
-    public static (DmsExtract? dmsExtract, string? ruleName, bool hasDuplicate) FindPriorityMatch(List<DmsExtract> matchingRecords, string ruleName)
+    public static (DmsExtract? dmsExtract, string? ruleName, bool hasDuplicate) FindPriorityMatch(
+        List<DmsExtract> matchingRecords,
+        string ruleName,
+        string licenceType)
     {
         // Define priority levels with their filters and labels
         var priorityLevels = new[]
         {
             (filter: dms => ContainsLicenseVariationPriority1(dms.FileName), label: "Priority 1"),
             (filter: dms => ContainsLicenseVariationPriority2(dms.FileName), label: "Priority 2"),
-            (filter: dms => ContainsLicenseVariationPriority3(dms.FileName), label: "Priority 3"),
+            (filter: dms => ContainsLicenseVariationPriority3(dms.FileName, licenceType), label: "Priority 3"),
             (filter: new Func<DmsExtract, bool>(dms => ContainsLicenseVariationPriority4(dms.FileName, dms.PermitNumber)), label: "Permit Number Match - Priority 4")
         };
 
@@ -77,7 +80,12 @@ public static class RuleHelpers
             return false;
         }
 
-        var exclusionTerms = new[] { "letter", "schedule", "addendum" };
+        var exclusionTerms = new[]
+        {
+            "letter",
+            "schedule",
+            "addendum"
+        };
 
         return exclusionTerms.Any(term => fileName.Contains(term, StringComparison.OrdinalIgnoreCase));
     }
@@ -157,8 +165,9 @@ public static class RuleHelpers
     /// Checks if a filename contains variations of "Abstraction Licence" priority 3
     /// </summary>
     /// <param name="fileName">The filename to check</param>
+    /// <param name="licenceType"></param>
     /// <returns>True if the filename contains Abstraction Licence variations, false otherwise</returns>
-    private static bool ContainsLicenseVariationPriority3(string fileName)
+    private static bool ContainsLicenseVariationPriority3(string fileName, string licenceType)
     {
         if (string.IsNullOrWhiteSpace(fileName))
         {
@@ -167,13 +176,24 @@ public static class RuleHelpers
 
         // Exclude if filename contains exclusion terms
         if (ShouldExcludeFileName(fileName))
-            return false;
+        {
+            return false;            
+        }
 
         // Pattern to match "Abstraction Licence" and common misspellings
         // Handles: Abstraction Licence, Abstaction Licence, Abstarction Licence, Abstraction License, etc.
         var abstractionLicencePattern = @"abst?r?action\s+licen[cs]e?";
+        
+        // Pattern to match "Impoundment Licence" and common misspellings
+        // Handles: TODO
+        var impoundmentLicencePattern = @"imp?o?nt\s+licen[cs]e?";
 
-        return Regex.IsMatch(fileName, abstractionLicencePattern, RegexOptions.IgnoreCase);
+        return Regex.IsMatch(
+            fileName,
+            licenceType.Equals("abstraction", StringComparison.InvariantCultureIgnoreCase)
+                ? abstractionLicencePattern
+                : impoundmentLicencePattern,
+            RegexOptions.IgnoreCase);
     }
 
     /// <summary>
