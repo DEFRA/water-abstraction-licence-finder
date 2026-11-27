@@ -6,29 +6,29 @@ namespace WA.DMS.LicenceFinder.Core.Models;
 public class NaldLicenceVersion
 {
     /// <summary>
-    /// License number(AABL_ID)
+    /// License number
     /// </summary>
     public string LicenceNumber { get; set; } = string.Empty;
     
     /// <summary>
-    /// NALD Identifier(AABL_ID)
+    /// NALD Identifier  (AABL_ID / AIMP_ID)
     /// </summary>
-    public string? AablId { get; set; } = string.Empty;
+    public string? RowId { get; set; } = string.Empty;
     
     /// <summary>
-    /// NALD Issue Number(Issue_No)
+    /// NALD Issue Number (ISSUE_NO)
     /// </summary>
     public string IssueNo { get; set; } = string.Empty;
     
     /// <summary>
-    /// NALD Issue Number(Issue_No)
+    /// NALD Issue Number (INCR_NO)
     /// </summary>
     public int? IncrementNo { get; set; }
     
     /// <summary>
-    /// Abbreviation Type(AABV_TYPE)
+    /// Abbreviation Type (AABV_TYPE / AIMV_TYPE)
     /// </summary>
-    public string? AabvType { get; set; } = string.Empty;
+    public string? Type { get; set; } = string.Empty;
 
     /// <summary>
     /// Signature Date(LIC_SIG_DATE)

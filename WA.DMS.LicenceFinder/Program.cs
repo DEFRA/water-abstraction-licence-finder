@@ -503,8 +503,8 @@ static async Task<(List<NaldSimpleRecord> NaldSimpleRecords,
                 naldData[licenceNumberWithoutSeperators].Add(
                     new NaldLicenceVersion
                     {
-                        AablId = version.AablId?.ToString(),
-                        AabvType = version.AabvType,
+                        RowId = version.AablId?.ToString(),
+                        Type = version.AabvType,
                         IssueNo = version.IssueNo.ToString(),
                         IncrementNo = version.IncrNo,
                         LicenceNumber = licence.LicenceNo!,
@@ -537,7 +537,7 @@ static async Task<(List<NaldSimpleRecord> NaldSimpleRecords,
 }
 
 static async Task<(List<NaldSimpleRecord> NaldSimpleRecords,
-        Dictionary<string, List<NaldImpoundmentLicenceVersion>> NaldData,
+        Dictionary<string, List<NaldLicenceVersion>> NaldData,
         string ImportDate)>
     GetNaldImpoundmentDataAsync(string apiBaseUrl)
 {
@@ -568,7 +568,7 @@ static async Task<(List<NaldSimpleRecord> NaldSimpleRecords,
     var naldApiStatusData = await naldApiStatusDataTask;
 
     var naldSimpleRecords = new List<NaldSimpleRecord>();
-    var naldData = new Dictionary<string, List<NaldImpoundmentLicenceVersion>>();
+    var naldData = new Dictionary<string, List<NaldLicenceVersion>>();
     var naldVersionsDict = new Dictionary<string, List<NaldImpoundmentLicenceVersionDataLine>>();
 
     if (allNaldData.ImpoundmentLicenceVersions == null || allNaldData.ImpoundmentLicenceVersions.Count == 0)
@@ -607,10 +607,10 @@ static async Task<(List<NaldSimpleRecord> NaldSimpleRecords,
             foreach (var version in licenceVersions)
             {
                 naldData[licenceNumberWithoutSeperators].Add(
-                    new NaldImpoundmentLicenceVersion
+                    new NaldLicenceVersion
                     {
-                        AimpId = version.AimpId?.ToString(),
-                        AimvType = version.AimvType,
+                        RowId = version.AimpId?.ToString(),
+                        Type = version.AimvType,
                         IssueNo = version.IssueNo.ToString(),
                         IncrementNo = version.IncrNo,
                         LicenceNumber = licence.LicenceNumber,

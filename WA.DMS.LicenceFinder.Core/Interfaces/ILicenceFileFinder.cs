@@ -39,7 +39,7 @@ public interface ILicenceFileFinder
         ConcurrentDictionary<Guid, List<DmsFileIdInformation>> dmsFileIdInformation,
         IGeneralApiClient generalApiClient,
         List<NaldSimpleRecord> naldRecordsToProcess,
-        Dictionary<string, List<NaldImpoundmentLicenceVersion>> naldData,
+        Dictionary<string, List<NaldLicenceVersion>> naldData,
         List<DmsFileReaderResult> wradiToolScrapeResults,
         List<LicenceMatchResult> licenceFinderPreviousIterationMatches,
         Dictionary<string, FileInventory> wradiLocalFilesInventory,
