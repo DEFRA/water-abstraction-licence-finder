@@ -71,9 +71,9 @@ public class GeneralApiClient : IGeneralApiClient
         return await response.Content.ReadAsStringAsync();
     }
     
-    public async Task<List<DmsFileReaderResult>> GetDmsFileReaderResultsAsync()
+    public async Task<List<DmsFileReaderResult>> GetDmsFileReaderResultsAsync(string licenceType)
     {
-        var path = "/Extractor/Dms/GetDmsFileReaderResults";
+        var path = $"/Extractor/Dms/GetDmsFileReaderResults?licenceType={licenceType}";
 
         var response = await HttpClient.GetAsync(path);
         response.EnsureSuccessStatusCode();
@@ -84,9 +84,9 @@ public class GeneralApiClient : IGeneralApiClient
             GetSerializerOptions())!;
     }
     
-    public async Task SaveLicenceFinderResultsAsync(List<LicenceMatchResult> results)
+    public async Task SaveLicenceFinderResultsAsync(List<LicenceMatchResult> results, string licenceType)
     {
-        var path = "/Extractor/LicenceFinder/SaveResults";
+        var path = $"/Extractor/LicenceFinder/SaveResults?licenceType={licenceType}";
         var json = JsonSerializer.Serialize(new
         {
             results
@@ -96,10 +96,10 @@ public class GeneralApiClient : IGeneralApiClient
         var response = await HttpClient.PostAsync(new Uri(HttpClient.BaseAddress!, path), httpContent);
         response.EnsureSuccessStatusCode();
     }
-    
-    public async Task ClearLicenceFinderResultsAsync()
+
+    public async Task ClearLicenceFinderResultsAsync(string licenceType)
     {
-        var path = "/Extractor/LicenceFinder/ClearResults";
+        var path = $"/Extractor/LicenceFinder/ClearResults?licenceType={licenceType}";
 
         var httpContent = new StringContent("{}", System.Text.Encoding.UTF8, "application/json");
         var response = await HttpClient.PostAsync(new Uri(HttpClient.BaseAddress!, path), httpContent);
@@ -125,9 +125,9 @@ public class GeneralApiClient : IGeneralApiClient
         response.EnsureSuccessStatusCode();
     }
 
-    public async Task SaveVersionFilesToDownloadAsync(List<DownloadInfoMissing> results)
+    public async Task SaveVersionFilesToDownloadAsync(List<DownloadInfoMissing> results, string licenceType)
     {
-        var path = "/Extractor/VersionFiles/SaveToDownload";
+        var path = $"/Extractor/VersionFiles/SaveToDownload?licenceType={licenceType}";
         var json = JsonSerializer.Serialize(new
         {
             results
@@ -138,9 +138,9 @@ public class GeneralApiClient : IGeneralApiClient
         response.EnsureSuccessStatusCode();
     }
 
-    public async Task SaveVersionFilesAsync(List<DownloadInfoAll> results)
+    public async Task SaveVersionFilesAsync(List<DownloadInfoAll> results, string licenceType)
     {
-        var path = "/Extractor/VersionFiles/SaveAll";
+        var path = $"/Extractor/VersionFiles/SaveAll?licenceType={licenceType}";
         var json = JsonSerializer.Serialize(new
         {
             results
@@ -151,25 +151,25 @@ public class GeneralApiClient : IGeneralApiClient
         response.EnsureSuccessStatusCode();
     }
     
-    public async Task ClearVersionFilesAsync()
+    public async Task ClearVersionFilesAsync(string licenceType)
     {
-        var path = "/Extractor/VersionFiles/ClearAllFiles";
+        var path = $"/Extractor/VersionFiles/ClearAllFiles?licenceType={licenceType}";
         
         var response = await HttpClient.DeleteAsync(new Uri(HttpClient.BaseAddress!, path));
         response.EnsureSuccessStatusCode();
     }
 
-    public async Task ClearVersionFilesToDownloadAsync()
+    public async Task ClearVersionFilesToDownloadAsync(string licenceType)
     {
-        var path = "/Extractor/VersionFiles/ClearDownloadFiles";
+        var path = $"/Extractor/VersionFiles/ClearDownloadFiles?licenceType={licenceType}";
         
         var response = await HttpClient.DeleteAsync(new Uri(HttpClient.BaseAddress!, path));
         response.EnsureSuccessStatusCode();
     }
 
-    public async Task<List<LicenceMatchResult>> GetLicenceFinderResultsAsync(int skip, int take)
+    public async Task<List<LicenceMatchResult>> GetLicenceFinderResultsAsync(int skip, int take, string licenceType)
     {
-        var path = $"/Extractor/LicenceFinder/GetResults?skip={skip}&take={take}";
+        var path = $"/Extractor/LicenceFinder/GetResults?skip={skip}&take={take}&licenceType={licenceType}";
 
         var response = await HttpClient.GetAsync(path);
         response.EnsureSuccessStatusCode();

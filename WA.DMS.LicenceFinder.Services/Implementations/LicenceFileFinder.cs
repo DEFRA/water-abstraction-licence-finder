@@ -167,7 +167,8 @@ public class LicenceFileFinder : ILicenceFileFinder
         string? regionName,
         string overridesFilename,
         string naldDate,
-        string dmsDate)
+        string dmsDate,
+        string licenceType)
     {
         try
         {
@@ -186,17 +187,18 @@ public class LicenceFileFinder : ILicenceFileFinder
                     naldData,
                     wradiToolScrapeResults,
                     licenceFinderPreviousIterationMatches,
-                    wradiLocalFilesInventory);
+                    wradiLocalFilesInventory,
+                    licenceType);
 
             // Save to DB
-            await generalApiClient.ClearLicenceFinderResultsAsync();
+            await generalApiClient.ClearLicenceFinderResultsAsync(licenceType);
             const int chunkSize = 1_000;
             
             var chunks = licenceMatchResults.Chunk(chunkSize);
 
             foreach (var chunk in chunks)
             {
-                await generalApiClient.SaveLicenceFinderResultsAsync(chunk.ToList());
+                await generalApiClient.SaveLicenceFinderResultsAsync(chunk.ToList(), licenceType);
             }
             
             // Generate output Excel file
@@ -219,7 +221,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                 ("Local files", S3FilesMapping, wradiLocalFilesInventory.Select(x => x.Value))
             };
             
-            var outputFileName = $"LicenceMatchResults_{DateTime.Now:yyyyMMdd_HHmmss}";
+            var outputFileName = $"{licenceType}LicenceMatchResults_{DateTime.Now:yyyyMMdd_HHmmss}";
             var firstFile = _fileProcessor.GenerateExcel(worksheetData, outputFileName);
 
             if (string.IsNullOrEmpty(regionName))
@@ -244,14 +246,14 @@ public class LicenceFileFinder : ILicenceFileFinder
             ];
 
             outputFileName =
-                $"{regionName.Replace(" ", string.Empty)}Only_LicenceMatchResults_{DateTime.Now:yyyyMMdd_HHmmss}";
+                $"{regionName.Replace(" ", string.Empty)}Only_{licenceType}LicenceMatchResults_{DateTime.Now:yyyyMMdd_HHmmss}";
 
             _fileProcessor.GenerateExcel(worksheetData, outputFileName);
             return firstFile;
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"Error occurred while finding licence files: {ex.Message}", ex);
+            throw new InvalidOperationException($"Error occurred while finding {licenceType} licence files: {ex.Message}", ex);
         }
     }
 
@@ -395,7 +397,8 @@ public class LicenceFileFinder : ILicenceFileFinder
         Dictionary<string, List<DmsExtract>> dmsRecords,
         List<LicenceMatchResult> currentMatches,
         Dictionary<string, FileInventory> wradiAllLocalFilesInventory,
-        IGeneralApiClient apiClient)
+        IGeneralApiClient apiClient,
+        string licenceType)
     {
         // Foreach permit number in the newest created file, find the DMS records for that permit number.
         // Check if the permit number row has a fileId that is different to the previous run. If so fetch the DMS info
@@ -544,11 +547,10 @@ public class LicenceFileFinder : ILicenceFileFinder
             ("All", allHeaderMapping, allRecords)
         };
 
-        
         Console.WriteLine("Starting saving version files");
         
-        var saveVersionAllTask = SaveVersionFilesAsync(apiClient, allRecords);
-        await SaveVersionFilesToDownloadAsync(apiClient, missingRecords);
+        var saveVersionAllTask = SaveVersionFilesAsync(apiClient, allRecords, licenceType);
+        await SaveVersionFilesToDownloadAsync(apiClient, missingRecords, licenceType);
 
         await saveVersionAllTask;
         
@@ -557,16 +559,17 @@ public class LicenceFileFinder : ILicenceFileFinder
 
         return _fileProcessor.GenerateExcel(
             worksheetData,
-            $"Version_Download_Info_{DateTime.Now:yyyyMMdd_HHmmss}");
+            $"{licenceType}_Version_Download_Info_{DateTime.Now:yyyyMMdd_HHmmss}");
     }
 
     private static async Task SaveVersionFilesAsync(
         IGeneralApiClient apiClient,
-        List<DownloadInfoAll> results)
+        List<DownloadInfoAll> results,
+        string licenceType)
     {
-        Console.WriteLine("ClearVersionFilesAsync started");
-        await apiClient.ClearVersionFilesAsync();
-        Console.WriteLine("ClearVersionFilesAsync finished");
+        Console.WriteLine($"{licenceType} ClearVersionFilesAsync started");
+        await apiClient.ClearVersionFilesAsync(licenceType);
+        Console.WriteLine($"{licenceType} ClearVersionFilesAsync finished");
         
         const int chunkSize = 10_000;
         var chunks = results.Chunk(chunkSize).ToList();
@@ -574,18 +577,19 @@ public class LicenceFileFinder : ILicenceFileFinder
         
         foreach (var chunk in chunks)
         {
-            await apiClient.SaveVersionFilesAsync(chunk.ToList());    
-            Console.WriteLine($"SaveVersionFilesAsync - Chunk {idx++} of {chunks.Count}");
+            await apiClient.SaveVersionFilesAsync(chunk.ToList(), licenceType);    
+            Console.WriteLine($"{licenceType} SaveVersionFilesAsync - Chunk {idx++} of {chunks.Count}");
         }
     }
     
     private static async Task SaveVersionFilesToDownloadAsync(
         IGeneralApiClient apiClient,
-        List<DownloadInfoMissing> missingRecords)
+        List<DownloadInfoMissing> missingRecords,
+        string licenceType)
     {
-        Console.WriteLine("ClearVersionFilesToDownloadAsync started");
-        await apiClient.ClearVersionFilesToDownloadAsync();
-        Console.WriteLine("ClearVersionFilesToDownloadAsync started");
+        Console.WriteLine($"{licenceType} ClearVersionFilesToDownloadAsync started");
+        await apiClient.ClearVersionFilesToDownloadAsync(licenceType);
+        Console.WriteLine($"{licenceType} ClearVersionFilesToDownloadAsync started");
         
         const int chunkSize = 10_000;
         var chunks = missingRecords.Chunk(chunkSize).ToList();
@@ -593,8 +597,8 @@ public class LicenceFileFinder : ILicenceFileFinder
 
         foreach (var chunk in chunks)
         {
-            await apiClient.SaveVersionFilesToDownloadAsync(chunk.ToList());
-            Console.WriteLine($"SaveVersionFilesToDownloadAsync - Chunk {idx++} of {chunks.Count}");
+            await apiClient.SaveVersionFilesToDownloadAsync(chunk.ToList(), licenceType);
+            Console.WriteLine($"{licenceType} SaveVersionFilesToDownloadAsync - Chunk {idx++} of {chunks.Count}");
         }
     }
 
@@ -1093,7 +1097,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                         : null;
                     
                     // Check for NALD data issues
-                    naldIssueResult = CheckForNaldDataIssue(
+                    naldIssueResult = CheckForNaldDataIssue_Abstraction(
                         matchedNaldRecords,
                         naldRecordsForPermit,
                         recordWithDifferentDate,
@@ -1134,7 +1138,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                         FileTypeEvaluated = matchedLicence.FileType,
                         FileDeterminedAsLicence = true,
                         DateOfIssueOfEvaluatedFile = matchedLicence.DateOfIssue?.ToString("dd/MM/yyyy"),
-                        NaldId = int.Parse(matchedNaldRecords?.AablId ?? "0"),
+                        NaldId = int.Parse(matchedNaldRecords?.RowId ?? "0"),
                         NaldIssueNo = int.Parse(matchedNaldRecords?.IssueNo ?? "0"),
                         NaldIncrementNo = matchedNaldRecords?.IncrementNo,
                         OriginalFileUrlIdentifiedAsLicence = recordWithDifferentDate.FileUrl,
@@ -1208,7 +1212,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                     FileTypeEvaluated = addendum.FileType,
                     FileDeterminedAsLicence = false,
                     DateOfIssueOfEvaluatedFile = addendum.DateOfIssue?.ToString("dd/MM/yyyy"),
-                    NaldId = int.Parse(matchedNaldRecords?.AablId ?? "0"),
+                    NaldId = int.Parse(matchedNaldRecords?.RowId ?? "0"),
                     NaldIssueNo = int.Parse(matchedNaldRecords?.IssueNo ?? "0"),
                     NaldIncrementNo = matchedNaldRecords?.IncrementNo,
                     FileId = fileId,
@@ -1243,7 +1247,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                 : null;
 
             // Check for NALD data issues
-            naldIssueResult = CheckForNaldDataIssue(
+            naldIssueResult = CheckForNaldDataIssue_Abstraction(
                 matchedNaldRecords,
                 naldRecordsForPermit,
                 recordWithDifferentDate,
@@ -1292,7 +1296,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                 FileTypeEvaluated = firstLicenceBeforeSignatureDate.FileType,
                 FileDeterminedAsLicence = true,
                 DateOfIssueOfEvaluatedFile = firstLicenceBeforeSignatureDate.DateOfIssue?.ToString("dd/MM/yyyy"),
-                NaldId = int.Parse(matchedNaldRecords?.AablId ?? "0"),
+                NaldId = int.Parse(matchedNaldRecords?.RowId ?? "0"),
                 NaldIssueNo = int.Parse(matchedNaldRecords?.IssueNo ?? "0"),
                 NaldIncrementNo = matchedNaldRecords?.IncrementNo,
                 OriginalFileUrlIdentifiedAsLicence = recordWithDifferentDate.FileUrl,
@@ -1326,7 +1330,7 @@ public class LicenceFileFinder : ILicenceFileFinder
 
         return orderedUnmatchedResults;
     }
-
+    
     public string BuildFileTemplateIdentificationExtract(
         List<LicenceMatchResult> previousIterationMatches,
         List<Override> overrides,
@@ -1556,7 +1560,6 @@ public class LicenceFileFinder : ILicenceFileFinder
         };
 
         return _fileProcessor.GenerateExcel(worksheetData, outputFileName);
-
     }
 
     /// <summary>
@@ -1661,6 +1664,7 @@ public class LicenceFileFinder : ILicenceFileFinder
     /// <param name="wradiToolScrapeResults"></param>
     /// <param name="licenceFinderPreviousIterationMatches"></param>
     /// <param name="wradiLocalFilesInventory"></param>
+    /// <param name="licenceType"></param>
     /// <returns>List of license matching results</returns>
     private async Task<(List<LicenceMatchResult> LicenceMatchResults,
         List<UnmatchedLicenceMatchResult> UnmatchedLicenseMatchResults,
@@ -1675,7 +1679,8 @@ public class LicenceFileFinder : ILicenceFileFinder
             Dictionary<string, List<NaldLicenceVersion>> naldData,
             List<DmsFileReaderResult> wradiToolScrapeResults,
             List<LicenceMatchResult> licenceFinderPreviousIterationMatches,
-            Dictionary<string, FileInventory> wradiLocalFilesInventory)
+            Dictionary<string, FileInventory> wradiLocalFilesInventory,
+            string licenceType)
     {
         var unmatchedVersionResults = await FindUnmatchedLicenceFilesAsync(
             dmsRecords,
@@ -1751,7 +1756,7 @@ public class LicenceFileFinder : ILicenceFileFinder
             var overrideIncrementNo = overrideRecord?.IncrementNo ?? 0;
             
             licenceMatchResult.SignatureDate = naldLicenceVersionData?.SignatureDate?.ToString("dd/MM/yyyy");
-            licenceMatchResult.NaldId = int.Parse(naldLicenceVersionData?.AablId ?? "0");
+            licenceMatchResult.NaldId = int.Parse(naldLicenceVersionData?.RowId ?? "0");
             licenceMatchResult.NaldIssueNo = int.Parse(naldLicenceVersionData?.IssueNo ?? "0");
             licenceMatchResult.NaldIncrementNo = naldLicenceVersionData?.IncrementNo;
             
@@ -1777,11 +1782,6 @@ public class LicenceFileFinder : ILicenceFileFinder
                     {
                         break;
                     }
-                }
-
-                if (!weHaveDownloaded)
-                {
-                        
                 }
 
                 licenceMatchResult.WeHaveDownloaded = weHaveDownloaded;
@@ -1876,7 +1876,8 @@ public class LicenceFileFinder : ILicenceFileFinder
                 {
                     matchedDmsRecord = ruleToMatch.FindMatch(
                         permitNumberToUseForDms,
-                        dmsDictionaries);
+                        dmsDictionaries,
+                        licenceType);
 
                     if (matchedDmsRecord == null)
                     {
@@ -1901,11 +1902,6 @@ public class LicenceFileFinder : ILicenceFileFinder
                         {
                             break;
                         }
-                    }
-
-                    if (!weHaveDownloaded)
-                    {
-                        
                     }
                     
                     licenceMatchResult.SeenInDmsExtract = true;
@@ -1985,8 +1981,7 @@ public class LicenceFileFinder : ILicenceFileFinder
             Console.WriteLine($"Processing record {processedRecordCount}/{naldRecordsToProcess.Count}: {naldReportRecord.LicNo} - {ruleUsed}");
         }
 
-        Console.WriteLine($"Licence matching completed. Total records processed: {processedRecordCount}");
-        
+        Console.WriteLine($"{licenceType} licence matching completed. Total records processed: {processedRecordCount}");
         return (returnList, unmatchedVersionResults, deltaResults);
     }
 
@@ -2133,7 +2128,7 @@ public class LicenceFileFinder : ILicenceFileFinder
     /// <param name="fileIdentification">File identification record</param>
     /// <param name="allMatchingIdentificationFiles"></param>
     /// <returns>UnmatchedLicenseMatchResult if NALD data issue found, null otherwise</returns>
-    private UnmatchedLicenceMatchResult? CheckForNaldDataIssue(
+    private UnmatchedLicenceMatchResult? CheckForNaldDataIssue_Abstraction(
         NaldLicenceVersion? matchedNaldRecord,
         List<NaldLicenceVersion> naldRecordsForPermit,
         LicenceMatchResult record,
@@ -2191,7 +2186,7 @@ public class LicenceFileFinder : ILicenceFileFinder
                 DateOfIssueOfEvaluatedFile = fileIdentification.DateOfIssue?.ToString("dd/MM/yyyy"),
                 NaldDataQualityIssue = true,
                 OriginalFileUrlIdentifiedAsLicence = record.FileUrl,
-                NaldId = int.Parse(matchedNaldRecord.AablId ?? "0"),
+                NaldId = int.Parse(matchedNaldRecord.RowId ?? "0"),
                 NaldIssueNo = int.Parse(matchedNaldRecord.IssueNo),
                 NaldIncrementNo = matchedNaldRecord.IncrementNo
             };
@@ -2199,7 +2194,7 @@ public class LicenceFileFinder : ILicenceFileFinder
 
         return null;
     }
-
+    
     /// <summary>
     /// Builds manual index from DMS records for optimized searching
     /// </summary>

@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using WA.DMS.LicenceFinder.Core.Constants;
 using WA.DMS.LicenceFinder.Core.Interfaces;
 using WA.DMS.LicenceFinder.Core.Models;
 using WA.DMS.LicenceFinder.Services;
@@ -35,33 +36,47 @@ using (var scope = host.Services.CreateScope())
     //var apiBaseUrl = "https://wli-api-tst.aws-int.defra.cloud";
 
     //var flowToRun = "FindAllFilesToDownload";
-    var flowToRun = "FindLicenceFilesAsync";
+    //var flowToRun = "FindLicenceFilesAsync Abstraction";
+    var flowToRun = "FindFilesAsync Impoundment";
     //var flowToRun = "FindInspectionReportFiles";
-
+    
     try
     {
-        var generalApiClient = new GeneralApiClient(apiBaseUrl);
+        IGeneralApiClient generalApiClient = new GeneralApiClient(apiBaseUrl);
+
+        var flowToRunParts = flowToRun.Split(' ');
+        flowToRun = flowToRunParts[0];
         
         // API - DMS data file export ~240k records (originally from Consolidate file)
         // dms_extract holds one extract per document type, so the flow decides which to read.
         // These must match the extractor's DocumentTypes.
-        var extractType = flowToRun == "FindInspectionReportFiles"
-            ? "WrInspectionReport"
-            : "AbstractionLicence";
+        var extractFileTypeToUse = flowToRun switch
+        {
+            "FindAllFilesToDownload" or "FindLicenceFilesAsync" => "AbstractionLicence",
+            "FindInspectionReportFiles" => "WrInspectionReport",
+            _ => throw new KeyNotFoundException(flowToRun)
+        };
 
-        var dmsRecords = await GetDmsExtractAsync(generalApiClient, extractType);
+        var dmsRecords = await GetDmsExtractAsync(generalApiClient, extractFileTypeToUse);
         var dmsRecordsData = GroupDmsRecords(dmsRecords.Data);
 
         switch (flowToRun)
         {
             case "FindLicenceFilesAsync":
             {
+                var licenceType = Constants.GetLicenceType(flowToRunParts[1]);
+
                 // FLOW - Licence file finder (produces LicenceMatchResults_DATE.xlsx)
                 Console.WriteLine("Starting licence file processing...");
 
                 // API - NALD data - started early as async so we can run in parallel
-                var naldDataTask = GetNaldDataAsync(apiBaseUrl);
-                
+                var naldDataTask = licenceType switch
+                {
+                    Constants.Abstraction => GetNaldAbstractionLicenceDataAsync(apiBaseUrl),
+                    Constants.Impoundment => GetNaldImpoundmentDataAsync(apiBaseUrl),
+                    _ => null
+                };
+
                 // API - DMS file id data (from what we've seen before)
                 var dmsFileIdInformationTask = GetDmsFileIdInformationAsync(generalApiClient);
                 
@@ -70,19 +85,22 @@ using (var scope = host.Services.CreateScope())
                 
                 // API - WRADI tool file/licence reader (DOI, template type etc... scraping) extracts
                 // (e.g. LicenceReader-yyyyMMdd.csv). Has date of issue, number of pages, template types etc...
-                var wradiToolScrapeResultsTask = generalApiClient.GetDmsFileReaderResultsAsync();
+                var wradiToolScrapeResultsTask = generalApiClient.GetDmsFileReaderResultsAsync(licenceType);
                 
                 // API - Licence finder previous iteration run matches
-                var licenceFinderLastIterationMatchesTask = GetLicenceFinderResultsAsync(generalApiClient);
+                var licenceFinderLastIterationMatchesTask = GetLicenceFinderResultsAsync(generalApiClient, licenceType);
                 
                 // Spreadsheet - DMS change audit overrides by our team (e.g. Overrides.xlsx)
-                var dmsChangeAuditOverrides = readExtractService.GetDmsChangeAuditOverrides("Override_");
+                var dmsChangeAuditOverrides = readExtractService.GetDmsChangeAuditOverrides("Override_", licenceType);
                 
                 // Spreadsheet - DMS manual fixes by our team/SamD (e.g. Manual_Fix_Extract.xlsx) - The 'Sam D' file
                 // - doesn't often change
-                var dmsManualFixes = readExtractService.GetDmsManualFixes();
+                var dmsManualFixes = readExtractService.GetDmsManualFixes(licenceType);
 
-                var (naldRecordsToProcess, naldAbsLicencesAndVersions, naldImportDate) = await naldDataTask;
+                var (
+                    naldRecordsToProcess,
+                    naldAbsLicencesAndVersions,
+                    naldImportDate) = await naldDataTask!;
 
                 var licenceMatchResultsFilePath = await licenceFileFinder.FindLicenceFilesAsync(
                     dmsRecordsData,
@@ -98,19 +116,22 @@ using (var scope = host.Services.CreateScope())
                     regionName,
                     dmsChangeAuditOverrides.Item2,
                     naldImportDate,
-                    dmsRecords.ImportDate);
+                    dmsRecords.ImportDate,
+                    licenceType);
 
                 Console.WriteLine($"Licence processing completed. Results saved to: {licenceMatchResultsFilePath}");
                 break;
             }
             case "FindAllFilesToDownload":
             {
+                var licenceType = Constants.GetLicenceType(flowToRunParts[1]);
+                
                  // FLOW - Find all files to download (i.e. all files, not just licences)
                  // NOTE - previously referred to as 'Build Version Download Info Excel'
-                Console.WriteLine("Started finding all files to download...");
+                Console.WriteLine($"Started finding all {licenceType} files to download...");
 
                 // API - Licence finder previous iteration run matches
-                var licenceFinderLastIterationMatchesTask = GetLicenceFinderResultsAsync(generalApiClient);
+                var licenceFinderLastIterationMatchesTask = GetLicenceFinderResultsAsync(generalApiClient, licenceType);
                 
                 // API - WRADI tool all local files inventory (from S3 stuff)
                 var wradiAllLocalFilesInventoryTask = GetWradiPdfsInventoryFiles(apiBaseUrl);
@@ -119,7 +140,8 @@ using (var scope = host.Services.CreateScope())
                     dmsRecordsData,
                     await licenceFinderLastIterationMatchesTask,
                     await wradiAllLocalFilesInventoryTask,
-                    generalApiClient);
+                    generalApiClient,
+                    licenceType);
 
                 Console.WriteLine($"File saved to {result}");
                 break;
@@ -149,10 +171,10 @@ using (var scope = host.Services.CreateScope())
                 Console.WriteLine("Started building file template identification extract...");
 
                 // API - Licence finder previous iteration run matches
-                var licenceFinderLastIterationMatchesTask = GetLicenceFinderResultsAsync(generalApiClient);
+                var licenceFinderLastIterationMatchesTask = GetLicenceFinderResultsAsync(generalApiClient, Constants.Abstraction);
                 
                 // Spreadsheet - DMS change audit overrides by our team (e.g. Overrides.xlsx)
-                var dmsChangeAuditOverrides = readExtractService.GetDmsChangeAuditOverrides("Override_");
+                var dmsChangeAuditOverrides = readExtractService.GetDmsChangeAuditOverrides("Override_", Constants.Abstraction);
                 
                 // Spreadsheet - File version results (e.g. LicenceVersionResults.xlsx) - Comes from JP
                 var jpFileVersionResults = readExtractService.ReadFileVersionResultsFile();
@@ -172,7 +194,7 @@ using (var scope = host.Services.CreateScope())
                 Console.WriteLine("Started finding licence files to download...");
 
                 // API - Licence finder previous iteration run matches
-                var licenceFinderLastIterationMatchesTask = GetLicenceFinderResultsAsync(generalApiClient);
+                var licenceFinderLastIterationMatchesTask = GetLicenceFinderResultsAsync(generalApiClient, Constants.Abstraction);
                 
                 // API - WRADI tool all local files inventory (from S3 stuff)
                 var wradiAllLocalFilesInventoryTask = GetWradiPdfsInventoryFiles(apiBaseUrl);
@@ -192,7 +214,7 @@ using (var scope = host.Services.CreateScope())
                 Console.WriteLine("Started finding licence files to download...");
 
                 // API - Licence finder previous iteration run matches
-                var licenceFinderLastIterationMatches = await GetLicenceFinderResultsAsync(generalApiClient);
+                var licenceFinderLastIterationMatches = await GetLicenceFinderResultsAsync(generalApiClient, Constants.Abstraction);
 
                 var fileName = licenceFileFinder.FindLicenceFilesToDownload_SpreadsheetCompareOnly(
                     DmsDictionaryToList(dmsRecordsData),
@@ -206,7 +228,7 @@ using (var scope = host.Services.CreateScope())
             case "FindDuplicateLicenceFiles":
             {
                 // FLOW - Find duplicate licence files (NOT USED ANYMORE - we read the files and check the hashes)
-                var (naldRecordsToProcess, _, _) = await GetNaldDataAsync(apiBaseUrl);
+                var (naldRecordsToProcess, _, _) = await GetNaldAbstractionLicenceDataAsync(apiBaseUrl);
 
                 var duplicateFilePath = licenceFileFinder.FindDuplicateLicenceFiles(
                     DmsDictionaryToList(dmsRecordsData),
@@ -228,7 +250,7 @@ using (var scope = host.Services.CreateScope())
 await host.StopAsync();
 return;
 
-static async Task<List<LicenceMatchResult>> GetLicenceFinderResultsAsync(GeneralApiClient apiClient)
+static async Task<List<LicenceMatchResult>> GetLicenceFinderResultsAsync(IGeneralApiClient apiClient, string licenceType)
 {
     var licenceFindResults = new List<LicenceMatchResult>();
     const int take = 10_000;
@@ -240,7 +262,7 @@ static async Task<List<LicenceMatchResult>> GetLicenceFinderResultsAsync(General
     {
         var skip = take * loopIdx++;
 
-        licenceFinderResultsPartial = await apiClient.GetLicenceFinderResultsAsync(skip, take);
+        licenceFinderResultsPartial = await apiClient.GetLicenceFinderResultsAsync(skip, take, licenceType);
         licenceFindResults.AddRange(licenceFinderResultsPartial);
     }
 
@@ -248,7 +270,7 @@ static async Task<List<LicenceMatchResult>> GetLicenceFinderResultsAsync(General
 }
 
 static async Task<(List<DmsExtract> Data, string ImportDate)> GetDmsExtractAsync(
-    GeneralApiClient generalApiClient,
+    IGeneralApiClient generalApiClient,
     string extractType)
 {
     var dmsExtractInfoRaw = new List<DmsExtract>();
@@ -369,14 +391,12 @@ static async Task<ConcurrentDictionary<Guid, List<DmsFileIdInformation>>>
     return dmsFileIdInformationDict;
 }
 
-static async Task<(List<
-        NaldSimpleRecord> NaldSimpleRecords,
+static async Task<(List<NaldSimpleRecord> NaldSimpleRecords,
         Dictionary<string, List<NaldLicenceVersion>> NaldData,
         string ImportDate)>
-    GetNaldDataAsync(string apiBaseUrl)
+    GetNaldAbstractionLicenceDataAsync(string apiBaseUrl)
 {
     var naldApiClient = new NaldApiClient(apiBaseUrl);
-
     var naldApiStatusDataTask = naldApiClient.GetNaldLicenceStatusDataAsync();
 
     const int take = 10_000;
@@ -395,7 +415,7 @@ static async Task<(List<
     {
         var skip = take * loopIdx++;
 
-        allNaldDataPartial = await naldApiClient.GetNaldDataAsync(null, false, skip, take);
+        allNaldDataPartial = await naldApiClient.GetNaldAbstractionLicenceDataAsync(null, false, skip, take);
         allNaldData.AbstractionLicences!.AddRange(allNaldDataPartial.AbstractionLicences!);
         allNaldData.AbstractionLicenceVersions!.AddRange(allNaldDataPartial.AbstractionLicenceVersions!);
     }
@@ -444,8 +464,8 @@ static async Task<(List<
                 naldData[licenceNumberWithoutSeperators].Add(
                     new NaldLicenceVersion
                     {
-                        AablId = version.AablId?.ToString(),
-                        AabvType = version.AabvType,
+                        RowId = version.AablId?.ToString(),
+                        Type = version.AabvType,
                         IssueNo = version.IssueNo.ToString(),
                         IncrementNo = version.IncrNo,
                         LicenceNumber = licence.LicenceNo!,
@@ -468,6 +488,111 @@ static async Task<(List<
             LicNo = licence.LicenceNo!,
             DmsPermitNo = licenceNumberWithoutSeperators,
             Region = RegionHelper.GetRegionName(licence.FgacRegionCode)
+        };
+
+        naldSimpleRecords.Add(naldSimpleRecord);
+    }
+
+    var importDate = await naldApiClient.GetImportRunDateAsync("Nald");
+    return (naldSimpleRecords, naldData, importDate ?? "Unknown");
+}
+
+static async Task<(List<NaldSimpleRecord> NaldSimpleRecords,
+        Dictionary<string, List<NaldLicenceVersion>> NaldData,
+        string ImportDate)>
+    GetNaldImpoundmentDataAsync(string apiBaseUrl)
+{
+    var naldApiClient = new NaldApiClient(apiBaseUrl);
+    var naldApiStatusDataTask = naldApiClient.GetNaldImpoundmentLicenceStatusDataAsync();
+
+    const int take = 10_000;
+    var allNaldData = new NaldImpoundmentDataCollection
+    {
+        ImpoundmentLicences = [],
+        ImpoundmentLicenceVersions = []
+    };
+
+    var allNaldDataPartial = new NaldImpoundmentDataCollection();
+    var loopIdx = 0;
+
+    while (loopIdx == 0
+        || allNaldDataPartial.ImpoundmentLicences!.Count == take
+        || allNaldDataPartial.ImpoundmentLicenceVersions!.Count == take)
+    {
+        var skip = take * loopIdx++;
+
+        allNaldDataPartial = await naldApiClient.GetNaldImpoundmentLicenceDataAsync(null, false, skip, take);
+        allNaldData.ImpoundmentLicences!.AddRange(allNaldDataPartial.ImpoundmentLicences!);
+        allNaldData.ImpoundmentLicenceVersions!.AddRange(allNaldDataPartial.ImpoundmentLicenceVersions!);
+    }
+
+    var naldApiStatusData = await naldApiStatusDataTask;
+
+    var naldSimpleRecords = new List<NaldSimpleRecord>();
+    var naldData = new Dictionary<string, List<NaldLicenceVersion>>();
+    var naldVersionsDict = new Dictionary<string, List<NaldImpoundmentLicenceVersionDataLine>>();
+
+    if (allNaldData.ImpoundmentLicenceVersions == null || allNaldData.ImpoundmentLicenceVersions.Count == 0)
+    {
+        throw new Exception("Nald Api impoundment licence versions came back empty");
+    }
+
+    // NOTE - LicenceVersions is only pulling back newest currently, so this is overkill
+    foreach (var licenceVersion in allNaldData.ImpoundmentLicenceVersions)
+    {
+        if (!naldVersionsDict.ContainsKey(licenceVersion.LookupKey))
+        {
+            naldVersionsDict.Add(licenceVersion.LookupKey, []);
+        }
+
+        naldVersionsDict[licenceVersion.LookupKey].Add(licenceVersion);
+    }
+
+    foreach (var licence in allNaldData.ImpoundmentLicences!)
+    {
+        var licenceNumberWithoutSeperators = LicenceFileHelpers.CleanPermitNumber(licence.LicenceNumber!);
+
+        if (!naldData.ContainsKey(licenceNumberWithoutSeperators))
+        {
+            naldData.Add(licenceNumberWithoutSeperators, []);
+        }
+
+        var strippedNumber = FormattingHelper.StripForComparison(
+            licence.LicenceNumber,
+            licence.RegionCode)!;
+
+        var lookupKey = $"{licence.RegionCode}|{licence.Id}";
+
+        if (naldVersionsDict.TryGetValue(lookupKey, out var licenceVersions))
+        {
+            foreach (var version in licenceVersions)
+            {
+                naldData[licenceNumberWithoutSeperators].Add(
+                    new NaldLicenceVersion
+                    {
+                        RowId = version.AimpId?.ToString(),
+                        Type = version.AimvType,
+                        IssueNo = version.IssueNo.ToString(),
+                        IncrementNo = version.IncrNo,
+                        LicenceNumber = licence.LicenceNumber,
+                        Region = licence.RegionCode.ToString(),
+                        SignatureDate = version.LicSigDate
+                    });
+            }
+        }
+
+        var isLive = naldApiStatusData.LiveLicences.Contains(strippedNumber);
+
+        if (!isLive)
+        {
+            continue;
+        }
+
+        var naldSimpleRecord = new NaldSimpleRecord
+        {
+            LicNo = licence.LicenceNumber,
+            DmsPermitNo = licenceNumberWithoutSeperators,
+            Region = RegionHelper.GetRegionName(licence.RegionCode)
         };
 
         naldSimpleRecords.Add(naldSimpleRecord);

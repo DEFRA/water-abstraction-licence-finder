@@ -114,7 +114,7 @@ public class FileReadExtractServiceTests
             .Returns(expectedRecords);
 
         // Act
-        var result = _fileReadExtractService.GetDmsManualFixes();
+        var result = _fileReadExtractService.GetDmsManualFixes(It.IsAny<string>());
 
         // Assert
         result.Should().BeEquivalentTo(expectedRecords);

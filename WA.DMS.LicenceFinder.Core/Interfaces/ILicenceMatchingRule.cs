@@ -27,6 +27,7 @@ public interface ILicenceMatchingRule
     /// </summary>
     /// <param name="permitNumber"></param>
     /// <param name="dmsLookups">Pre-built lookup dictionaries for fast searching</param>
+    /// <param name="licenceType"></param>
     /// <returns>Matching DMS record or null if no match found</returns>
-    DmsExtract? FindMatch(string permitNumber, DmsLookupIndexes dmsLookups);
+    DmsExtract? FindMatch(string permitNumber, DmsLookupIndexes dmsLookups, string licenceType);
 }

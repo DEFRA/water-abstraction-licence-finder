@@ -28,10 +28,12 @@ public abstract class BaseRuleWithPriorityMatching : ILicenceMatchingRule
     /// </summary>
     /// <param name="permitNumber"></param>
     /// <param name="dmsLookups">Pre-built lookup dictionaries for fast searching</param>
+    /// <param name="licenceType"></param>
     /// <returns>Matching DMS record or null if no match found</returns>
     public DmsExtract? FindMatch(
         string? permitNumber,
-        DmsLookupIndexes dmsLookups)
+        DmsLookupIndexes dmsLookups,
+        string licenceType)
     {
         // Reset state for new search
         _dynamicRuleName = null;
@@ -52,8 +54,11 @@ public abstract class BaseRuleWithPriorityMatching : ILicenceMatchingRule
         }
 
         // Apply priority matching logic
-        var priorityResult = RuleHelpers.FindPriorityMatch(matchingRecords, GetRuleBaseName());
-
+        var priorityResult = RuleHelpers.FindPriorityMatch(
+            matchingRecords,
+            GetRuleBaseName(),
+            licenceType);
+        
         // Update state based on results
         _dynamicRuleName = priorityResult.ruleName;
         _hasDuplicates = priorityResult.hasDuplicate;

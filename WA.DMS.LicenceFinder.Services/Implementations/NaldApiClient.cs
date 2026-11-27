@@ -20,7 +20,34 @@ public class NaldApiClient
     
     private HttpClient HttpClient { get; set; }
 
-    public async Task<NaldDataCollection> GetNaldDataAsync(
+    public async Task<NaldImpoundmentDataCollection> GetNaldImpoundmentLicenceDataAsync(
+        short? regionCode,
+        bool allVersions,
+        int skip,
+        int take)
+    {
+        var path = $"/Extractor/NaldData/GetAllImpoundment?skip={skip}&take={take}";
+
+        if (regionCode != null)
+        {
+            path += $"&regionCode={regionCode}";
+        }
+        
+        if (allVersions)
+        {
+            path += "&allVersions=true";
+        }
+        
+        var response = await HttpClient.GetAsync(path);
+        response.EnsureSuccessStatusCode();
+
+        var content = await response.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<NaldImpoundmentDataCollection>(
+            content,
+            GetSerializerOptions())!;
+    }
+    
+    public async Task<NaldDataCollection> GetNaldAbstractionLicenceDataAsync(
         short? regionCode,
         bool allVersions,
         int skip,
@@ -43,6 +70,24 @@ public class NaldApiClient
 
         var content = await response.Content.ReadAsStringAsync();
         return JsonSerializer.Deserialize<NaldDataCollection>(
+            content,
+            GetSerializerOptions())!;
+    }
+    
+    public async Task<NaldImpoundmentLicenceStatusData> GetNaldImpoundmentLicenceStatusDataAsync(short? regionCode = null)
+    {
+        var path = "/Extractor/NaldData/GetImpoundmentLicenceStatusData";
+        
+        if (regionCode != null)
+        {
+            path += $"?regionCode={regionCode}";            
+        }
+        
+        var response = await HttpClient.GetAsync(path);
+        response.EnsureSuccessStatusCode();
+
+        var content = await response.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<NaldImpoundmentLicenceStatusData>(
             content,
             GetSerializerOptions())!;
     }

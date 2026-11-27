@@ -26,7 +26,8 @@ public interface ILicenceFileFinder
         string? regionName,
         string overridesFilename,
         string naldDate,
-        string dmsDate);
+        string dmsDate,
+        string licenceType);
     
     /// <summary>
     /// Finds all potential duplicates in DMS extract
@@ -49,7 +50,8 @@ public interface ILicenceFileFinder
         Dictionary<string, List<DmsExtract>> dmsRecords,
         List<LicenceMatchResult> currentIterationMatches,
         Dictionary<string, FileInventory> wradiAllLocalFilesInventory,
-        IGeneralApiClient apiClient);
+        IGeneralApiClient apiClient,
+        string licenceType);
     
     string FindLicenceFilesToDownload(
         List<DmsExtract> dmsRecords,
