@@ -120,7 +120,8 @@ public class LicenceFileFinderTests
             null,
             "",
             "",
-            "");
+            "",
+            "Abstraction");
 
         // Assert
         result.Should().Be("output.xlsx");
@@ -151,7 +152,8 @@ public class LicenceFileFinderTests
             null,
             "",
             "",
-            "");
+            "",
+            "Abstraction");
         
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("Error occurred while finding licence files: Test exception");
@@ -176,14 +178,16 @@ public class LicenceFileFinderTests
 
         SetupMocksForBasicTest(dmsRecords, naldRecords);
 
-        _mockRule1.Setup(r => r.FindAbstractionMatch(
+        _mockRule1.Setup(r => r.FindMatch(
                 It.IsAny<string>(),
-                It.IsAny<DmsLookupIndexes>()))
+                It.IsAny<DmsLookupIndexes>(),
+                It.IsAny<string>()))
             .Returns((DmsExtract?)null);
         
-        _mockRule2.Setup(r => r.FindAbstractionMatch(
+        _mockRule2.Setup(r => r.FindMatch(
                 It.IsAny<string>(),
-                It.IsAny<DmsLookupIndexes>()))
+                It.IsAny<DmsLookupIndexes>(),
+                It.IsAny<string>()))
             .Returns((DmsExtract?)null);
 
         var finder = new LicenceFileFinder(_mockFileProcessor.Object, _matchingRules);
@@ -203,7 +207,8 @@ public class LicenceFileFinderTests
             null,
             "",
             "",
-            "");
+            "",
+            "Abstraction");
 
         // Assert
         result.Should().NotBeNull();
@@ -245,9 +250,10 @@ public class LicenceFileFinderTests
 
         SetupMocksForBasicTest(dmsRecords, naldRecords);
 
-        _mockRule1.Setup(r => r.FindAbstractionMatch(
+        _mockRule1.Setup(r => r.FindMatch(
                 It.IsAny<string>(),
-                It.IsAny<DmsLookupIndexes>()))
+                It.IsAny<DmsLookupIndexes>(),
+                It.IsAny<string>()))
             .Returns(dmsRecord);
         
         _mockRule1.Setup(r => r.HasDuplicates).Returns(false);
@@ -269,7 +275,8 @@ public class LicenceFileFinderTests
             null,
             "",
             "",
-            "");
+            "",
+            "Abstraction");
 
         // Assert
         result.Should().NotBeNull();

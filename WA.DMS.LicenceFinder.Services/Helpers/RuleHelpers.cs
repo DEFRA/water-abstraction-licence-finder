@@ -188,11 +188,19 @@ public static class RuleHelpers
         // Handles: TODO
         var impoundmentLicencePattern = @"imp?o?nt\s+licen[cs]e?";
 
+        const string impoundment = "Impoundment";
+        const string abstraction = "Abstraction";
+        
+        var relevantRegex = licenceType switch
+        {
+            impoundment => impoundmentLicencePattern,
+            abstraction => abstractionLicencePattern,
+            _ => throw new KeyNotFoundException(licenceType)
+        };
+        
         return Regex.IsMatch(
             fileName,
-            licenceType.Equals("abstraction", StringComparison.InvariantCultureIgnoreCase)
-                ? abstractionLicencePattern
-                : impoundmentLicencePattern,
+            relevantRegex,
             RegexOptions.IgnoreCase);
     }
 

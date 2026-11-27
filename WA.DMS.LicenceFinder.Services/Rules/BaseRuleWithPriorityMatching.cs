@@ -28,10 +28,12 @@ public abstract class BaseRuleWithPriorityMatching : ILicenceMatchingRule
     /// </summary>
     /// <param name="permitNumber"></param>
     /// <param name="dmsLookups">Pre-built lookup dictionaries for fast searching</param>
+    /// <param name="licenceType"></param>
     /// <returns>Matching DMS record or null if no match found</returns>
-    public DmsExtract? FindAbstractionMatch(
+    public DmsExtract? FindMatch(
         string? permitNumber,
-        DmsLookupIndexes dmsLookups)
+        DmsLookupIndexes dmsLookups,
+        string licenceType)
     {
         // Reset state for new search
         _dynamicRuleName = null;
@@ -55,41 +57,8 @@ public abstract class BaseRuleWithPriorityMatching : ILicenceMatchingRule
         var priorityResult = RuleHelpers.FindPriorityMatch(
             matchingRecords,
             GetRuleBaseName(),
-            "Abstraction");
+            licenceType);
         
-        // Update state based on results
-        _dynamicRuleName = priorityResult.ruleName;
-        _hasDuplicates = priorityResult.hasDuplicate;
-
-        return priorityResult.dmsExtract;
-    }
-
-    public DmsExtract? FindImpoundmentMatch(string permitNumber, DmsLookupIndexes dmsLookups)
-    {
-        // Reset state for new search
-        _dynamicRuleName = null;
-        _hasDuplicates = false;
-
-        // Input validation
-        if (string.IsNullOrWhiteSpace(permitNumber))
-        {
-            return null;
-        }
-
-        // Get matching records using the specific rule's logic
-        var matchingRecords = GetMatchingRecords(permitNumber, dmsLookups);
-
-        if (!matchingRecords.Any())
-        {
-            return null;
-        }
-
-        // Apply priority matching logic
-        var priorityResult = RuleHelpers.FindPriorityMatch(
-            matchingRecords,
-            GetRuleBaseName(),
-            "Impoundment");
-
         // Update state based on results
         _dynamicRuleName = priorityResult.ruleName;
         _hasDuplicates = priorityResult.hasDuplicate;
