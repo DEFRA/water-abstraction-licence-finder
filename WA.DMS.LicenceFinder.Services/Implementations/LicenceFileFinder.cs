@@ -997,7 +997,7 @@ public class LicenceFileFinder : ILicenceFileFinder
         }
     }
 
-    private async Task<List<UnmatchedLicenceMatchResult>> FindUnmatchedAbstractionLicenceFilesAsync(
+    private async Task<List<UnmatchedLicenceMatchResult>> FindUnmatchedLicenceFilesAsync(
         Dictionary<string, List<DmsExtract>> dmsRecords,
         Dictionary<string, List<NaldLicenceVersion>> naldData,
         List<LicenceMatchResult> licenceFinderPreviousIterationMatches,
@@ -1680,7 +1680,7 @@ public class LicenceFileFinder : ILicenceFileFinder
             Dictionary<string, FileInventory> wradiLocalFilesInventory,
             string licenceType)
     {
-        var unmatchedVersionResults = await FindUnmatchedAbstractionLicenceFilesAsync(
+        var unmatchedVersionResults = await FindUnmatchedLicenceFilesAsync(
             dmsRecords,
             naldData,
             licenceFinderPreviousIterationMatches,
