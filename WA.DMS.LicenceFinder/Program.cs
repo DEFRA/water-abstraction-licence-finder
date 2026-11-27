@@ -35,7 +35,7 @@ using (var scope = host.Services.CreateScope())
     //var apiBaseUrl = "https://wli-api-dev.aws-int.defra.cloud";
     //var apiBaseUrl = "https://wli-api-tst.aws-int.defra.cloud";
 
-    //var flowToRun = "FindAllFilesToDownload";
+    //var flowToRun = "FindAllFilesToDownload Abstraction";
     //var flowToRun = "FindLicenceFilesAsync Abstraction";
     var flowToRun = "FindFilesAsync Impoundment";
     //var flowToRun = "FindInspectionReportFiles";
