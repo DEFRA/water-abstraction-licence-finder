@@ -84,7 +84,7 @@ public class GeneralApiClient : IGeneralApiClient
             GetSerializerOptions())!;
     }
     
-    public async Task SaveAbstractionLicenceFinderResultsAsync(List<LicenceMatchResult> results, string licenceType)
+    public async Task SaveLicenceFinderResultsAsync(List<LicenceMatchResult> results, string licenceType)
     {
         var path = $"/Extractor/LicenceFinder/SaveResults?licenceType={licenceType}";
         var json = JsonSerializer.Serialize(new

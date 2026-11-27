@@ -196,7 +196,7 @@ public class LicenceFileFinder : ILicenceFileFinder
 
             foreach (var chunk in chunks)
             {
-                await generalApiClient.SaveAbstractionLicenceFinderResultsAsync(chunk.ToList(), "Abstraction");
+                await generalApiClient.SaveLicenceFinderResultsAsync(chunk.ToList(), "Abstraction");
             }
             
             // Generate output Excel file
@@ -298,7 +298,7 @@ public class LicenceFileFinder : ILicenceFileFinder
 
             foreach (var chunk in chunks)
             {
-                await generalApiClient.SaveAbstractionLicenceFinderResultsAsync(chunk.ToList(), "Impoundment");
+                await generalApiClient.SaveLicenceFinderResultsAsync(chunk.ToList(), "Impoundment");
             }
             
             // Generate output Excel file

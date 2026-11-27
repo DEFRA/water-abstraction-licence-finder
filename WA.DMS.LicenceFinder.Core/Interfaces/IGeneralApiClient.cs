@@ -8,7 +8,7 @@ public interface IGeneralApiClient
 
     public Task AddDmsFileIdInformationAsync(DmsFileIdInformation newDmsFileIdInformation);
 
-    public Task SaveAbstractionLicenceFinderResultsAsync(List<LicenceMatchResult> results, string licenceType);
+    public Task SaveLicenceFinderResultsAsync(List<LicenceMatchResult> results, string licenceType);
     
     public Task ClearLicenceFinderResultsAsync(string licenceType);
 
