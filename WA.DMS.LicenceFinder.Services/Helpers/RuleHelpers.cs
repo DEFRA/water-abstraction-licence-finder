@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using WA.DMS.LicenceFinder.Core.Constants;
 using WA.DMS.LicenceFinder.Core.Models;
 
 namespace WA.DMS.LicenceFinder.Services.Helpers;
@@ -188,13 +189,10 @@ public static class RuleHelpers
         // Handles: TODO
         var impoundmentLicencePattern = @"imp?o?nt\s+licen[cs]e?";
 
-        const string impoundment = "Impoundment";
-        const string abstraction = "Abstraction";
-        
         var relevantRegex = licenceType switch
         {
-            impoundment => impoundmentLicencePattern,
-            abstraction => abstractionLicencePattern,
+            Constants.Impoundment => impoundmentLicencePattern,
+            Constants.Abstraction => abstractionLicencePattern,
             _ => throw new KeyNotFoundException(licenceType)
         };
         

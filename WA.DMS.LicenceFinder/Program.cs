@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using WA.DMS.LicenceFinder.Core.Constants;
 using WA.DMS.LicenceFinder.Core.Interfaces;
 using WA.DMS.LicenceFinder.Core.Models;
 using WA.DMS.LicenceFinder.Services;
@@ -41,7 +42,7 @@ using (var scope = host.Services.CreateScope())
     
     try
     {
-        var generalApiClient = (IGeneralApiClient)new GeneralApiClient(apiBaseUrl);
+        IGeneralApiClient generalApiClient = new GeneralApiClient(apiBaseUrl);
 
         var flowToRunParts = flowToRun.Split(' ');
         flowToRun = flowToRunParts[0];
@@ -63,15 +64,7 @@ using (var scope = host.Services.CreateScope())
         {
             case "FindLicenceFilesAsync":
             {
-                const string impoundment = "Impoundment";
-                const string abstraction = "Abstraction";
-                
-                var licenceType = flowToRunParts[1] switch
-                {
-                    impoundment => impoundment,
-                    abstraction => abstraction,
-                    _ => throw new KeyNotFoundException(flowToRunParts[1])
-                };
+                var licenceType = Constants.GetLicenceType(flowToRunParts[1]);
 
                 // FLOW - Licence file finder (produces LicenceMatchResults_DATE.xlsx)
                 Console.WriteLine("Starting licence file processing...");
@@ -79,8 +72,8 @@ using (var scope = host.Services.CreateScope())
                 // API - NALD data - started early as async so we can run in parallel
                 var naldDataTask = licenceType switch
                 {
-                    abstraction => GetNaldAbstractionLicenceDataAsync(apiBaseUrl),
-                    impoundment => GetNaldImpoundmentDataAsync(apiBaseUrl),
+                    Constants.Abstraction => GetNaldAbstractionLicenceDataAsync(apiBaseUrl),
+                    Constants.Impoundment => GetNaldImpoundmentDataAsync(apiBaseUrl),
                     _ => null
                 };
 
@@ -131,12 +124,14 @@ using (var scope = host.Services.CreateScope())
             }
             case "FindAllFilesToDownload":
             {
+                var licenceType = Constants.GetLicenceType(flowToRunParts[1]);
+                
                  // FLOW - Find all files to download (i.e. all files, not just licences)
                  // NOTE - previously referred to as 'Build Version Download Info Excel'
-                Console.WriteLine("Started finding all files to download...");
+                Console.WriteLine($"Started finding all {licenceType} files to download...");
 
                 // API - Licence finder previous iteration run matches
-                var licenceFinderLastIterationMatchesTask = GetLicenceFinderResultsAsync(generalApiClient, "Abstraction");
+                var licenceFinderLastIterationMatchesTask = GetLicenceFinderResultsAsync(generalApiClient, licenceType);
                 
                 // API - WRADI tool all local files inventory (from S3 stuff)
                 var wradiAllLocalFilesInventoryTask = GetWradiPdfsInventoryFiles(apiBaseUrl);
@@ -253,7 +248,6 @@ using (var scope = host.Services.CreateScope())
 
 await host.StopAsync();
 return;
-
 
 static async Task<List<LicenceMatchResult>> GetLicenceFinderResultsAsync(IGeneralApiClient apiClient, string licenceType)
 {
