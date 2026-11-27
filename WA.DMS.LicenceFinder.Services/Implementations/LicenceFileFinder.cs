@@ -397,7 +397,8 @@ public class LicenceFileFinder : ILicenceFileFinder
         Dictionary<string, List<DmsExtract>> dmsRecords,
         List<LicenceMatchResult> currentMatches,
         Dictionary<string, FileInventory> wradiAllLocalFilesInventory,
-        IGeneralApiClient apiClient)
+        IGeneralApiClient apiClient,
+        string licenceType)
     {
         // Foreach permit number in the newest created file, find the DMS records for that permit number.
         // Check if the permit number row has a fileId that is different to the previous run. If so fetch the DMS info
@@ -546,11 +547,10 @@ public class LicenceFileFinder : ILicenceFileFinder
             ("All", allHeaderMapping, allRecords)
         };
 
-        
         Console.WriteLine("Starting saving version files");
         
-        var saveVersionAllTask = SaveVersionFilesAsync(apiClient, allRecords);
-        await SaveVersionFilesToDownloadAsync(apiClient, missingRecords);
+        var saveVersionAllTask = SaveVersionFilesAsync(apiClient, allRecords, licenceType);
+        await SaveVersionFilesToDownloadAsync(apiClient, missingRecords, licenceType);
 
         await saveVersionAllTask;
         
@@ -559,16 +559,17 @@ public class LicenceFileFinder : ILicenceFileFinder
 
         return _fileProcessor.GenerateExcel(
             worksheetData,
-            $"Version_Download_Info_{DateTime.Now:yyyyMMdd_HHmmss}");
+            $"{licenceType}_Version_Download_Info_{DateTime.Now:yyyyMMdd_HHmmss}");
     }
 
     private static async Task SaveVersionFilesAsync(
         IGeneralApiClient apiClient,
-        List<DownloadInfoAll> results)
+        List<DownloadInfoAll> results,
+        string licenceType)
     {
-        Console.WriteLine("ClearVersionFilesAsync started");
-        await apiClient.ClearVersionFilesAsync();
-        Console.WriteLine("ClearVersionFilesAsync finished");
+        Console.WriteLine($"{licenceType} ClearVersionFilesAsync started");
+        await apiClient.ClearVersionFilesAsync(licenceType);
+        Console.WriteLine($"{licenceType} ClearVersionFilesAsync finished");
         
         const int chunkSize = 10_000;
         var chunks = results.Chunk(chunkSize).ToList();
@@ -576,18 +577,19 @@ public class LicenceFileFinder : ILicenceFileFinder
         
         foreach (var chunk in chunks)
         {
-            await apiClient.SaveVersionFilesAsync(chunk.ToList());    
-            Console.WriteLine($"SaveVersionFilesAsync - Chunk {idx++} of {chunks.Count}");
+            await apiClient.SaveVersionFilesAsync(chunk.ToList(), licenceType);    
+            Console.WriteLine($"{licenceType} SaveVersionFilesAsync - Chunk {idx++} of {chunks.Count}");
         }
     }
     
     private static async Task SaveVersionFilesToDownloadAsync(
         IGeneralApiClient apiClient,
-        List<DownloadInfoMissing> missingRecords)
+        List<DownloadInfoMissing> missingRecords,
+        string licenceType)
     {
-        Console.WriteLine("ClearVersionFilesToDownloadAsync started");
-        await apiClient.ClearVersionFilesToDownloadAsync();
-        Console.WriteLine("ClearVersionFilesToDownloadAsync started");
+        Console.WriteLine($"{licenceType} ClearVersionFilesToDownloadAsync started");
+        await apiClient.ClearVersionFilesToDownloadAsync(licenceType);
+        Console.WriteLine($"{licenceType} ClearVersionFilesToDownloadAsync started");
         
         const int chunkSize = 10_000;
         var chunks = missingRecords.Chunk(chunkSize).ToList();
@@ -595,8 +597,8 @@ public class LicenceFileFinder : ILicenceFileFinder
 
         foreach (var chunk in chunks)
         {
-            await apiClient.SaveVersionFilesToDownloadAsync(chunk.ToList());
-            Console.WriteLine($"SaveVersionFilesToDownloadAsync - Chunk {idx++} of {chunks.Count}");
+            await apiClient.SaveVersionFilesToDownloadAsync(chunk.ToList(), licenceType);
+            Console.WriteLine($"{licenceType} SaveVersionFilesToDownloadAsync - Chunk {idx++} of {chunks.Count}");
         }
     }
 

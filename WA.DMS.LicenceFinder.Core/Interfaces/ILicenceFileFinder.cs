@@ -50,7 +50,8 @@ public interface ILicenceFileFinder
         Dictionary<string, List<DmsExtract>> dmsRecords,
         List<LicenceMatchResult> currentIterationMatches,
         Dictionary<string, FileInventory> wradiAllLocalFilesInventory,
-        IGeneralApiClient apiClient);
+        IGeneralApiClient apiClient,
+        string licenceType);
     
     string FindLicenceFilesToDownload(
         List<DmsExtract> dmsRecords,

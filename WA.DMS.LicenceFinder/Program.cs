@@ -140,7 +140,8 @@ using (var scope = host.Services.CreateScope())
                     dmsRecordsData,
                     await licenceFinderLastIterationMatchesTask,
                     await wradiAllLocalFilesInventoryTask,
-                    generalApiClient);
+                    generalApiClient,
+                    licenceType);
 
                 Console.WriteLine($"File saved to {result}");
                 break;

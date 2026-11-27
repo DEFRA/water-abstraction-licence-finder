@@ -14,13 +14,13 @@ public interface IGeneralApiClient
 
     public Task ClearLicenceFinderResultsAsync(string licenceType);
 
-    public Task SaveVersionFilesToDownloadAsync(List<DownloadInfoMissing> results);
+    public Task SaveVersionFilesToDownloadAsync(List<DownloadInfoMissing> results, string licenceType);
 
-    public Task SaveVersionFilesAsync(List<DownloadInfoAll> results);
+    public Task SaveVersionFilesAsync(List<DownloadInfoAll> results, string licenceType);
 
-    public Task ClearVersionFilesAsync();
+    public Task ClearVersionFilesAsync(string licenceType);
 
-    public Task ClearVersionFilesToDownloadAsync();
+    public Task ClearVersionFilesToDownloadAsync(string licenceType);
 
     public Task<List<LicenceMatchResult>> GetLicenceFinderResultsAsync(int skip, int take, string licenceType);
     
