@@ -1,3 +1,4 @@
+using WA.DMS.LicenceFinder.Core.Constants;
 using WA.DMS.LicenceFinder.Core.Interfaces;
 using WA.DMS.LicenceFinder.Core.Models;
 using WA.DMS.LicenceFinder.Services.Helpers;
@@ -361,7 +362,7 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
     {
         var allOverrides = new List<Override>();
         
-        filename = licenceType == "Abstraction"
+        filename = licenceType == Constants.Abstraction
             ? filename
             : $"{licenceType}_{filename}";
         
@@ -413,7 +414,7 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
     {
         var allManualFixes = new Dictionary<string, DmsManualFixExtract>(StringComparer.OrdinalIgnoreCase);
 
-        var fileNamePattern = licenceType == "Abstraction"
+        var fileNamePattern = licenceType == Constants.Abstraction
             ? "Manual_Fix_Extract"
             : $"{licenceType}_Manual_Fix_Extract";
         

@@ -170,10 +170,10 @@ using (var scope = host.Services.CreateScope())
                 Console.WriteLine("Started building file template identification extract...");
 
                 // API - Licence finder previous iteration run matches
-                var licenceFinderLastIterationMatchesTask = GetLicenceFinderResultsAsync(generalApiClient, "Abstraction");
+                var licenceFinderLastIterationMatchesTask = GetLicenceFinderResultsAsync(generalApiClient, Constants.Abstraction);
                 
                 // Spreadsheet - DMS change audit overrides by our team (e.g. Overrides.xlsx)
-                var dmsChangeAuditOverrides = readExtractService.GetDmsChangeAuditOverrides("Override_", "Abstraction");
+                var dmsChangeAuditOverrides = readExtractService.GetDmsChangeAuditOverrides("Override_", Constants.Abstraction);
                 
                 // Spreadsheet - File version results (e.g. LicenceVersionResults.xlsx) - Comes from JP
                 var jpFileVersionResults = readExtractService.ReadFileVersionResultsFile();
@@ -193,7 +193,7 @@ using (var scope = host.Services.CreateScope())
                 Console.WriteLine("Started finding licence files to download...");
 
                 // API - Licence finder previous iteration run matches
-                var licenceFinderLastIterationMatchesTask = GetLicenceFinderResultsAsync(generalApiClient, "Abstraction");
+                var licenceFinderLastIterationMatchesTask = GetLicenceFinderResultsAsync(generalApiClient, Constants.Abstraction);
                 
                 // API - WRADI tool all local files inventory (from S3 stuff)
                 var wradiAllLocalFilesInventoryTask = GetWradiPdfsInventoryFiles(apiBaseUrl);
@@ -213,7 +213,7 @@ using (var scope = host.Services.CreateScope())
                 Console.WriteLine("Started finding licence files to download...");
 
                 // API - Licence finder previous iteration run matches
-                var licenceFinderLastIterationMatches = await GetLicenceFinderResultsAsync(generalApiClient, "Abstraction");
+                var licenceFinderLastIterationMatches = await GetLicenceFinderResultsAsync(generalApiClient, Constants.Abstraction);
 
                 var fileName = licenceFileFinder.FindLicenceFilesToDownload_SpreadsheetCompareOnly(
                     DmsDictionaryToList(dmsRecordsData),
