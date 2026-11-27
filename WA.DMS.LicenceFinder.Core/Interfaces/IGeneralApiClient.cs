@@ -4,6 +4,8 @@ namespace WA.DMS.LicenceFinder.Core.Interfaces;
 
 public interface IGeneralApiClient
 {
+    public Task<List<DmsFileReaderResult>> GetDmsFileReaderResultsAsync(string licenceType);
+    
     public Task<List<DmsFileIdInformation>> GetDmsFileIdInformationAsync();
 
     public Task AddDmsFileIdInformationAsync(DmsFileIdInformation newDmsFileIdInformation);
@@ -25,4 +27,9 @@ public interface IGeneralApiClient
     public Task SaveInspectionReportFinderResultsAsync(List<DmsExtract> results);
 
     public Task ClearInspectionReportFinderResultsAsync();
+
+    public Task<(List<DmsExtract> Data, string ImportDate)> GetDmsExtractAsync(
+        int skip,
+        int take,
+        string extractType);
 }

@@ -98,7 +98,7 @@ public class LicenceFileFinderTests
         _mockReadExtract.Setup(r => r.ReadChangeAuditFiles()).Returns(new List<ChangeAudit>());
         _mockReadExtract.Setup(r => r.GetLicenceFinderPreviousIterationResults(It.IsAny<string>(), It.IsAny<string?>())).Returns(new List<LicenceMatchResult>());
         //_mockReadExtract.Setup(r => r.GetNaldAbsLicencesAndVersions(It.IsAny<bool>())).Returns(new Dictionary<string, List<NaldLicenceVersion>>());
-        _mockReadExtract.Setup(r => r.GetDmsManualFixes()).Returns(new Dictionary<string, DmsManualFixExtract>());
+        _mockReadExtract.Setup(r => r.GetDmsManualFixes(It.IsAny<string>())).Returns(new Dictionary<string, DmsManualFixExtract>());
         
         _mockFileProcessor.Setup(p => p.GenerateExcel(It.IsAny<List<LicenceMatchResult>>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
             .Returns("output.xlsx");
@@ -544,7 +544,7 @@ public class LicenceFileFinderTests
         _mockReadExtract.Setup(r => r.ReadChangeAuditFiles()).Returns(new List<ChangeAudit>());
         _mockReadExtract.Setup(r => r.GetLicenceFinderPreviousIterationResults(It.IsAny<string>(), It.IsAny<string?>())).Returns(new List<LicenceMatchResult>());
         //_mockReadExtract.Setup(r => r.GetNaldAbsLicencesAndVersions(It.IsAny<bool>())).Returns(new Dictionary<string, List<NaldLicenceVersion>>());
-        _mockReadExtract.Setup(r => r.GetDmsManualFixes()).Returns(new Dictionary<string, DmsManualFixExtract>());
+        _mockReadExtract.Setup(r => r.GetDmsManualFixes(It.IsAny<string>())).Returns(new Dictionary<string, DmsManualFixExtract>());
 
         _mockFileProcessor.Setup(p => p.GenerateExcel(It.IsAny<List<LicenceMatchResult>>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
             .Returns("output.xlsx");

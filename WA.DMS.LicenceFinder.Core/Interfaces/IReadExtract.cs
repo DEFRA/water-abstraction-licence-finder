@@ -35,13 +35,13 @@ public interface IReadExtract
     /// Reads all files starting with 'Manual_Fix_Extract' from the resources folder
     /// </summary>
     /// <returns>Combined list of manual fix extract records from all matching files</returns>
-    Dictionary<string, DmsManualFixExtract> GetDmsManualFixes();
+    Dictionary<string, DmsManualFixExtract> GetDmsManualFixes(string licenceType);
 
     /// <summary>
     /// Reads Change_Audit.xlsx file from the resources folder
     /// </summary>
     /// <returns>List of change audit records</returns>
-    (List<Override>, string) GetDmsChangeAuditOverrides(string filename);
+    (List<Override>, string) GetDmsChangeAuditOverrides(string filename, string licenceType);
 
     /// <summary>
     /// Reads LicenceVersionResult.xlsx file from the resources folder

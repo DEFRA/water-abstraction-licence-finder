@@ -357,9 +357,14 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
     /// Reads Change_Audit.xlsx file from the resources folder
     /// </summary>
     /// <returns>List of change audit records</returns>
-    public (List<Override>, string) GetDmsChangeAuditOverrides(string filename)
+    public (List<Override>, string) GetDmsChangeAuditOverrides(string filename, string licenceType)
     {
         var allOverrides = new List<Override>();
+        
+        filename = licenceType == "Abstraction"
+            ? filename
+            : $"{licenceType}_{filename}";
+        
         var overridesFilenames = _fileProcessor.FindFilesByPattern(filename);
 
         if (!overridesFilenames.Any())
@@ -404,10 +409,15 @@ public class FileReadExtractService(ILicenceFileProcessor fileProcessor) : IRead
     /// Reads all files starting with 'Manual_Fix_Extract' from the resources folder
     /// </summary>
     /// <returns>Combined list of manual fix extract records from all matching files</returns>
-    public Dictionary<string, DmsManualFixExtract> GetDmsManualFixes()
+    public Dictionary<string, DmsManualFixExtract> GetDmsManualFixes(string licenceType)
     {
         var allManualFixes = new Dictionary<string, DmsManualFixExtract>(StringComparer.OrdinalIgnoreCase);
-        var manualFixFiles = _fileProcessor.FindFilesByPattern("Manual_Fix_Extract");
+
+        var fileNamePattern = licenceType == "Abstraction"
+            ? "Manual_Fix_Extract"
+            : $"{licenceType}_Manual_Fix_Extract";
+        
+        var manualFixFiles = _fileProcessor.FindFilesByPattern(fileNamePattern);
 
         foreach (var fileName in manualFixFiles)
         {

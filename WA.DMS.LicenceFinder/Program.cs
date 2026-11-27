@@ -41,7 +41,7 @@ using (var scope = host.Services.CreateScope())
     
     try
     {
-        var generalApiClient = new GeneralApiClient(apiBaseUrl);
+        var generalApiClient = (IGeneralApiClient)new GeneralApiClient(apiBaseUrl);
 
         var flowToRunParts = flowToRun.Split(' ');
         flowToRun = flowToRunParts[0];
@@ -92,17 +92,17 @@ using (var scope = host.Services.CreateScope())
                 
                 // API - WRADI tool file/licence reader (DOI, template type etc... scraping) extracts
                 // (e.g. LicenceReader-yyyyMMdd.csv). Has date of issue, number of pages, template types etc...
-                var wradiToolScrapeResultsTask = generalApiClient.GetDmsFileReaderResultsAsync();
+                var wradiToolScrapeResultsTask = generalApiClient.GetDmsFileReaderResultsAsync(licenceType);
                 
                 // API - Licence finder previous iteration run matches
                 var licenceFinderLastIterationMatchesTask = GetLicenceFinderResultsAsync(generalApiClient, licenceType);
                 
                 // Spreadsheet - DMS change audit overrides by our team (e.g. Overrides.xlsx)
-                var dmsChangeAuditOverrides = readExtractService.GetDmsChangeAuditOverrides("Override_");
+                var dmsChangeAuditOverrides = readExtractService.GetDmsChangeAuditOverrides("Override_", licenceType);
                 
                 // Spreadsheet - DMS manual fixes by our team/SamD (e.g. Manual_Fix_Extract.xlsx) - The 'Sam D' file
                 // - doesn't often change
-                var dmsManualFixes = readExtractService.GetDmsManualFixes();
+                var dmsManualFixes = readExtractService.GetDmsManualFixes(licenceType);
 
                 var (
                     naldRecordsToProcess,
@@ -178,7 +178,7 @@ using (var scope = host.Services.CreateScope())
                 var licenceFinderLastIterationMatchesTask = GetLicenceFinderResultsAsync(generalApiClient, "Abstraction");
                 
                 // Spreadsheet - DMS change audit overrides by our team (e.g. Overrides.xlsx)
-                var dmsChangeAuditOverrides = readExtractService.GetDmsChangeAuditOverrides("Override_");
+                var dmsChangeAuditOverrides = readExtractService.GetDmsChangeAuditOverrides("Override_", "Abstraction");
                 
                 // Spreadsheet - File version results (e.g. LicenceVersionResults.xlsx) - Comes from JP
                 var jpFileVersionResults = readExtractService.ReadFileVersionResultsFile();
@@ -275,7 +275,7 @@ static async Task<List<LicenceMatchResult>> GetLicenceFinderResultsAsync(IGenera
 }
 
 static async Task<(List<DmsExtract> Data, string ImportDate)> GetDmsExtractAsync(
-    GeneralApiClient generalApiClient,
+    IGeneralApiClient generalApiClient,
     string extractType)
 {
     var dmsExtractInfoRaw = new List<DmsExtract>();

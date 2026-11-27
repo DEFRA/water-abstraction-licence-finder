@@ -71,9 +71,9 @@ public class GeneralApiClient : IGeneralApiClient
         return await response.Content.ReadAsStringAsync();
     }
     
-    public async Task<List<DmsFileReaderResult>> GetDmsFileReaderResultsAsync()
+    public async Task<List<DmsFileReaderResult>> GetDmsFileReaderResultsAsync(string licenceType)
     {
-        var path = "/Extractor/Dms/GetDmsFileReaderResults";
+        var path = $"/Extractor/Dms/GetDmsFileReaderResults?licenceType={licenceType}";
 
         var response = await HttpClient.GetAsync(path);
         response.EnsureSuccessStatusCode();
@@ -99,7 +99,7 @@ public class GeneralApiClient : IGeneralApiClient
 
     public async Task ClearLicenceFinderResultsAsync(string licenceType)
     {
-        var path = "/Extractor/LicenceFinder/ClearResults?licenceType={licenceType}";
+        var path = $"/Extractor/LicenceFinder/ClearResults?licenceType={licenceType}";
 
         var httpContent = new StringContent("{}", System.Text.Encoding.UTF8, "application/json");
         var response = await HttpClient.PostAsync(new Uri(HttpClient.BaseAddress!, path), httpContent);
@@ -170,7 +170,7 @@ public class GeneralApiClient : IGeneralApiClient
     
     public async Task<List<LicenceMatchResult>> GetLicenceFinderResultsAsync(int skip, int take, string licenceType)
     {
-        var path = $"/Extractor/LicenceFinder/GetResults?skip={skip}&take={take}";
+        var path = $"/Extractor/LicenceFinder/GetResults?skip={skip}&take={take}&licenceType={licenceType}";
 
         var response = await HttpClient.GetAsync(path);
         response.EnsureSuccessStatusCode();
